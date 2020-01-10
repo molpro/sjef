@@ -6,7 +6,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(libconfig)
 
 execute_process(
-        COMMAND git name-rev --name-only --tags HEAD
+#        COMMAND git name-rev --name-only --tags HEAD
+        COMMAND git describe
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         OUTPUT_VARIABLE SJEF_VERSION)
 string(STRIP "${SJEF_VERSION}" SJEF_VERSION)

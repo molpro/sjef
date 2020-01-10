@@ -7,7 +7,7 @@ include(libconfig)
 
 execute_process(
 #        COMMAND git name-rev --name-only --tags HEAD
-        COMMAND git describe --tags --abbrev=0
+        COMMAND git describe --tags --abbrev=0 HEAD
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         OUTPUT_VARIABLE SJEF_VERSION)
 string(STRIP "${SJEF_VERSION}" SJEF_VERSION)

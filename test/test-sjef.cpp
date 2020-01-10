@@ -112,9 +112,24 @@ TEST(project, move) {
   ASSERT_TRUE(fs::exists(fs::path(x2.filename())));
   ASSERT_TRUE(fs::exists(sjef::expand_path(filename2)));
   ASSERT_TRUE(fs::exists(sjef::expand_path(filename)));
-  x2.move(filename,true);
+  x2.move(filename, true);
   EXPECT_FALSE(fs::exists(sjef::expand_path(filename2)));
   EXPECT_TRUE(fs::exists(sjef::expand_path(filename)));
+}
+
+TEST(project, moveMolpro) {
+  savestate x;
+  std::string filename_old("moveMolproOld.molpro");
+  std::string filename_new("moveMolproNew.molpro");
+  sjef::Project p(filename_old, nullptr, true);
+  std::ofstream(p.filename("inp")) << "geometry="+p.name()+".xyz"+"\n";
+  std::ofstream(p.filename("xyz")) << "1\n\nHe 0 0 0\n";
+  p.move(filename_new,true);
+  EXPECT_FALSE(fs::exists(sjef::expand_path(filename_old)));
+  EXPECT_TRUE(fs::exists(sjef::expand_path(filename_new)));
+  std::string inp;
+  std::ifstream(p.filename("inp")) >> inp;
+  EXPECT_EQ(inp,"geometry="+p.name()+".xyz");
 }
 
 TEST(project, erase) {

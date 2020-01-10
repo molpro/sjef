@@ -11,21 +11,25 @@ Generally applicable flags include
 
 - `-s` | `--suffix` *suffix* Specify the filename extension (without the leading `.`) of the project. This forces `sjef` to work only with projects of type *suffix*.
 - `-v` | `--verbose` Increase verbosity. Can be specified more than once to increase the amount of information shown.
+- `--suffix-inp` *suffix* Specify the suffix that denotes an input file. Default `inp`.
+- `--suffix-out` *suffix* Specify the suffix that denotes an output file. Default `out`.
+- `--suffix-xml` *suffix* Specify the suffix that denotes a marked-up output file. Default `xml`.
 
-*project* is the file name of the bundle. If it has no extension and the `-s` flag has not been used, the extension `.sjef` is appended.
+*project* is the file name of the bundle, and can be specified as an absolute or relative path. If it has no extension and the `-s` flag has not been used, the extension `.sjef` is appended.
 If `-s` has been used, and the extension is absent or different to that specified, the `-s` extension is appended.
 
 *operation* is one of
 
 `new`: Make a completely new project bundle
 
-`edit`: Edit the Molpro input file
+`edit`: Edit the input file, whose name is the project base name with extension from the `--suffix-inp` flag,
+using `${VISUAL}` (default `${EDITOR}`, default `vi`).
 
-`browse`: Browse the Molpro output file
+`browse`: Browse the output file, whose name is the project base name with extension from the `--suffix-out` flag, using `${PAGER}` (default `less`).
 
 `run`: Launch a job either on the local machine or on a preconfigured [backend](../lib/backends.md). Valid flags that can then be specified are
 - `-b` | `--backend` *backend*: specify the name of the backend to be used (default is last used, or `local`)
-- `-p` | `--parameter` *key*=*value*: specify a parameter value for substitution in the template for `run_command` defined in the [backend](../lib//backends.md)
+- `-p` | `--parameter` *key*=*value*: specify a parameter value for substitution in the template for `run_command` defined in the [backend](../lib/backends.md)
 - `-w` | `--wait`
 - `-f` | `--force`
 

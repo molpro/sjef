@@ -88,6 +88,30 @@ int main(int argc, char* argv[]) {
                      "",
                      "string",
                      cmd);
+    TCLAP::ValueArg<std::string>
+        suffixInpSwitch("",
+                        "suffix-inp",
+                        "Specify the filename extension (without the leading .) for input files",
+                        false,
+                        "inp",
+                        "string",
+                        cmd);
+    TCLAP::ValueArg<std::string>
+        suffixOutSwitch("",
+                        "suffix-out",
+                        "Specify the filename extension (without the leading .) for output files",
+                        false,
+                        "out",
+                        "string",
+                        cmd);
+    TCLAP::ValueArg<std::string>
+        suffixXmlSwitch("",
+                     "suffix-xml",
+                     "Specify the filename extension (without the leading .) for marked-up output files",
+                     false,
+                     "xml",
+                     "string",
+                     cmd);
     TCLAP::SwitchArg
         forceArg("f", "force", "Allow operations that would result in overwriting an existing file", false);
     cmd.add(forceArg);
@@ -131,7 +155,8 @@ int main(int argc, char* argv[]) {
     status_message[sjef::status::running] = "Running";
     status_message[sjef::status::waiting] = "Waiting";
     status_message[sjef::status::completed] = "Completed";
-    Project proj(project, nullptr, false, true, suffixSwitch.getValue());
+    Project proj(project, nullptr, false, true, suffixSwitch.getValue(),
+                 {{"inp",suffixInpSwitch.getValue()},{"out",suffixOutSwitch.getValue()},{"xml",suffixXmlSwitch.getValue()}});
 
     auto allowedBackends = proj.backend_names();
     if (verboseSwitch.getValue() > 1

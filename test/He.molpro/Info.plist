@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<plist>
+	<dict>
+		<key>backend</key>
+		<string>local</string>
+		<key>run_options</key>
+		<string></string>
+		<key>backend_inactive</key>
+		<string>0</string>
+		<key>backend_inactive_synced</key>
+		<string>0</string>
+		<key>jobnumber</key>
+		<string>25263</string>
+	</dict>
+</plist>

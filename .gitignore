@@ -1,0 +1,17 @@
+build/
+.idea
+record.txt
+cmake-build*/
+dependencies/*/
+*_lockfile
+env/
+__pycache__/
+*.pyc
+*.so
+*.vim
+*.sw*
+ycm_extra_conf.py
+_build/
+cy.sh
+scrap/
+.ipynb_checkpoints

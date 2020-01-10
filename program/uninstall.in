@@ -1,0 +1,3 @@
+#!/bin/sh
+rm -f $(dirname $(dirname $(dirname $(dirname $0))))/bin/${PROGRAM_NAME}
+rm -rf $(dirname $(dirname $0))

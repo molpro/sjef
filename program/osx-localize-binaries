@@ -1,0 +1,43 @@
+#!/bin/sh
+# first argument is library directory to be copied into
+# remaining arguments are binaries to be modified
+
+export PATH=/usr/local/bin:$PATH
+
+exemain=''; if [ "$1" = "-x" ]; then shift; exemain=$1; shift; else exemain=$2; fi
+
+mkdir -p "$1"
+cd "$1" ; shift
+outlibg=$(pwd -L)
+
+excluded='^/System|^/usr/lib'
+
+function resolve() {
+    workdone=0
+    exe="$1"; shift
+    exedir=$(dirname $exe)
+    outlib=$(realpath --relative-to=${exedir} $outlibg)
+    # echo exe=$exe >&2
+    # echo exedir=$exedir >&2
+    # echo outlibg=$outlibg >&2
+    # echo outlib=$outlib >&2
+    for target in $@ ; do
+	writable=0; if [ ! -w $target ]; then writable=0; fi; chmod +w $target
+	for lib in $(otool -L $target | sed -e '/:[[:space:]]*$/d' -e 's/^[[:space:]]*//' -e 's/[[:space:]].*$//' |egrep -v "$excluded|@executable_path"|egrep -v "@rpath" ) ; do
+	    libcopy=$outlibg/$(basename $lib)
+	    if [ ! -r $libcopy ]; then
+		cp -pf $lib $libcopy
+		workdone=1
+	    fi
+	    install_name_tool -change "$lib" "@executable_path/$outlib/$(basename $lib)" $target
+	done
+	if [ $writable == 0 ]; then chmod -w $target ; fi
+    done
+    echo $workdone
+}
+
+workdone=$( resolve "${exemain}" $@ )
+while [ $workdone != 0 ];  do
+    workdone=$( resolve "$1" $outlibg/* )
+done
+

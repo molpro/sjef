@@ -1,0 +1,11 @@
+find_package(pugixml QUIET)
+if (TARGET pugixml)
+    set_target_properties(pugixml PROPERTIES IMPORTED_GLOBAL TRUE)
+    add_library(pugixml::pugixml ALIAS pugixml)
+else ()
+    declare_dependency(pugixml https://github.com/zeux/pugixml)
+endif ()
+
+if (BUILD_TESTS)
+    declare_dependency(googletest https://github.com/google/googletest.git)
+endif ()

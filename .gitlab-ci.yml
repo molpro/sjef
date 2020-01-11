@@ -16,9 +16,8 @@ build:
   #    - merge_requests
   script:
     - TOP=$PWD
-    - echo CI_COMMIT_SHA=$CI_COMMIT_SHA
-    - env
     - git checkout $CI_COMMIT_SHA # because of cache
+    - git fetch --tags
     - git reset --hard
     - git clean -f program lib test
     - procs=$(lscpu -p | egrep -v '^#' | wc -l ) || procs=$(sysctl -n hw.physicalcpu) || procs=1; echo $procs processors available

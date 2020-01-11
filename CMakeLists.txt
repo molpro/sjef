@@ -6,21 +6,11 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(libconfig)
 
 execute_process(
-#        COMMAND git name-rev --name-only --tags HEAD
         COMMAND git describe --tags --abbrev=0 --always HEAD
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         OUTPUT_VARIABLE SJEF_VERSION)
 string(STRIP "${SJEF_VERSION}" SJEF_VERSION)
-if (SJEF_VERSION STREQUAL "undefined")
-    execute_process(
-            COMMAND git rev-parse --short HEAD
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-            OUTPUT_VARIABLE SJEF_VERSION)
-    string(STRIP "${SJEF_VERSION}" SJEF_VERSION)
-    project(sjef LANGUAGES CXX C VERSION 0.0)
-else ()
-    project(sjef LANGUAGES CXX C VERSION ${SJEF_VERSION})
-endif ()
+project(sjef LANGUAGES CXX C VERSION ${SJEF_VERSION})
 message("SJEF_VERSION: ${SJEF_VERSION}")
 
 set(LIB_FILENAME "sjef")

@@ -3,7 +3,6 @@ cache:
   paths:
     - public
     - build
-    - dependencies
 build:
   image: ${CI_REGISTRY}/molpro/sjef
   #  only:

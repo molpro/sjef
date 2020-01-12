@@ -21,7 +21,7 @@ build:
     - git reset --hard
     - git clean -f program lib test
     - procs=$(lscpu -p | egrep -v '^#' | wc -l ) || procs=$(sysctl -n hw.physicalcpu) || procs=1; echo $procs processors available
-    - cd $TOP; BUILD=build ; mkdir -p $BUILD && cd $BUILD && pwd && cmake -G Ninja $TOP ;  cmake --build . ;  ctest -V -j $procs
+    - cd $TOP; BUILD=build ; mkdir -p $BUILD && cd $BUILD && pwd && cmake $TOP ;  cmake --build . ;  ctest -V -j $procs
     - mkdir -p $TOP/public/${CI_COMMIT_REF_NAME}
     - rsync -a --delete $TOP/$BUILD/html/ $TOP/public/${CI_COMMIT_REF_NAME}
 pages:

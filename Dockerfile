@@ -5,6 +5,6 @@ FROM alpine:latest
 RUN apk update && apk add --no-cache \ 
 cmake g++ gfortran libxml2-dev git doxygen boost-filesystem wget tar build-base binutils file 
 
-RUN  wget -qO- "https://cmake.org/files/v3.14/cmake-3.14.3-Linux-x86_64.tar.gz" | tar --strip-components=1 -xz -C /usr/local; echo 'PATH="$PATH:/usr/local/bin"; export PATH; cmake --version' >> /etc/profile
+#RUN  wget -qO- "https://cmake.org/files/v3.14/cmake-3.14.3-Linux-x86_64.tar.gz" | tar --strip-components=1 -xz -C /usr/local; echo 'PATH="$PATH:/usr/local/bin"; export PATH; cmake --version' >> /etc/profile
 
 

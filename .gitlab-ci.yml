@@ -2,16 +2,10 @@ cache:
   key: ${CI_PROJECT_NAME}
   paths:
     - public
-  # cache everything so that unnecessary recompilation is avoided
-#    - lib
-#    - cmake
-#    - test
-#    - program
-#    - CMakeLists.txt
-#    - build
-#    - dependencies
+    - build
+    - dependencies
 build:
-  image: pjknowles/sjef
+  image: ${CI_REGISTRY}/molpro/sjef
   #  only:
   #    - merge_requests
   script:

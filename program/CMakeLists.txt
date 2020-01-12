@@ -26,9 +26,6 @@ add_custom_command(OUTPUT ${deployp}/bin/${PROGRAM_FILENAME}${CMAKE_EXECUTABLE_S
         DEPENDS ${PROGRAM_NAME} ${deployp}/share/${PROGRAM_FILENAME}/sbin/uninstall
         COMMAND ${CMAKE_COMMAND} -E make_directory ${deployp}/bin
         COMMAND chmod +x ${deployp}/share/${PROGRAM_FILENAME}/sbin/uninstall
-        COMMAND ls -ltraR ${deployp}
-        COMMAND ls -ltraR ${CMAKE_CURRENT_BINARY_DIR}
-        COMMAND find ${CMAKE_CURRENT_BINARY_DIR} -name 'sjef*'
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${PROGRAM_FILENAME}${CMAKE_EXECUTABLE_SUFFIX} ${deployp}/bin
         )
 add_custom_target(${LIB_FILENAME}-deploy ALL DEPENDS ${deployp}/bin/${PROGRAM_FILENAME}${CMAKE_EXECUTABLE_SUFFIX})

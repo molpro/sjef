@@ -2,16 +2,9 @@ cache:
   key: ${CI_PROJECT_NAME}
   paths:
     - public
-  # cache everything so that unnecessary recompilation is avoided
-#    - lib
-#    - cmake
-#    - test
-#    - program
-#    - CMakeLists.txt
-#    - build
-#    - dependencies
+    - build
 build:
-  image: pjknowles/opensuse
+  image: ${CI_REGISTRY}/molpro/sjef
   #  only:
   #    - merge_requests
   script:
@@ -21,7 +14,7 @@ build:
     - git reset --hard
     - git clean -f program lib test
     - procs=$(lscpu -p | egrep -v '^#' | wc -l ) || procs=$(sysctl -n hw.physicalcpu) || procs=1; echo $procs processors available
-    - cd $TOP; BUILD=build ; mkdir -p $BUILD && cd $BUILD && pwd && cmake -G Ninja $TOP ;  cmake --build . ;  ctest -V -j $procs
+    - cd $TOP; BUILD=build ; mkdir -p $BUILD && cd $BUILD && pwd && cmake $TOP ;  cmake --build . ;  ctest -V -j $procs
     - mkdir -p $TOP/public/${CI_COMMIT_REF_NAME}
     - rsync -a --delete $TOP/$BUILD/html/ $TOP/public/${CI_COMMIT_REF_NAME}
 pages:

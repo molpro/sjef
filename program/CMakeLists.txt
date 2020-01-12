@@ -23,7 +23,7 @@ set(prefix "/usr/local")
 set(deployp "${deploy}${prefix}")
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/uninstall.in ${deployp}/share/${PROGRAM_FILENAME}/sbin/uninstall)
 add_custom_command(OUTPUT ${deployp}/bin/${PROGRAM_FILENAME}${CMAKE_EXECUTABLE_SUFFIX}
-        DEPENDS ${PROGRAM_FILENAME} ${deployp}/share/${PROGRAM_FILENAME}/sbin/uninstall
+        DEPENDS ${PROGRAM_NAME} ${deployp}/share/${PROGRAM_FILENAME}/sbin/uninstall
         COMMAND ${CMAKE_COMMAND} -E make_directory ${deployp}/bin
         COMMAND chmod +x ${deployp}/share/${PROGRAM_FILENAME}/sbin/uninstall
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${PROGRAM_FILENAME}${CMAKE_EXECUTABLE_SUFFIX} ${deployp}/bin

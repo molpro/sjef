@@ -11,7 +11,7 @@ cache:
 #    - build
 #    - dependencies
 build:
-  image: pjknowles/opensuse
+  image: pjknowles/sjef
   #  only:
   #    - merge_requests
   script:

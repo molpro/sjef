@@ -24,7 +24,7 @@ class Backend {
           std::string cache = "${PWD}",
           std::string run_command = "sjef",
           std::string run_jobnumber = "([0-9]+)",
-          std::string status_command = "/bin/ps -o pid,state -p",
+          std::string status_command = "ps -o pid,state -p",
           std::string status_running = "^S$",
           std::string status_waiting = "^[^SZ]$",
           std::string kill_command = "pkill -P")

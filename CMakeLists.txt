@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 option(BUILD_TESTS "Whether to build tests or not" ON)
+option(BUILD_PROGRAM "Whether to build sjef bash program or not" ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
@@ -26,7 +27,10 @@ if (BUILD_TESTS)
     enable_testing()
     add_subdirectory(test)
 endif ()
-add_subdirectory(program)
+
+if (BUILD_PROGRAM)
+    add_subdirectory(program)
+endif ()
 
 find_package(Doxygen)
 if (DOXYGEN_FOUND)

@@ -961,8 +961,7 @@ size_t sjef::Project::input_hash() const {
       input += std::string(std::istreambuf_iterator<char>(s2),
                            std::istreambuf_iterator<char>());
     } else
-      input += line + "\n";
-    input += referenced_file_contents(line);
+      input += referenced_file_contents(line) + "\n";
   }
   if (debug)
     std::cerr << "rewritten input " << input << std::endl;

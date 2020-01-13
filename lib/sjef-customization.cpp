@@ -25,7 +25,7 @@ std::string sjef::Project::input_from_output() const {
 
 std::string sjef::Project::referenced_file_contents(const std::string& line) const {
   //TODO implementation for Molpro geometry= and include
-  return "";
+  return line;
 }
 
 void sjef::Project::rewrite_input_file(const std::string& input_file_name, const std::string& old_name) {

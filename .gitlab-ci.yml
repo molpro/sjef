@@ -2,7 +2,6 @@ cache:
   key: ${CI_PROJECT_NAME}
   paths:
     - public
-    - build
 build:
   image: ${CI_REGISTRY}/molpro/sjef
   #  only:

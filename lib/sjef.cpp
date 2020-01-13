@@ -101,6 +101,7 @@ Project::Project(const std::string& filename,
   auto recent_projects_directory = expand_path(std::string{"~/.sjef/"} + m_project_suffix);
   fs::create_directories(recent_projects_directory);
   m_recent_projects_file = expand_path(recent_projects_directory + "/projects");
+  std::cerr << "contructor"<<m_filename<<",  m_erase_on_destroy="<<m_erase_on_destroy<<std::endl;
   for (const auto& key: suffix_keys)
     if (m_suffixes.count(key) < 1)
       m_suffixes[key] = key;
@@ -183,6 +184,7 @@ std::string Project::get_project_suffix(const std::string& filename, const std::
 
 Project::~Project() {
   properties_last_written_by_me(true);
+  std::cerr << "destructor"<<m_filename<<",  m_erase_on_destroy="<<m_erase_on_destroy<<std::endl;
   if (m_erase_on_destroy) erase();
 }
 
@@ -344,6 +346,7 @@ bool Project::copy(const std::string& destination_filename, bool force, bool kee
 }
 
 void Project::erase() {
+  std::cerr << "erase "<<m_filename<<std::endl;
   if (fs::remove_all(m_filename)) {
     recent_edit("", m_filename);
     m_filename = "";

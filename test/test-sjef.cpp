@@ -143,7 +143,7 @@ TEST(project, copyMolpro) {
     p.copy(filename_new, true);
   }
   sjef::Project p(filename_new, nullptr, true);
-  EXPECT_TRUE(fs::exists(sjef::expand_path(filename_old)));
+  EXPECT_FALSE(fs::exists(sjef::expand_path(filename_old)));
   EXPECT_TRUE(fs::exists(sjef::expand_path(filename_new)));
   std::string inp;
   std::ifstream(p.filename("inp")) >> inp;

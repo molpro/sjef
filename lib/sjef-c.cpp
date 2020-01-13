@@ -321,7 +321,7 @@ char** sjef_project_backend_names(const char* project) {
 }
 
 char* sjef_project_recent(int number, const char* suffix) {
-  return strdup(sjef::Project("",
+  return strdup(sjef::Project("$TMPDIR/.sjef.recent",
                               nullptr,
                               true,
                               false,

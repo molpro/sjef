@@ -288,15 +288,8 @@ void Project::force_file_names(const std::string& oldname) {
         rename(path, newpath);
 
 
-        // TODO put this in customization
-        if (newpath.extension() == ".inp") {
+        if (newpath.extension() == ".inp")
           rewrite_input_file(newpath.string(),oldname);
-//          std::ifstream in(newpath.string());
-//          std::string contents((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-//          boost::replace_all(contents, oldname + ".xyz", name() + ".xyz");
-//          std::ofstream out(newpath.string());
-//          out << contents;
-        }
       }
     }
     catch (const std::exception& ex) {

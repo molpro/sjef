@@ -142,7 +142,6 @@ TEST(project, copyMolpro) {
   std::ofstream(p.filename("xyz")) << "1\n\nHe 0 0 0\n";
   p.copy(filename_new,true);
   }
-  sjef::Project::erase(filename_new);
   sjef::Project p(filename_new, nullptr, true);
   EXPECT_TRUE(fs::exists(sjef::expand_path(filename_old)));
   EXPECT_TRUE(fs::exists(sjef::expand_path(filename_new)));

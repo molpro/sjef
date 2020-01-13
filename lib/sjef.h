@@ -154,6 +154,7 @@ class Project {
  * @return The input used to construct the output, or, if that can't be deduced, an empty string.
  */
   std::string input_from_output() const;
+  void rewrite_input_file(const std::string& input_file_name, const std::string& old_name);
   /*!
    * @brief Get the xml output, completing any open tags if necessary
    * @return
@@ -236,7 +237,7 @@ class Project {
   std::string cache(const Backend& backend) const;
   void force_file_names(const std::string& oldname);
   /*!
-   * @brief Take a line from a program input file, and figure out whether it references some other files that would influence the program behaviour. If so, return the contents of those files.
+   * @brief Take a line from a program input file, and figure out whether it references some other files that would influence the program behaviour. If so, return the contents of those files; otherwise, return the line.
    * @param line
    * @return
    */

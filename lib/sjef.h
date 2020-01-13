@@ -154,6 +154,7 @@ class Project {
  * @return The input used to construct the output, or, if that can't be deduced, an empty string.
  */
   std::string input_from_output() const;
+  void rewrite_input_file(const std::string& input_file_name, const std::string& old_name);
   /*!
    * @brief Get the xml output, completing any open tags if necessary
    * @return

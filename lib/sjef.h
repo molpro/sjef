@@ -237,7 +237,7 @@ class Project {
   std::string cache(const Backend& backend) const;
   void force_file_names(const std::string& oldname);
   /*!
-   * @brief Take a line from a program input file, and figure out whether it references some other files that would influence the program behaviour. If so, return the contents of those files.
+   * @brief Take a line from a program input file, and figure out whether it references some other files that would influence the program behaviour. If so, return the contents of those files; otherwise, return the line.
    * @param line
    * @return
    */

@@ -24,7 +24,6 @@
 #include <sys/wait.h>
 #endif
 
-
 namespace bp = boost::process;
 namespace fs = boost::filesystem;
 
@@ -133,11 +132,12 @@ Project::Project(const std::string& filename,
   }
   recent_edit(m_filename);
 
-  m_backends[sjef::Backend::default_name]=sjef::Backend(sjef::Backend::default_name, "localhost", "{$PWD}", m_project_suffix);
-  m_backends[sjef::Backend::dummy_name]=sjef::Backend(sjef::Backend::dummy_name,
-                                        "localhost",
-                                        "{$PWD}",
-                                        "/bin/sh -c 'echo dummy > ${0%.*}.out; echo \"<?xml version=\\\"1.0\\\"?>\n<root/>\" > ${0%.*}.xml'");
+  m_backends[sjef::Backend::default_name] =
+      sjef::Backend(sjef::Backend::default_name, "localhost", "{$PWD}", m_project_suffix);
+  m_backends[sjef::Backend::dummy_name] = sjef::Backend(sjef::Backend::dummy_name,
+                                                        "localhost",
+                                                        "{$PWD}",
+                                                        "/bin/sh -c 'echo dummy > ${0%.*}.out; echo \"<?xml version=\\\"1.0\\\"?>\n<root/>\" > ${0%.*}.xml'");
   for (const auto& config_dir : std::vector<std::string>{"/usr/local/etc/sjef", "~/.sjef"}) {
     const auto config_file = expand_path(config_dir + "/" + m_project_suffix + "/backends.xml");
     if (fs::exists(config_file)) {
@@ -176,7 +176,8 @@ Project::Project(const std::string& filename,
 std::string Project::get_project_suffix(const std::string& filename, const std::string& default_suffix) const {
   auto suffix = fs::path{expand_path(filename, default_suffix)}.extension().string();
   if (suffix.empty())
-    throw std::runtime_error("Cannot deduce project suffix for \""+filename+"\" with default suffix \""+default_suffix+"\"");
+    throw std::runtime_error(
+        "Cannot deduce project suffix for \"" + filename + "\" with default suffix \"" + default_suffix + "\"");
   return suffix.substr(1);
 }
 
@@ -287,9 +288,8 @@ void Project::force_file_names(const std::string& oldname) {
 //        std::cerr << "rename(" << path.filename() << "," << newpath.filename() << ")" << std::endl;
         rename(path, newpath);
 
-
         if (newpath.extension() == ".inp")
-          rewrite_input_file(newpath.string(),oldname);
+          rewrite_input_file(newpath.string(), oldname);
       }
     }
     catch (const std::exception& ex) {
@@ -393,7 +393,7 @@ std::string Project::backend_get(const std::string& backend, const std::string& 
   else if (key == "kill_command")
     return be.kill_command;
   else
-    throw std::out_of_range("Invalid key "+key);
+    throw std::out_of_range("Invalid key " + key);
 }
 
 std::string Project::backend_parameter_expand(const std::string& backend, const std::string& templ) {
@@ -611,7 +611,7 @@ bool Project::run_needed(int verbosity) {
   if (not inputFromOutput.empty()) {
     if (verbosity > 1)
       std::cerr << "sjef::Project::run_needed, input from output\n" << input_from_output() << std::endl;
-    if (std::regex_replace(file_contents("inp"),std::regex{" *\n\n*"},"\n") != input_from_output()) return true;
+    if (std::regex_replace(file_contents("inp"), std::regex{" *\n\n*"}, "\n") != input_from_output()) return true;
   }
   auto run_input_hash = property_get("run_input_hash");
   if (not run_input_hash.empty()) {
@@ -943,6 +943,13 @@ size_t sjef::Project::project_hash() {
 }
 
 size_t sjef::Project::input_hash() const {
+  constexpr bool debug = false;
+  if (debug) {
+    std::cerr << "input_hash" << filename("inp") << std::endl;
+    std::ifstream ss(filename("inp"));
+    std::cerr << "unmodified file\n" << std::string((std::istreambuf_iterator<char>(ss)),
+                                                    std::istreambuf_iterator<char>()) << std::endl;
+  }
   std::ifstream ss(filename("inp"));
   std::string line;
   std::string input;
@@ -957,6 +964,8 @@ size_t sjef::Project::input_hash() const {
       input += line + "\n";
     input += referenced_file_contents(line);
   }
+  if (debug)
+    std::cerr << "rewritten input " << input << std::endl;
   return std::hash<std::string>{}(input);
 }
 

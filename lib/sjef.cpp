@@ -953,16 +953,8 @@ size_t sjef::Project::input_hash() const {
   std::ifstream ss(filename("inp"));
   std::string line;
   std::string input;
-  while (std::getline(ss, line)) {
-    auto pos = line.find("geometry=");
-    if (pos != std::string::npos && line[pos + 1] != '{') {
-      auto fn = filename("", line.substr(pos + 9));
-      std::ifstream s2(fn);
-      input += std::string(std::istreambuf_iterator<char>(s2),
-                           std::istreambuf_iterator<char>());
-    } else
-      input += referenced_file_contents(line) + "\n";
-  }
+  while (std::getline(ss, line))
+    input += referenced_file_contents(line) + "\n";
   if (debug)
     std::cerr << "rewritten input " << input << std::endl;
   return std::hash<std::string>{}(input);

@@ -24,7 +24,16 @@ std::string sjef::Project::input_from_output() const {
 }
 
 std::string sjef::Project::referenced_file_contents(const std::string& line) const {
-  //TODO implementation for Molpro geometry= and include
+  //TODO full robust implementation for Molpro geometry= and include
+  auto pos = line.find("geometry=");
+  if (pos != std::string::npos && line[pos + 1] != '{') {
+    auto fn = filename("", line.substr(pos + 9));
+    std::ifstream s2(fn);
+    auto g = std::string(std::istreambuf_iterator<char>(s2),
+                       std::istreambuf_iterator<char>());
+    g.erase(g.end()-1,g.end());
+    return g;
+  }
   return line;
 }
 

@@ -1,4 +1,7 @@
 #include <pugixml.hpp>
+#include <fstream>
+#include <boost/algorithm/string.hpp>
+#include <iostream>
 #include "sjef.h"
 #include "sjef-backend.h"
 ///> @private
@@ -10,7 +13,7 @@ std::string sjef::Project::input_from_output() const {
   sjef::pugi_xml_document outxml;
   outxml.load_string(xml().c_str());
 
-  { // look for Molpro input in Molpro output
+  if (m_project_suffix == "molpro") { // look for Molpro input in Molpro output
     for (const auto& node : outxml.select_nodes("/molpro/job/input/p"))
       result += std::string{node.node().child_value()} + "\n";
     while (result.back() == '\n')
@@ -21,7 +24,30 @@ std::string sjef::Project::input_from_output() const {
 }
 
 std::string sjef::Project::referenced_file_contents(const std::string& line) const {
-  //TODO implementation for Molpro geometry= and include
-  return "";
+  //TODO full robust implementation for Molpro geometry= and include
+  auto pos = line.find("geometry=");
+  if (pos != std::string::npos && line[pos + 1] != '{') {
+    auto fn = filename("", line.substr(pos + 9));
+    std::ifstream s2(fn);
+    auto g = std::string(std::istreambuf_iterator<char>(s2),
+                       std::istreambuf_iterator<char>());
+    g.erase(g.end()-1,g.end());
+    return g;
+  }
+  return line;
 }
 
+void sjef::Project::rewrite_input_file(const std::string& input_file_name, const std::string& old_name) {
+  if (m_project_suffix == "molpro") {
+    constexpr bool debug=false;
+    std::ifstream in(input_file_name);
+    std::string contents((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    if (debug)
+      std::cerr << "rewrite_input_file("<<input_file_name<<", "<<old_name<<") original contents:\n"<<contents <<std::endl;
+    boost::replace_all(contents, "geometry=" + old_name + ".xyz", "geometry=" + this->name() + ".xyz");
+    if (debug)
+      std::cerr << "rewrite_input_file("<<input_file_name<<", "<<old_name<<") final contents:\n"<<contents <<std::endl;
+    std::ofstream out(input_file_name);
+    out << contents;
+  }
+}

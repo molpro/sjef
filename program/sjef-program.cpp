@@ -175,11 +175,12 @@ int main(int argc, char* argv[]) {
       success = proj.import_file(extras, forceArg.getValue());
     else if (command == "export")
       success = proj.export_file(extras, forceArg.getValue());
-    else if (command == "new");
-    else if (command == "copy")
-      proj.copy(extras.front(),forceArg.getValue());
+    else if (command == "new") {
+      success = proj.import_file(extras, forceArg.getValue());
+    } else if (command == "copy")
+      proj.copy(extras.front(), forceArg.getValue());
     else if (command == "move")
-      success = proj.move(extras.front(),forceArg.getValue());
+      success = proj.move(extras.front(), forceArg.getValue());
     else if (command == "erase")
       proj.erase();
     else if (command == "property")

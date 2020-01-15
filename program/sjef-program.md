@@ -20,7 +20,7 @@ If `-s` has been used, and the extension is absent or different to that specifie
 
 *operation* is one of
 
-`new`: Make a completely new project bundle
+`new`: Make a completely new project bundle. Any additional arguments are interpreted as files to be imported into the project.
 
 `edit`: Edit the input file, whose name is the project base name with extension from the `--suffix-inp` flag,
 using `${VISUAL}` (default `${EDITOR}`, default `vi`).

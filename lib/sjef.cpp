@@ -1072,4 +1072,23 @@ std::vector<std::string> sjef::Project::backend_names() const {
   return result;
 }
 
+void sjef::Project::ensure_remote_server() {
+  if (m_remote_server.process.running()
+    //TODO if backend has changed don't return
+      )
+    return;
+  std::cerr << "Start remote_server " << std::endl;
+  m_remote_server.process.terminate();
+  m_remote_server.process = bp::child(bp::search_path("ssh"),
+                                      m_backends.at(property_get("backend")).host,
+                                      bp::std_in < m_remote_server.in,
+                                      bp::std_err > m_remote_server.err,
+                                      bp::std_out > m_remote_server.out);
+  m_remote_server.in << "ls -ltr"<<std::endl;
+  std::string result;
+  m_remote_server.out >> result;
+  std::cerr << result<<std::endl;
+
+}
+
 } // namespace sjef

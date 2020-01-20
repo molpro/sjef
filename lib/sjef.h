@@ -34,7 +34,12 @@ class Project {
   std::map<std::string, Backend> m_backends;
   std::unique_ptr<pugi_xml_document> m_backend_doc;
   mutable std::unique_ptr<boost::process::ipstream> m_status_stream;
-  mutable std::unique_ptr<boost::process::child> m_remote_server;
+  mutable struct {
+    boost::process::child process;
+    boost::process::opstream in;
+    boost::process::ipstream out;
+    boost::process::ipstream err;
+  } m_remote_server;
  public:
   static const std::string s_propertyFile;
   /*!
@@ -231,6 +236,7 @@ class Project {
    * @return the filename of the project, or "" if not found
    */
   std::string recent(int number = 1) const;
+  void ensure_remote_server();
  protected:
   std::string get_project_suffix(const std::string& filename, const std::string& default_suffix) const;
   void recent_edit(const std::string& add, const std::string& remove = "");

@@ -135,14 +135,20 @@ int sjef_project_run(const char* project,
   catch (...) {}
   return false;
 }
-int sjef_project_status(const char* project, int verbosity) {
+static int sjef_project_status_asynchronous(const char* project, int verbosity, int wait) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    return static_cast<int>(projects.at(project).status(verbosity));
+    return static_cast<int>(projects.at(project).status(verbosity, wait!=0));
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
   return 0;
+}
+int sjef_project_status(const char* project, int verbosity) {
+  return sjef_project_status_asynchronous(project, verbosity, 1);
+}
+int sjef_project_status_initiate(const char* project, int verbosity) {
+  return sjef_project_status_asynchronous(project, verbosity, 0);
 }
 void sjef_project_kill(const char* project) {
   try {

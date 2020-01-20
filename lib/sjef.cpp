@@ -648,7 +648,7 @@ std::string Project::file_contents(const std::string& suffix, const std::string&
   return result;
 }
 
-status Project::status(int verbosity) const {
+status Project::status(int verbosity, bool wait) const {
   if (property_get("backend").empty()) return unknown;
   auto be = m_backends.at(property_get("backend"));
   if (verbosity > 1)
@@ -659,6 +659,7 @@ status Project::status(int verbosity) const {
   if (pid.empty() or std::stoi(pid) < 0) return unknown;
   const_cast<Project*>(this)->property_set("backend_inactive", "0");
   if (be.host == "localhost") {
+    if (not wait) return unknown; // asynchronous mode not implemented for local host
 //    std::cerr << "status of local job " << pid << std::endl;
     auto spacepos = be.status_command.find_first_of(" ");
     bp::child c;
@@ -687,20 +688,36 @@ status Project::status(int verbosity) const {
   } else {
     if (verbosity > 1)
       std::cerr << "remote status " << be.host << ":" << be.status_command << ":" << pid << std::endl;
-    bp::ipstream pstderr, pstdout;
+    if (!m_status_stream) {
+      m_status_stream.reset(new bp::ipstream);
+      bp::ipstream pstderr;
+      bp::spawn(bp::search_path("ssh"),
+                be.host,
+                be.status_command,
+                pid,
+                bp::std_out > *m_status_stream,
+                bp::std_err > pstderr);
+    }
+    if (not wait) return unknown;
     std::string line;
-    bp::spawn(bp::search_path("ssh"), be.host, be.status_command, pid, bp::std_out > pstdout, bp::std_err > pstderr);
-    while (std::getline(pstdout, line)) {
+    while (std::getline(*m_status_stream, line)) {
       if (verbosity > 0) std::cout << line << std::endl;
       if ((" " + line).find(" " + pid + " ") != std::string::npos) {
         std::smatch match;
         if (verbosity > 2) std::cerr << "line" << line << std::endl;
         if (verbosity > 2) std::cerr << "status_running " << be.status_running << std::endl;
         if (verbosity > 2) std::cerr << "status_waiting " << be.status_waiting << std::endl;
-        if (std::regex_search(line, match, std::regex{be.status_running})) return running;
-        if (std::regex_search(line, match, std::regex{be.status_waiting})) return waiting;
+        if (std::regex_search(line, match, std::regex{be.status_running})) {
+          m_status_stream.reset(nullptr);
+          return running;
+        }
+        if (std::regex_search(line, match, std::regex{be.status_waiting})) {
+          m_status_stream.reset(nullptr);
+          return waiting;
+        }
       }
     }
+    m_status_stream.reset(nullptr);
   }
   auto result = property_get("jobnumber") == "" ? unknown : completed;
   if (verbosity > 1) std::cerr << "fallen through loop, result=" << result << std::endl;

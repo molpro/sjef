@@ -34,6 +34,7 @@ class Project {
   std::map<std::string, Backend> m_backends;
   std::unique_ptr<pugi_xml_document> m_backend_doc;
   mutable std::unique_ptr<boost::process::ipstream> m_status_stream;
+  mutable std::unique_ptr<boost::process::child> m_remote_server;
  public:
   static const std::string s_propertyFile;
   /*!

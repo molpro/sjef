@@ -189,7 +189,10 @@ int main(int argc, char* argv[]) {
     else if (command == "wait") {
       proj.wait();
     } else if (command == "status") {
+      proj.ensure_remote_server();
       auto status = proj.status(verboseSwitch.getValue());
+      for (int i=0; i<10; ++i)
+        if (status != proj.status(verboseSwitch.getValue())) throw std::runtime_error("wrong status");
       std::cout << "Status: " << status_message[status];
       if (status != sjef::status::unknown && !proj.property_get("jobnumber").empty())
         std::cout << ", job number " << proj.property_get("jobnumber") << " on backend "

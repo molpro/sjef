@@ -688,19 +688,11 @@ status Project::status(int verbosity, bool wait) const {
   } else {
     if (verbosity > 1)
       std::cerr << "remote status " << be.host << ":" << be.status_command << ":" << pid << std::endl;
-    if (!m_status_stream) {
-      m_status_stream.reset(new bp::ipstream);
-      bp::ipstream pstderr;
-      bp::spawn(bp::search_path("ssh"),
-                be.host,
-                be.status_command,
-                pid,
-                bp::std_out > *m_status_stream,
-                bp::std_err > pstderr);
-    }
-    if (not wait) return unknown;
+    ensure_remote_server();
+    m_remote_server.in << be.status_command << " " << pid << std::endl;
+    m_remote_server.in << "echo '---'" << std::endl;
     std::string line;
-    while (std::getline(*m_status_stream, line)) {
+    while (std::getline(m_remote_server.out, line) && line != "---") {
       if (verbosity > 0) std::cout << line << std::endl;
       if ((" " + line).find(" " + pid + " ") != std::string::npos) {
         std::smatch match;
@@ -708,16 +700,13 @@ status Project::status(int verbosity, bool wait) const {
         if (verbosity > 2) std::cerr << "status_running " << be.status_running << std::endl;
         if (verbosity > 2) std::cerr << "status_waiting " << be.status_waiting << std::endl;
         if (std::regex_search(line, match, std::regex{be.status_running})) {
-          m_status_stream.reset(nullptr);
           return running;
         }
         if (std::regex_search(line, match, std::regex{be.status_waiting})) {
-          m_status_stream.reset(nullptr);
           return waiting;
         }
       }
     }
-    m_status_stream.reset(nullptr);
   }
   auto result = property_get("jobnumber") == "" ? unknown : completed;
   if (verbosity > 1) std::cerr << "fallen through loop, result=" << result << std::endl;
@@ -1072,7 +1061,7 @@ std::vector<std::string> sjef::Project::backend_names() const {
   return result;
 }
 
-void sjef::Project::ensure_remote_server() {
+void sjef::Project::ensure_remote_server() const {
   if (m_remote_server.process.running()
     //TODO if backend has changed don't return
       )
@@ -1080,14 +1069,17 @@ void sjef::Project::ensure_remote_server() {
   std::cerr << "Start remote_server " << std::endl;
   m_remote_server.process.terminate();
   m_remote_server.process = bp::child(bp::search_path("ssh"),
-                                      m_backends.at(property_get("backend")).host,
+                                      property_get("backend"),
                                       bp::std_in < m_remote_server.in,
                                       bp::std_err > m_remote_server.err,
                                       bp::std_out > m_remote_server.out);
-  m_remote_server.in << "ls -ltr"<<std::endl;
-  std::string result;
-  m_remote_server.out >> result;
-  std::cerr << result<<std::endl;
+//  m_remote_server.in << "ls -ltr; echo '---'" << std::endl;
+//  std::string result;
+//  do {
+//    m_remote_server.out >> result;
+//    std::cerr << result ;
+//  }
+//  while (result != "---");
 
 }
 

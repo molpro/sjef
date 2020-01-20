@@ -236,7 +236,7 @@ class Project {
    * @return the filename of the project, or "" if not found
    */
   std::string recent(int number = 1) const;
-  void ensure_remote_server();
+  void ensure_remote_server() const;
  protected:
   std::string get_project_suffix(const std::string& filename, const std::string& default_suffix) const;
   void recent_edit(const std::string& add, const std::string& remove = "");

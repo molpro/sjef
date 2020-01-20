@@ -6,6 +6,7 @@
 #include <vector>
 #include <memory>
 #include <boost/filesystem/path.hpp>
+#include <boost/process/child.hpp>
 
 namespace sjef {
 class Backend; ///< @private
@@ -30,8 +31,9 @@ class Project {
   std::unique_ptr<pugi_xml_document> m_properties;
   std::map<std::string, std::string> m_suffixes; ///< File suffixes for the standard files
   std::string m_recent_projects_file;
-  std::map<std::string,Backend> m_backends;
+  std::map<std::string, Backend> m_backends;
   std::unique_ptr<pugi_xml_document> m_backend_doc;
+  mutable std::unique_ptr<boost::process::ipstream> m_status_stream;
  public:
   static const std::string s_propertyFile;
   /*!
@@ -47,8 +49,9 @@ class Project {
                    const Project* source = nullptr,
                    bool erase_on_destroy = false,
                    bool construct = true,
-                   const std::string& default_suffix="",
-                   const std::map<std::string,std::string>& suffixes={{"inp","inp"},{"out","out"},{"xml","xml"}});
+                   const std::string& default_suffix = "",
+                   const std::map<std::string, std::string>& suffixes = {{"inp", "inp"}, {"out", "out"},
+                                                                         {"xml", "xml"}});
   Project(Project&& source) = default;
   virtual ~Project();
   /*!
@@ -127,12 +130,14 @@ class Project {
    * @param verbosity
    * - 0 print nothing
    * - 1 show result from underlying status commands
+   * @param wait If true, complete the status request before returning. If false,
+   * initiate the request and return immediately; a subsequent call with wait=true will complete
    * @return
    * - 0 not found
    * - 1 running
    * - 2 queued
    */
-  sjef::status status(int verbosity = 0) const;
+  sjef::status status(int verbosity = 0, bool wait = true) const;
   /*!
    * @brief Wait unconditionally for status() to return 'completed'
    * @param maximum_microseconds The poll interval is successively increased between calls to status() until reaching this value.
@@ -308,7 +313,7 @@ class Project {
    * @param name The name of the backend to be created. An existing backend of the same name will be overwritten
    * @param fields The backend fields to be specified
    */
-  void add_backend(const std::string& name, const std::map<std::string,std::string>& fields);
+  void add_backend(const std::string& name, const std::map<std::string, std::string>& fields);
 
   /*!
    * @brief Remove a backend from the project and from the user's global backend configuration for all projects of the same type.

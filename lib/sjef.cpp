@@ -658,6 +658,7 @@ status Project::status(int verbosity, bool wait) const {
     std::cerr << "job number " << pid << std::endl;
   if (pid.empty() or std::stoi(pid) < 0) return unknown;
   const_cast<Project*>(this)->property_set("backend_inactive", "0");
+  auto result = property_get("jobnumber") == "" ? unknown : completed;
   if (be.host == "localhost") {
     if (not wait) return unknown; // asynchronous mode not implemented for local host
 //    std::cerr << "status of local job " << pid << std::endl;
@@ -669,7 +670,6 @@ status Project::status(int verbosity, bool wait) const {
     c = bp::child(
         executable(cmd[0]), bp::args(std::vector<std::string>{cmd.begin() + 1, cmd.end()}),
         bp::std_out > is);
-    auto result = completed;
     while (std::getline(is, line)) {
       while (isspace(line.back())) line.pop_back();
 //      std::cout << "line: @"<<line<<"@"<<std::endl;
@@ -694,7 +694,7 @@ status Project::status(int verbosity, bool wait) const {
     std::cerr <<"sending "<<be.status_command << " " << pid << std::endl;
     std::string line;
     while (std::getline(m_remote_server.out, line)
-//    && line != "---"
+    && line != "---"
     ) {
       if (verbosity > 0) std::cerr << "line received: "<<line << std::endl;
       if ((" " + line).find(" " + pid + " ") != std::string::npos) {
@@ -703,15 +703,14 @@ status Project::status(int verbosity, bool wait) const {
         if (verbosity > 2) std::cerr << "status_running " << be.status_running << std::endl;
         if (verbosity > 2) std::cerr << "status_waiting " << be.status_waiting << std::endl;
         if (std::regex_search(line, match, std::regex{be.status_running})) {
-          return running;
+          result = running;
         }
         if (std::regex_search(line, match, std::regex{be.status_waiting})) {
-          return waiting;
+          result = waiting;
         }
       }
     }
   }
-  auto result = property_get("jobnumber") == "" ? unknown : completed;
   if (verbosity > 1) std::cerr << "fallen through loop, result=" << result << std::endl;
   synchronize(be, verbosity, true);
   const_cast<Project*>(this)->property_set("backend_inactive",

@@ -691,9 +691,12 @@ status Project::status(int verbosity, bool wait) const {
     ensure_remote_server();
     m_remote_server.in << be.status_command << " " << pid << std::endl;
     m_remote_server.in << "echo '---'" << std::endl;
+    std::cerr <<"sending "<<be.status_command << " " << pid << std::endl;
     std::string line;
-    while (std::getline(m_remote_server.out, line) && line != "---") {
-      if (verbosity > 0) std::cout << line << std::endl;
+    while (std::getline(m_remote_server.out, line)
+//    && line != "---"
+    ) {
+      if (verbosity > 0) std::cerr << "line received: "<<line << std::endl;
       if ((" " + line).find(" " + pid + " ") != std::string::npos) {
         std::smatch match;
         if (verbosity > 2) std::cerr << "line" << line << std::endl;

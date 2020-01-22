@@ -1074,7 +1074,7 @@ std::vector<std::string> sjef::Project::backend_names() const {
 
 void sjef::Project::ensure_remote_server() const {
   if (m_remote_server.process.running()
-  and m_remote_server.backend == property_get("backend")
+  and m_remote_server.host == property_get("backend")
       )
     return;
 //  std::cerr << "Start remote_server " << std::endl;

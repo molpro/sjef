@@ -118,6 +118,14 @@ int main(int argc, char* argv[]) {
     TCLAP::SwitchArg
         waitArg("w", "wait", "Wait for completion of a job launched by run", false);
     cmd.add(waitArg);
+    TCLAP::ValueArg<std::string>
+        repeatArg("r",
+                     "repeat",
+                     "Just for debugging",
+                     false,
+                     "1",
+                     "integer",
+                     cmd);
     TCLAP::UnlabeledValueArg<std::string>
         projectArg("project",
                    "The file name of the project bundle. If it has no extension and the -s flag has not been used, the extension .sjef is appended. If -s has been used, and the extension is absent or different to that specified, the -s extension is appended.",
@@ -171,6 +179,7 @@ int main(int argc, char* argv[]) {
       throw std::runtime_error("Backend " + backendSwitch.getValue() + " not defined or invalid");
 
     bool success = true;
+    for (int repeat=0; repeat < std::stoi(repeatArg.getValue()); ++repeat) {
     if (command == "import")
       success = proj.import_file(extras, forceArg.getValue());
     else if (command == "export")
@@ -189,6 +198,7 @@ int main(int argc, char* argv[]) {
     else if (command == "wait") {
       proj.wait();
     } else if (command == "status") {
+      proj.ensure_remote_server();
       auto status = proj.status(verboseSwitch.getValue());
       std::cout << "Status: " << status_message[status];
       if (status != sjef::status::unknown && !proj.property_get("jobnumber").empty())
@@ -217,7 +227,7 @@ int main(int argc, char* argv[]) {
       else
         std::cerr << "Run not needed, so not started" << std::endl;
     } else if (command == "sync") {
-      Project proj(project);
+//      Project proj(project);
       if (verboseSwitch.getValue() > 0) std::cerr << "Synchronize project " << proj.filename() << std::endl;
       auto cbe = proj.property_get("backend");
       if (cbe.empty()) {
@@ -240,6 +250,7 @@ int main(int argc, char* argv[]) {
       proj.clean(true, false, false);
     } else
       throw TCLAP::CmdLineParseException("Unknown subcommand: " + command);
+    }
     return success ? 0 : 1;
 
   } catch (TCLAP::ArgException& e)  // catch any exceptions

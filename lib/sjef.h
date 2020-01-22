@@ -41,6 +41,7 @@ class Project {
     boost::process::ipstream err;
     std::string host;
   } m_remote_server;
+  mutable std::string m_control_path_option;
  public:
   static const std::string s_propertyFile;
   /*!

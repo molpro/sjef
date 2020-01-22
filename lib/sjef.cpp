@@ -267,9 +267,9 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
     fs::current_path(current_path_save);
   if (not nostatus) // to avoid infinite loop with call from status()
     status(0); // to get backend_inactive
-//  std::cerr << "synchronize backend_inactive="<<property_get("backend_inactive")<<std::endl;
+//  std::cerr << "synchronize backend_inactive=" << property_get("backend_inactive") << std::endl;
   const_cast<Project*>(this)->property_set("backend_inactive_synced", property_get("backend_inactive"));
-//  std::cerr << "synchronize backend_inactive_synced="<<property_get("backend_inactive_synced")<<std::endl;
+//  std::cerr << "synchronize backend_inactive_synced=" << property_get("backend_inactive_synced") << std::endl;
   return true;
 }
 
@@ -692,7 +692,11 @@ status Project::status(int verbosity, bool wait) const {
   } else {
     if (verbosity > 1)
       std::cerr << "remote status " << be.host << ":" << be.status_command << ":" << pid << std::endl;
-    if (property_get("backend_completed_job") == be.host + ":" + pid) return completed;
+    if (property_get("backend_completed_job") == be.host + ":" + pid) {
+//      std::cerr << "status return complete because backend_completed_job is valid"<<std::endl;
+      const_cast<Project*>(this)->property_set("backend_inactive","1");
+      return completed;
+    }
     ensure_remote_server();
     m_remote_server.in << be.status_command << " " << pid << std::endl;
     m_remote_server.in << "echo '@@@!!EOF'" << std::endl;
@@ -721,6 +725,7 @@ status Project::status(int verbosity, bool wait) const {
   if (result == completed)
     const_cast<Project*>(this)->property_set("backend_completed_job", be.host + ":" + pid);
   if (result != unknown) {
+//    std::cerr << "result is not unknown, but is " << result << std::endl;
     const_cast<Project*>(this)->property_set("backend_inactive", result == completed ? "1" : "0");
     return result;
   }
@@ -1078,17 +1083,42 @@ std::vector<std::string> sjef::Project::backend_names() const {
 
 void sjef::Project::ensure_remote_server() const {
   if (m_remote_server.process.running()
-  and m_remote_server.host == property_get("backend")
+      and m_remote_server.host == property_get("backend")
       )
     return;
+  fs::path control_path_directory = expand_path("$HOME/.sjef/.ssh/ctl");
+  fs::create_directories(control_path_directory);
+  auto control_path_option = "-o ControlPath=\"" + (control_path_directory / "%L-%r@%h:%p").string() + "\"";
+  m_remote_server.host = property_get("backend");
+//  std::cerr << "ssh " + control_path_option + " -O check " + m_remote_server.host << std::endl;
+  auto c = boost::process::child("ssh " + control_path_option + " -O check " + m_remote_server.host,
+                                 bp::std_out > bp::null,
+                                 bp::std_err > bp::null);
+  c.wait();
+//  if (c.exit_code() != 0)
+//    std::cerr << "Attempting to start ssh ControlMaster" << std::endl;
+//  else
+//    std::cerr << "ssh ControlMaster already running" << std::endl;
+//  if (c.exit_code() != 0)
+//    std::cerr
+//        << "ssh -nNf " + control_path_option + " -o ControlMaster=yes -o ControlPersist=60 " + m_remote_server.host
+//        << std::endl;
+  if (c.exit_code() != 0)
+    c = boost::process::child(
+        "ssh -nNf " + control_path_option + " -o ControlMaster=yes -o ControlPersist=60 " + m_remote_server.host,
+        bp::std_out > bp::null,
+        bp::std_err > bp::null);
+  c.wait();
+  m_control_path_option = (c.exit_code() == 0) ? control_path_option : "";
+
 //  std::cerr << "Start remote_server " << std::endl;
   m_remote_server.process.terminate();
   m_remote_server.process = bp::child(bp::search_path("ssh"),
+                                      m_control_path_option,
                                       property_get("backend"),
                                       bp::std_in < m_remote_server.in,
                                       bp::std_err > m_remote_server.err,
                                       bp::std_out > m_remote_server.out);
-  m_remote_server.host = property_get("backend");
 }
 
 } // namespace sjef

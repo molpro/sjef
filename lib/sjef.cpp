@@ -691,12 +691,12 @@ status Project::status(int verbosity, bool wait) const {
     if (property_get("backend_completed_job") == be.host + ":" + pid) return completed;
     ensure_remote_server();
     m_remote_server.in << be.status_command << " " << pid << std::endl;
-    m_remote_server.in << "echo '---'" << std::endl;
+    m_remote_server.in << "echo '@@@!!EOF'" << std::endl;
     if (verbosity > 2)
       std::cerr << "sending " << be.status_command << " " << pid << std::endl;
     std::string line;
     while (std::getline(m_remote_server.out, line)
-        && line != "---"
+        && line != "@@@!!EOF"
         ) {
       if (verbosity > 0) std::cerr << "line received: " << line << std::endl;
       if ((" " + line).find(" " + pid + " ") != std::string::npos) {

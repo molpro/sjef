@@ -252,16 +252,21 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
     if (fs::exists(f))
       rfs += " " + f;
   }
+  std::string rsync = "rsync";
+  ensure_remote_server();
+  if (not this->m_control_path_option.empty())
+    rsync += " -e 'ssh " + m_control_path_option + "'";
+  std::cerr << "rsync: "<<rsync<<std::endl;
   if (!rfs.empty())
-    system(("rsync -L -a " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + rfs + " " + backend.host + ":"
+    system((rsync + " -L -a " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + rfs + " " + backend.host + ":"
         + cache(backend)).c_str());
   // send any files that do not exist on the backend yet
-  system(("rsync -L --ignore-existing -a " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + ". "
+  system((rsync + " -L --ignore-existing -a " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + ". "
       + backend.host
       + ":"
       + cache(backend)).c_str());
   // fetch all newer files from backend
-  system(("rsync -a " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + backend.host + ":" + cache(backend)
+  system((rsync + " -a " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + backend.host + ":" + cache(backend)
       + "/ .").c_str());
   if (current_path_save != "")
     fs::current_path(current_path_save);

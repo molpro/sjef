@@ -227,7 +227,7 @@ int main(int argc, char* argv[]) {
       else
         std::cerr << "Run not needed, so not started" << std::endl;
     } else if (command == "sync") {
-      Project proj(project);
+//      Project proj(project);
       if (verboseSwitch.getValue() > 0) std::cerr << "Synchronize project " << proj.filename() << std::endl;
       auto cbe = proj.property_get("backend");
       if (cbe.empty()) {

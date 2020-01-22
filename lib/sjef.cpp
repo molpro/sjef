@@ -688,15 +688,17 @@ status Project::status(int verbosity, bool wait) const {
   } else {
     if (verbosity > 1)
       std::cerr << "remote status " << be.host << ":" << be.status_command << ":" << pid << std::endl;
+    if (property_get("backend_completed_job") == be.host + ":" + pid) return completed;
     ensure_remote_server();
     m_remote_server.in << be.status_command << " " << pid << std::endl;
     m_remote_server.in << "echo '---'" << std::endl;
-    std::cerr <<"sending "<<be.status_command << " " << pid << std::endl;
+    if (verbosity > 2)
+      std::cerr << "sending " << be.status_command << " " << pid << std::endl;
     std::string line;
     while (std::getline(m_remote_server.out, line)
-    && line != "---"
-    ) {
-      if (verbosity > 0) std::cerr << "line received: "<<line << std::endl;
+        && line != "---"
+        ) {
+      if (verbosity > 0) std::cerr << "line received: " << line << std::endl;
       if ((" " + line).find(" " + pid + " ") != std::string::npos) {
         std::smatch match;
         if (verbosity > 2) std::cerr << "line" << line << std::endl;
@@ -711,7 +713,14 @@ status Project::status(int verbosity, bool wait) const {
       }
     }
   }
-  if (verbosity > 1) std::cerr << "fallen through loop, result=" << result << std::endl;
+  if (verbosity > 2) std::cerr << "received status " << result << std::endl;
+  if (result == completed)
+    const_cast<Project*>(this)->property_set("backend_completed_job", be.host + ":" + pid);
+  if (result != unknown) {
+    const_cast<Project*>(this)->property_set("backend_inactive", result == completed ? "1" : "0");
+    return result;
+  }
+  if (verbosity > 2) std::cerr << "fallen through loop" << std::endl;
   synchronize(be, verbosity, true);
   const_cast<Project*>(this)->property_set("backend_inactive",
                                            (result != completed or
@@ -1068,7 +1077,7 @@ void sjef::Project::ensure_remote_server() const {
     //TODO if backend has changed don't return
       )
     return;
-  std::cerr << "Start remote_server " << std::endl;
+//  std::cerr << "Start remote_server " << std::endl;
   m_remote_server.process.terminate();
   m_remote_server.process = bp::child(bp::search_path("ssh"),
                                       property_get("backend"),

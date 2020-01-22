@@ -588,8 +588,12 @@ void Project::kill() {
     else
       bp::spawn(executable(be.kill_command), pid);
   } else {
-//    std::cerr << "remote kill "<<be.host<<":"<<be.kill_command<<":"<<pid<<std::endl;
-    bp::spawn(bp::search_path("ssh"), be.host, be.kill_command, pid);
+    std::cerr << "remote kill "<<be.host<<":"<<be.kill_command<<":"<<pid<<std::endl;
+    ensure_remote_server();
+    m_remote_server.in << be.kill_command << " " << pid << std::endl;
+    m_remote_server.in << "echo '@@@!!EOF'" << std::endl;
+    std::string line;
+    while (std::getline(m_remote_server.out, line) && line != "@@@!!EOF" ) ;
   }
 }
 

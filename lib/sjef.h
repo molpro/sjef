@@ -39,6 +39,7 @@ class Project {
     boost::process::opstream in;
     boost::process::ipstream out;
     boost::process::ipstream err;
+    std::string host;
   } m_remote_server;
  public:
   static const std::string s_propertyFile;

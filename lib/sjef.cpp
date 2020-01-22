@@ -1074,7 +1074,7 @@ std::vector<std::string> sjef::Project::backend_names() const {
 
 void sjef::Project::ensure_remote_server() const {
   if (m_remote_server.process.running()
-    //TODO if backend has changed don't return
+  and m_remote_server.backend == property_get("backend")
       )
     return;
 //  std::cerr << "Start remote_server " << std::endl;
@@ -1084,14 +1084,7 @@ void sjef::Project::ensure_remote_server() const {
                                       bp::std_in < m_remote_server.in,
                                       bp::std_err > m_remote_server.err,
                                       bp::std_out > m_remote_server.out);
-//  m_remote_server.in << "ls -ltr; echo '---'" << std::endl;
-//  std::string result;
-//  do {
-//    m_remote_server.out >> result;
-//    std::cerr << result ;
-//  }
-//  while (result != "---");
-
+  m_remote_server.host = property_get("backend");
 }
 
 } // namespace sjef

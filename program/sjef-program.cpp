@@ -77,7 +77,7 @@ int main(int argc, char* argv[]) {
                       "backend",
                       backend_description,
                       false,
-                      "local",
+                      "",
                       "string",
                       cmd);
     TCLAP::ValueArg<std::string>
@@ -167,16 +167,21 @@ int main(int argc, char* argv[]) {
                  {{"inp",suffixInpSwitch.getValue()},{"out",suffixOutSwitch.getValue()},{"xml",suffixXmlSwitch.getValue()}});
 
     auto allowedBackends = proj.backend_names();
+    auto backend = backendSwitch.getValue();
+    if (backend.empty()) backend = proj.property_get("backend");
+    if (backend.empty()) backend = "local";
+    proj.property_set("backend",backend);
     if (verboseSwitch.getValue() > 1
-        or std::find(allowedBackends.begin(), allowedBackends.end(), backendSwitch.getValue())
+        or std::find(allowedBackends.begin(), allowedBackends.end(), backend)
             == allowedBackends.end()) {
       std::cout << "Project location: " << proj.filename() << std::endl;
+      std::cout << "Project backend: " << proj.property_get("backend") << std::endl;
       std::cout << "Defined backends: " << std::endl;
       for (const auto& n : allowedBackends)
         std::cout << n << std::endl;
     }
-    if (std::find(allowedBackends.begin(), allowedBackends.end(), backendSwitch.getValue()) == allowedBackends.end())
-      throw std::runtime_error("Backend " + backendSwitch.getValue() + " not defined or invalid");
+    if (std::find(allowedBackends.begin(), allowedBackends.end(), backend) == allowedBackends.end())
+      throw std::runtime_error("Backend " + backend + " not defined or invalid");
 
     bool success = true;
     for (int repeat=0; repeat < std::stoi(repeatArg.getValue()); ++repeat) {
@@ -208,14 +213,13 @@ int main(int argc, char* argv[]) {
     } else if (command == "kill")
       proj.kill();
     else if (command == "run") {
-      std::string backend = backendSwitch.getValue();
       for (const auto& kv : backendParameterArg) {
         auto pos = kv.find_first_of("=");
         if (pos == std::string::npos)
           throw std::runtime_error("--parameter value must be of the form key=value");
         proj.backend_parameter_set(backend, kv.substr(0, pos), kv.substr(pos + 1));
       }
-      if ((success = proj.run(backendSwitch.getValue(),
+      if ((success = proj.run(backend,
                               extras,
                               verboseSwitch.getValue(),
                               forceArg.getValue(),

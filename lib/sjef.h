@@ -280,7 +280,7 @@ class Project {
    * @param key
    * @return
    */
-  std::string backend_get(const std::string& backend, const std::string& key);
+  std::string backend_get(const std::string& backend, const std::string& key) const;
 
   /*!
    * @brief Perform parameter substitution for a backend run_command template

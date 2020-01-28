@@ -377,7 +377,7 @@ static std::vector<std::string> splitString(std::string input, char c = ' ', cha
   return result;
 }
 
-std::string Project::backend_get(const std::string& backend, const std::string& key) {
+std::string Project::backend_get(const std::string& backend, const std::string& key) const {
   auto& be = m_backends.at(backend);
   if (key == "name")
     return be.name;
@@ -1088,13 +1088,13 @@ std::vector<std::string> sjef::Project::backend_names() const {
 
 void sjef::Project::ensure_remote_server() const {
   if (m_remote_server.process.running()
-      and m_remote_server.host == property_get("backend")
+      and m_remote_server.host == this->backend_get(property_get("backend"),"host")
       )
     return;
   fs::path control_path_directory = expand_path("$HOME/.sjef/.ssh/ctl");
   fs::create_directories(control_path_directory);
   auto control_path_option = "-o ControlPath=\"" + (control_path_directory / "%L-%r@%h:%p").string() + "\"";
-  m_remote_server.host = property_get("backend");
+  m_remote_server.host = this->backend_get(property_get("backend"),"host");
 //  std::cerr << "ssh " + control_path_option + " -O check " + m_remote_server.host << std::endl;
   auto c = boost::process::child("ssh " + control_path_option + " -O check " + m_remote_server.host,
                                  bp::std_out > bp::null,
@@ -1120,7 +1120,7 @@ void sjef::Project::ensure_remote_server() const {
   m_remote_server.process.terminate();
   m_remote_server.process = bp::child(bp::search_path("ssh"),
                                       m_control_path_option,
-                                      property_get("backend"),
+                                      m_remote_server.host,
                                       bp::std_in < m_remote_server.in,
                                       bp::std_err > m_remote_server.err,
                                       bp::std_out > m_remote_server.out);

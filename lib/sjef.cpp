@@ -232,7 +232,8 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
   if (verbosity > 1)
     std::cerr << "synchronize backend_inactive=" << property_get("backend_inactive") << " backend_inactive_synced="
               << property_get("backend_inactive_synced") << std::endl;
-  if (property_get("backend_inactive_synced") == "1") return true;
+  // TODO check if any files have changed locally somehow. If they haven't, and backend_inactive_synced is set, then we could return immediately
+  if (false and property_get("backend_inactive_synced") == "1") return true;
   //TODO: implement more robust error checking
   fs::path current_path_save;
   try {
@@ -244,30 +245,50 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
   fs::current_path(m_filename);
   system(("ssh " + backend.host + " mkdir -p " + cache(backend)).c_str());
   // absolutely send reserved files
-  std::string rfs;
-  for (const auto& rf : m_reserved_files) {
-//    std::cerr << "reserved file pattern " << rf << std::endl;
-    auto f = regex_replace(rf, std::regex(R"--(%)--"), name());
-//    std::cerr << "reserved file resolved " << f << std::endl;
-    if (fs::exists(f))
-      rfs += " " + f;
-  }
   std::string rsync = "rsync";
   ensure_remote_server();
   if (not this->m_control_path_option.empty())
     rsync += " -e 'ssh " + m_control_path_option + "'";
-  std::cerr << "rsync: "<<rsync<<std::endl;
-  if (!rfs.empty())
-    system((rsync + " -L -a " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + rfs + " " + backend.host + ":"
+  if (verbosity > 2)
+    std::cerr << "rsync: " << rsync << std::endl;
+  bool send_only_reserved = false;
+  if (send_only_reserved) { // 2020-01-29 not safe under all circumstances, and probably not faster
+    std::string rfs;
+    for (const auto& rf : m_reserved_files) {
+      std::cerr << "reserved file pattern " << rf << std::endl;
+      auto f = regex_replace(rf, std::regex(R"--(%)--"), name());
+      std::cerr << "reserved file resolved " << f << std::endl;
+      if (fs::exists(f))
+        rfs += " " + f;
+    }
+    if (!rfs.empty())
+      system((rsync + " -L -a " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + rfs + " " + backend.host
+          + ":"
+          + cache(backend)).c_str());
+    // send any files that do not exist on the backend yet
+    system((rsync + " -L --ignore-existing -a " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + ". "
+        + backend.host
+        + ":"
         + cache(backend)).c_str());
-  // send any files that do not exist on the backend yet
-  system((rsync + " -L --ignore-existing -a " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + ". "
-      + backend.host
-      + ":"
-      + cache(backend)).c_str());
+  } else {
+    auto cmd = rsync + " -L -a " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + ". " + backend.host + ":"
+        + cache(backend);
+    if (verbosity > 1) std::cerr << cmd << std::endl;
+    system(cmd.c_str());
+  }
   // fetch all newer files from backend
-  system((rsync + " -a " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + backend.host + ":" + cache(backend)
-      + "/ .").c_str());
+  if (property_get("backend_inactive_synced") == "1") return true;
+  auto cmd = rsync + " -a " + (verbosity > 0 ? std::string{"-v "} : std::string{""});
+  for (const auto& rf : m_reserved_files) {
+    std::cerr << "reserved file pattern " << rf << std::endl;
+    auto f = regex_replace(fs::path{rf}.filename().native(), std::regex(R"--(%)--"), name());
+    std::cerr << "reserved file resolved " << f << std::endl;
+    if (fs::exists(f))
+      cmd += "--exclude=" + f + " ";
+  }
+  cmd += backend.host + ":" + cache(backend) + "/ .";
+  if (verbosity > 1) std::cerr << cmd << std::endl;
+  system(cmd.c_str());
   if (current_path_save != "")
     fs::current_path(current_path_save);
   if (not nostatus) // to avoid infinite loop with call from status()
@@ -593,12 +614,12 @@ void Project::kill() {
     else
       bp::spawn(executable(be.kill_command), pid);
   } else {
-    std::cerr << "remote kill "<<be.host<<":"<<be.kill_command<<":"<<pid<<std::endl;
+    std::cerr << "remote kill " << be.host << ":" << be.kill_command << ":" << pid << std::endl;
     ensure_remote_server();
     m_remote_server.in << be.kill_command << " " << pid << std::endl;
     m_remote_server.in << "echo '@@@!!EOF'" << std::endl;
     std::string line;
-    while (std::getline(m_remote_server.out, line) && line != "@@@!!EOF" ) ;
+    while (std::getline(m_remote_server.out, line) && line != "@@@!!EOF");
   }
 }
 
@@ -699,7 +720,7 @@ status Project::status(int verbosity, bool wait) const {
       std::cerr << "remote status " << be.host << ":" << be.status_command << ":" << pid << std::endl;
     if (property_get("backend_completed_job") == be.host + ":" + pid) {
 //      std::cerr << "status return complete because backend_completed_job is valid"<<std::endl;
-      const_cast<Project*>(this)->property_set("backend_inactive","1");
+      const_cast<Project*>(this)->property_set("backend_inactive", "1");
       return completed;
     }
     ensure_remote_server();
@@ -1088,13 +1109,13 @@ std::vector<std::string> sjef::Project::backend_names() const {
 
 void sjef::Project::ensure_remote_server() const {
   if (m_remote_server.process.running()
-      and m_remote_server.host == this->backend_get(property_get("backend"),"host")
+      and m_remote_server.host == this->backend_get(property_get("backend"), "host")
       )
     return;
   fs::path control_path_directory = expand_path("$HOME/.sjef/.ssh/ctl");
   fs::create_directories(control_path_directory);
   auto control_path_option = "-o ControlPath=\"" + (control_path_directory / "%L-%r@%h:%p").string() + "\"";
-  m_remote_server.host = this->backend_get(property_get("backend"),"host");
+  m_remote_server.host = this->backend_get(property_get("backend"), "host");
 //  std::cerr << "ssh " + control_path_option + " -O check " + m_remote_server.host << std::endl;
   auto c = boost::process::child("ssh " + control_path_option + " -O check " + m_remote_server.host,
                                  bp::std_out > bp::null,

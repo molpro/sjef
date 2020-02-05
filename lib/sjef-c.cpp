@@ -102,6 +102,7 @@ int sjef_project_export(const char* project, const char* file) {
 
 int sjef_project_run_needed(const char* project) {
   try {
+//    fprintf(stderr,"sjef_project_run_needed: need to open the project? %d\n",projects.count(project) == 0);
     if (projects.count(project) == 0) sjef_project_open(project);
     return (projects.at(project).run_needed() ? 1 : 0);
   }

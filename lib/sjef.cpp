@@ -120,9 +120,9 @@ Project::Project(const std::string& filename,
   if (!fs::exists(propertyFile())) {
     save_property_file();
     property_set("_private_sjef_project_backend_inactive", "1");
-    property_set("_private_sjef_project_backend_inactive_synced", "0");
   }
   load_property_file();
+  property_set("_private_sjef_project_backend_inactive_synced", "0");
 
   auto nimport = property_get("IMPORTED").empty() ? 0 : std::stoi(property_get("IMPORTED"));
 //    std::cerr << "nimport "<<nimport<<std::endl;
@@ -271,14 +271,14 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
         + ":"
         + cache(backend)).c_str());
   } else {
-    auto cmd = rsync + " -L -a " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + ". " + backend.host + ":"
+    auto cmd = rsync + " -L -a --update " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + ". " + backend.host + ":"
         + cache(backend);
     if (verbosity > 1) std::cerr << cmd << std::endl;
     system(cmd.c_str());
   }
   // fetch all newer files from backend
   if (property_get("_private_sjef_project_backend_inactive_synced") == "1") return true;
-  auto cmd = rsync + " -a " + (verbosity > 0 ? std::string{"-v "} : std::string{""});
+  auto cmd = rsync + " -a --update " + (verbosity > 0 ? std::string{"-v "} : std::string{""});
   for (const auto& rf : m_reserved_files) {
     std::cerr << "reserved file pattern " << rf << std::endl;
     auto f = regex_replace(fs::path{rf}.filename().native(), std::regex(R"--(%)--"), name());
@@ -702,11 +702,15 @@ std::string Project::xml() const {
   return xmlRepair(file_contents(m_suffixes.at("xml")));
 }
 
-std::string Project::file_contents(const std::string& suffix, const std::string& name) const {
+std::string Project::file_contents(const std::string& suffix, const std::string& name, bool sync) const {
 
+  std::cerr << "file_contents " << suffix << ": " << property_get("_private_sjef_project_backend_inactive_synced")
+            << std::endl;
   auto be = property_get("backend");
-  if (not be.empty()
+  if (sync
+      and not be.empty()
       and be != "local"
+      and property_get("_private_sjef_project_backend_inactive_synced") != "1"
       )
     synchronize(be);
   std::ifstream s(filename(suffix, name));
@@ -785,10 +789,14 @@ status Project::status(int verbosity, bool wait) const {
     }
   }
   if (verbosity > 2) std::cerr << "received status " << result << std::endl;
-  if (result == completed)
+  if (result == completed) {
+//    const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced", property_get("_private_sjef_project_backend_inactive"));
     const_cast<Project*>(this)->property_set("_private_sjef_project_completed_job", be.host + ":" + pid);
+  }
   if (result != unknown) {
 //    std::cerr << "result is not unknown, but is " << result << std::endl;
+    if (result == running)
+      const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced", "0");
     const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", result == completed ? "1" : "0");
     return result;
   }

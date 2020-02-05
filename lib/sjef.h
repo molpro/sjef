@@ -177,9 +177,10 @@ class Project {
    * @brief Obtain the contents of a project file
    * @param suffix If present without \c name, look for a primary file with that type. If absent, the file name of the bundle is instead selected
    * @param name If present,  look for a file of this name, appended with .\c suffix if that is non-blank
+   * @param sync Whether to force a synchronisation with backend before getting the file contents
    * @return the fully-qualified name of the file
    */
-  std::string file_contents(const std::string& suffix = "", const std::string& name = "") const;
+  std::string file_contents(const std::string& suffix = "", const std::string& name = "", bool sync = true) const;
 
   /*!
    * @brief Remove potentially unwanted files from the project

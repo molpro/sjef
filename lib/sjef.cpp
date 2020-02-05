@@ -629,10 +629,10 @@ bool Project::run_needed(int verbosity) {
   if (verbosity > 1)
     std::cerr << ", time " << std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now() - start_time).count() << std::endl;
-  if (status() == running) return false;
-  if (status() == waiting) return false;
-  auto inpfile = fs::path{filename()} / fs::path{name() + ".inp"};
-  auto xmlfile = fs::path{filename()} / fs::path{name() + ".xml"};
+  auto statuss = status();
+  if (statuss == running or statuss == waiting) return false;
+  auto inpfile = filename("inp");
+  auto xmlfile = filename("xml");
   if (verbosity > 1)
     std::cerr << ", time " << std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now() - start_time).count() << std::endl;
@@ -647,22 +647,25 @@ bool Project::run_needed(int verbosity) {
     std::cerr << ", time " << std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now() - start_time).count() << std::endl;
   if (not fs::exists(xmlfile)) return true;
+//  if (fs::last_write_time(xmlfile) < fs::last_write_time(inpfile)) return true;
   if (verbosity > 1)
-    std::cerr << "sjef::Project::run_needed, input\n" << file_contents(m_suffixes.at("inp"))
-              << ", time " << std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now() - start_time).count()
-              << std::endl;
-  auto inputFromOutput = input_from_output();
-  if (verbosity > 1)
-    std::cerr << "after input_from_output"
-              << ", time " << std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now() - start_time).count()
-              << std::endl;
-  if (not inputFromOutput.empty()) {
-    if (verbosity > 1)
-      std::cerr << "sjef::Project::run_needed, input from output\n" << input_from_output() << std::endl;
-    if (std::regex_replace(file_contents("inp"), std::regex{" *\n\n*"}, "\n") != input_from_output()) return true;
-  }
+    std::cerr << "sjef::Project::run_needed, time after initial checks "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(
+                  std::chrono::steady_clock::now() - start_time).count() << std::endl;
+//  if (verbosity > 3)
+//    std::cerr << "sjef::Project::run_needed, input\n" << file_contents(m_suffixes.at("inp"))
+//              << std::endl;
+//  auto inputFromOutput = input_from_output();
+//  if (verbosity > 1)
+//    std::cerr << "after input_from_output"
+//              << ", time " << std::chrono::duration_cast<std::chrono::milliseconds>(
+//        std::chrono::steady_clock::now() - start_time).count()
+//              << std::endl;
+//  if (not inputFromOutput.empty()) {
+//    if (verbosity > 1)
+//      std::cerr << "sjef::Project::run_needed, input from output\n" << input_from_output() << std::endl;
+//    if (std::regex_replace(file_contents("inp"), std::regex{" *\n\n*"}, "\n") != input_from_output()) return true;
+//  }
   if (verbosity > 1)
     std::cerr << "before property_get, time " << std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now() - start_time).count() << std::endl;
@@ -677,16 +680,25 @@ bool Project::run_needed(int verbosity) {
     size_t i_run_input_hash;
     sstream >> i_run_input_hash;
     if (verbosity > 1)
-      std::cerr << "sjef::Project::run_needed, run_input_hash =" << run_input_hash << i_run_input_hash << std::endl;
+      std::cerr << "sjef::Project::run_needed, run_input_hash =" << i_run_input_hash << std::endl;
     if (verbosity > 1) {
       std::cerr << "sjef::Project::run_needed, input hash matches ?=" << (i_run_input_hash
           == input_hash()) << std::endl;
-      std::cerr << "ending"
-                << ", time " << std::chrono::duration_cast<std::chrono::milliseconds>(
-          std::chrono::steady_clock::now() - start_time).count()
-                << std::endl;
+//      std::cerr << "ending"
+//                << ", time " << std::chrono::duration_cast<std::chrono::milliseconds>(
+//          std::chrono::steady_clock::now() - start_time).count()
+//                << std::endl;
     }
-    if (i_run_input_hash != input_hash()) return true;
+    if (i_run_input_hash != input_hash()) {
+      if (verbosity > 1) {
+        std::cerr << "sjef::Project::run_needed returning true" << std::endl;
+        std::cerr << "ending time " << std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - start_time).count()
+                  << std::endl;
+        std::cerr << "because i_run_input_hash != input_hash()" << std::endl;
+      }
+      return true;
+    }
   }
   if (verbosity > 1) {
     std::cerr << "sjef::Project::run_needed returning false" << std::endl;

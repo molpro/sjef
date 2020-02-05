@@ -97,7 +97,9 @@ Project::Project(const std::string& filename,
     m_erase_on_destroy(erase_on_destroy),
     m_properties(std::make_unique<pugi_xml_document>()),
     m_suffixes(suffixes),
-    m_backend_doc(std::make_unique<pugi_xml_document>()) {
+    m_backend_doc(std::make_unique<pugi_xml_document>()),
+    m_status_lifetime(0),
+    m_status_last(std::chrono::steady_clock::now()) {
   auto recent_projects_directory = expand_path(std::string{"~/.sjef/"} + m_project_suffix);
   fs::create_directories(recent_projects_directory);
   m_recent_projects_file = expand_path(recent_projects_directory + "/projects");
@@ -230,7 +232,8 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
   if (verbosity > 1) std::cerr << "synchronize with " << backend.name << " (" << backend.host << ")" << std::endl;
   if (backend.host == "localhost") return true;
   if (verbosity > 1)
-    std::cerr << "synchronize backend_inactive=" << property_get("_private_sjef_project_backend_inactive") << " backend_inactive_synced="
+    std::cerr << "synchronize backend_inactive=" << property_get("_private_sjef_project_backend_inactive")
+              << " backend_inactive_synced="
               << property_get("_private_sjef_project_backend_inactive_synced") << std::endl;
   // TODO check if any files have changed locally somehow. If they haven't, and backend_inactive_synced is set, then we could return immediately
   if (false and property_get("_private_sjef_project_backend_inactive_synced") == "1") return true;
@@ -271,8 +274,9 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
         + ":"
         + cache(backend)).c_str());
   } else {
-    auto cmd = rsync + " -L -a --update " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + ". " + backend.host + ":"
-        + cache(backend);
+    auto cmd =
+        rsync + " -L -a --update " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + ". " + backend.host + ":"
+            + cache(backend);
     if (verbosity > 1) std::cerr << cmd << std::endl;
     system(cmd.c_str());
   }
@@ -294,7 +298,8 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
   if (not nostatus) // to avoid infinite loop with call from status()
     status(0); // to get backend_inactive
 //  std::cerr << "synchronize backend_inactive=" << property_get("_private_sjef_project_backend_inactive") << std::endl;
-  const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced", property_get("_private_sjef_project_backend_inactive"));
+  const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced",
+                                           property_get("_private_sjef_project_backend_inactive"));
 //  std::cerr << "synchronize backend_inactive_synced=" << property_get("_private_sjef_project_backend_inactive_synced") << std::endl;
   return true;
 }
@@ -733,7 +738,13 @@ std::string Project::file_contents(const std::string& suffix, const std::string&
 }
 
 status Project::status(int verbosity, bool wait) const {
+//  if (std::chrono::steady_clock::now() - m_status_last < m_status_lifetime)
+//    std::cerr << "using cached status " << m_status << std::endl;
+//  else
+//    std::cerr << "cannot use cached status " << m_status << std::endl;
+  if (std::chrono::steady_clock::now() - m_status_last < m_status_lifetime) return m_status;
   if (property_get("backend").empty()) return unknown;
+  auto start_time = std::chrono::steady_clock::now();
   auto be = m_backends.at(property_get("backend"));
   if (verbosity > 1)
     std::cerr << "status() backend:\n====" << be.str() << "\n====" << std::endl;
@@ -810,7 +821,7 @@ status Project::status(int verbosity, bool wait) const {
     if (result == running)
       const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced", "0");
     const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", result == completed ? "1" : "0");
-    return result;
+    goto return_point;
   }
   if (verbosity > 2) std::cerr << "fallen through loop" << std::endl;
   synchronize(be, verbosity, true);
@@ -821,6 +832,13 @@ status Project::status(int verbosity, bool wait) const {
                                                                                               + m_suffixes.at("xml")}) // there may be a race, where the job status is completed, but the output file is not yet there. This is an imperfect test for that .. just whether the .xml exists at all. TODO: improve test for complete output file
                                            )
                                            ? "1" : "0");
+  return_point:
+  auto
+      time_taken = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time);
+  if (time_taken < m_status_lifetime) m_status_lifetime = time_taken;
+  m_status_last = std::chrono::steady_clock::now();
+  m_status = result;
+//  std::cerr << "m_status set to " << m_status << std::endl;
   return result;
 }
 

@@ -99,7 +99,9 @@ Project::Project(const std::string& filename,
     m_suffixes(suffixes),
     m_backend_doc(std::make_unique<pugi_xml_document>()),
     m_status_lifetime(0),
-    m_status_last(std::chrono::steady_clock::now()) {
+    m_status_last(std::chrono::steady_clock::now()),
+    m_remote_daemon(std::thread(this->remote_daemon))
+    {
   auto recent_projects_directory = expand_path(std::string{"~/.sjef/"} + m_project_suffix);
   fs::create_directories(recent_projects_directory);
   m_recent_projects_file = expand_path(recent_projects_directory + "/projects");
@@ -1219,6 +1221,11 @@ void sjef::Project::ensure_remote_server() const {
                                       bp::std_in < m_remote_server.in,
                                       bp::std_err > m_remote_server.err,
                                       bp::std_out > m_remote_server.out);
+}
+
+void sjef::Project::remote_daemon() {
+  constexpr int wait_seconds = 1;
+  std::cerr << "sjef::Project::remote_daemon()"<<std::endl;
 }
 
 } // namespace sjef

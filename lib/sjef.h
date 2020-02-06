@@ -7,6 +7,7 @@
 #include <memory>
 #include <boost/filesystem/path.hpp>
 #include <boost/process/child.hpp>
+#include <thread>
 
 namespace sjef {
 class Backend; ///< @private
@@ -45,6 +46,7 @@ class Project {
   mutable std::chrono::milliseconds m_status_lifetime;
   mutable std::chrono::time_point<std::chrono::steady_clock> m_status_last;
   mutable sjef::status m_status;
+  mutable std::thread m_remote_daemon;
  public:
   static const std::string s_propertyFile;
   /*!
@@ -254,6 +256,7 @@ class Project {
   std::string propertyFile() const;
   std::string cache(const Backend& backend) const;
   void force_file_names(const std::string& oldname);
+  void remote_daemon();
   /*!
    * @brief Take a line from a program input file, and figure out whether it references some other files that would influence the program behaviour. If so, return the contents of those files; otherwise, return the line.
    * @param line

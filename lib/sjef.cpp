@@ -772,7 +772,6 @@ status Project::status(int verbosity, bool wait) const {
   auto result = pid == "" ? unknown : completed;
   if (be.host == "localhost") {
     if (not wait) return unknown; // asynchronous mode not implemented for local host
-    std::cerr << "status of local job " << pid << std::endl;
     auto spacepos = be.status_command.find_first_of(" ");
     bp::child c;
     bp::ipstream is;

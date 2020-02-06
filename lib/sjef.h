@@ -44,7 +44,7 @@ class Project {
   mutable std::string m_control_path_option;
   mutable std::chrono::milliseconds m_status_lifetime;
   mutable std::chrono::time_point<std::chrono::steady_clock> m_status_last;
-  mutable status m_status;
+  mutable sjef::status m_status;
  public:
   static const std::string s_propertyFile;
   /*!

@@ -514,6 +514,7 @@ bool Project::run(std::string name, std::vector<std::string> options, int verbos
   std::string optionstring;
   for (const auto& o : options) optionstring += o + " ";
   property_set("run_options", optionstring);
+  std::cerr << "setting run_input_hash to input_hash()=" << input_hash() << std::endl;
   property_set("run_input_hash", std::to_string(input_hash()));
   if (verbosity > 0 and backend.name != sjef::Backend::dummy_name) optionstring += "-v ";
 //  std::cerr << "backend.run_command before expand "<<backend.run_command<<std::endl;
@@ -693,6 +694,16 @@ bool Project::run_needed(int verbosity) {
 //                << ", time " << std::chrono::duration_cast<std::chrono::milliseconds>(
 //          std::chrono::steady_clock::now() - start_time).count()
 //                << std::endl;
+    }
+    if (i_run_input_hash != input_hash()) {
+      if (verbosity > 1) {
+        std::cerr << "sjef::Project::run_needed returning true" << std::endl;
+        std::cerr << "ending time " << std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - start_time).count()
+                  << std::endl;
+        std::cerr << "because i_run_input_hash != input_hash()" << std::endl;
+      }
+      return true;
     }
     if (i_run_input_hash != input_hash()) {
       if (verbosity > 1) {

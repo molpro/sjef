@@ -867,7 +867,9 @@ void Project::property_rewind() {
 }
 
 void Project::property_delete(const std::string& property) {
+//  std::cerr << "property_delete "<<property<<std::endl;
   auto val = property_get(property);
+  if (val.empty()) return;
   check_property_file();
   val = property_get(property);
   if (!m_properties->child("plist")) m_properties->append_child("plist");

@@ -256,7 +256,7 @@ class Project {
   std::string propertyFile() const;
   std::string cache(const Backend& backend) const;
   void force_file_names(const std::string& oldname);
-  void remote_daemon();
+  static void remote_daemon(sjef::Project& project);
   /*!
    * @brief Take a line from a program input file, and figure out whether it references some other files that would influence the program behaviour. If so, return the contents of those files; otherwise, return the line.
    * @param line

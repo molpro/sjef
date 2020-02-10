@@ -1253,7 +1253,7 @@ void sjef::Project::change_backend(std::string backend) {
 }
 
 void sjef::Project::backend_daemon(sjef::Project& project, const std::string& backend, int wait_milliseconds) {
-  std::cerr << "sjef::Project::backend_daemon() start for backend " <<backend << ", " <<project.property_get(backend) << std::endl;
+  std::cerr << "sjef::Project::backend_daemon() start for backend " <<backend << ", " <<project.property_get("backend") << std::endl;
   while (!project.m_unmovables.shutdown_flag.test_and_set()) {
     project.m_unmovables.shutdown_flag.clear();
     project.synchronize(backend);

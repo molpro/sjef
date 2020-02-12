@@ -7,10 +7,6 @@ target_compile_options(${LIB_NAME} PUBLIC -fPIC)
 set_target_properties(${LIB_NAME} PROPERTIES PUBLIC_HEADER "sjef.h;sjef-c.h")
 set_target_properties(${LIB_NAME} PROPERTIES OUTPUT_NAME "${LIB_FILENAME}")
 
-if (APPLE AND NOT MOLPRO_APP_NAME) # for gMolpro want dynamic Boost
-    message(STATUS "Using static Boost libraries")
-    set(Boost_USE_STATIC_LIBS ON)
-endif ()
 find_package(Boost 1.71.0 COMPONENTS filesystem REQUIRED)
 
 if (NOT TARGET pugixml)

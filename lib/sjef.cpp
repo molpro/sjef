@@ -711,16 +711,6 @@ bool Project::run_needed(int verbosity) {
       }
       return true;
     }
-    if (i_run_input_hash != input_hash()) {
-      if (verbosity > 1) {
-        std::cerr << "sjef::Project::run_needed returning true" << std::endl;
-        std::cerr << "ending time " << std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - start_time).count()
-                  << std::endl;
-        std::cerr << "because i_run_input_hash != input_hash()" << std::endl;
-      }
-      return true;
-    }
   }
   if (verbosity > 1) {
     std::cerr << "sjef::Project::run_needed returning false" << std::endl;

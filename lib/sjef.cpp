@@ -381,6 +381,7 @@ bool Project::copy(const std::string& destination_filename, bool force, bool kee
 }
 
 void Project::erase() {
+  shutdown_backend_daemon();
   if (fs::remove_all(m_filename)) {
     recent_edit("", m_filename);
     m_filename = "";

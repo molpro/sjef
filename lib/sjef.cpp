@@ -99,7 +99,8 @@ Project::Project(const std::string& filename,
     m_suffixes(suffixes),
     m_backend_doc(std::make_unique<pugi_xml_document>()),
     m_status_lifetime(0),
-    m_status_last(std::chrono::steady_clock::now()) {
+    m_status_last(std::chrono::steady_clock::now()),
+    m_status(unknown) {
   auto recent_projects_directory = expand_path(std::string{"~/.sjef/"} + m_project_suffix);
   fs::create_directories(recent_projects_directory);
   m_recent_projects_file = expand_path(recent_projects_directory + "/projects");
@@ -1255,16 +1256,27 @@ void sjef::Project::change_backend(std::string backend) {
   std::cerr << "change_backend returns " << backend << std::endl;
 }
 
-void sjef::Project::backend_daemon(sjef::Project& project, const std::string& backend, int wait_milliseconds) {
-  std::cerr << "sjef::Project::backend_daemon() start for backend " <<backend << ", " <<project.property_get("backend") << std::endl;
-  while (!project.m_unmovables.shutdown_flag.test_and_set()) {
-    project.m_unmovables.shutdown_flag.clear();
-    project.synchronize(backend);
-    project.m_status = project.status(4, false);
-    std::cerr << "sjef::Project::backend_daemon() status " << project.m_status << std::endl;
-    std::this_thread::sleep_for(std::chrono::milliseconds(wait_milliseconds));
+void sjef::Project::backend_daemon(sjef::Project &project, const std::string &backend, int wait_milliseconds) {
+  try {
+    std::cerr << "sjef::Project::backend_daemon() start for backend " << backend << ", "
+              << project.property_get("backend") << std::endl;
+    while (!project.m_unmovables.shutdown_flag.test_and_set()) {
+      project.m_unmovables.shutdown_flag.clear();
+      project.synchronize(backend);
+      try {
+        project.m_status = project.status(4, false);
+      }
+      catch (const std::exception &ex) {
+        std::cerr << "sjef::Project::backend_daemon() status() has thrown " << ex.what() << std::endl;
+        project.m_status = unknown;
+      }
+      std::cerr << "sjef::Project::backend_daemon() status " << project.m_status << std::endl;
+      std::this_thread::sleep_for(std::chrono::milliseconds(wait_milliseconds));
+    }
+    std::cerr << "sjef::Project::backend_daemon() stop" << std::endl;
   }
-  std::cerr << "sjef::Project::backend_daemon() stop" << std::endl;
+  catch (...) {
+  }
 }
 
 } // namespace sjef

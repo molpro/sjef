@@ -178,7 +178,7 @@ Project::Project(const std::string& filename,
 }
 
 Project::~Project() {
-  shutdown_backend_daemon();
+  shutdown_backend_watcher();
   properties_last_written_by_me(true);
   if (m_erase_on_destroy) erase();
 }
@@ -382,7 +382,7 @@ bool Project::copy(const std::string& destination_filename, bool force, bool kee
 }
 
 void Project::erase() {
-  shutdown_backend_daemon();
+  shutdown_backend_watcher();
   if (fs::remove_all(m_filename)) {
     recent_edit("", m_filename);
     m_filename = "";
@@ -1240,25 +1240,25 @@ void sjef::Project::ensure_remote_server() const {
                                       bp::std_out > m_remote_server.out);
 }
 
-void sjef::Project::shutdown_backend_daemon() {
+void sjef::Project::shutdown_backend_watcher() {
   m_unmovables.shutdown_flag.test_and_set();
-  if (m_backend_daemon.joinable())
-    m_backend_daemon.join();
+  if (m_backend_watcher.joinable())
+    m_backend_watcher.join();
 }
 
 void sjef::Project::change_backend(std::string backend) {
   if (backend.empty()) backend = sjef::Backend::default_name;
   std::cerr << "change_backend " << backend << std::endl;
   property_set("backend",backend);
-  shutdown_backend_daemon();
+  shutdown_backend_watcher();
   m_unmovables.shutdown_flag.clear();
-  m_backend_daemon = std::thread(backend_daemon, std::ref(*this), backend, 1000);
+  m_backend_watcher = std::thread(backend_watcher, std::ref(*this), backend, 1000);
   std::cerr << "change_backend returns " << backend << std::endl;
 }
 
-void sjef::Project::backend_daemon(sjef::Project &project, const std::string &backend, int wait_milliseconds) {
+void sjef::Project::backend_watcher(sjef::Project &project, const std::string &backend, int wait_milliseconds) noexcept {
   try {
-    std::cerr << "sjef::Project::backend_daemon() start for backend " << backend << ", "
+    std::cerr << "sjef::Project::backend_watcher() start for backend " << backend << ", "
               << project.property_get("backend") << std::endl;
     while (!project.m_unmovables.shutdown_flag.test_and_set()) {
       project.m_unmovables.shutdown_flag.clear();
@@ -1267,13 +1267,13 @@ void sjef::Project::backend_daemon(sjef::Project &project, const std::string &ba
         project.m_status = project.status(4, false);
       }
       catch (const std::exception &ex) {
-        std::cerr << "sjef::Project::backend_daemon() status() has thrown " << ex.what() << std::endl;
+        std::cerr << "sjef::Project::backend_watcher() status() has thrown " << ex.what() << std::endl;
         project.m_status = unknown;
       }
-      std::cerr << "sjef::Project::backend_daemon() status " << project.m_status << std::endl;
+      std::cerr << "sjef::Project::backend_watcher() status " << project.m_status << std::endl;
       std::this_thread::sleep_for(std::chrono::milliseconds(wait_milliseconds));
     }
-    std::cerr << "sjef::Project::backend_daemon() stop" << std::endl;
+    std::cerr << "sjef::Project::backend_watcher() stop" << std::endl;
   }
   catch (...) {
   }

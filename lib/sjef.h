@@ -47,16 +47,16 @@ class Project {
   mutable std::chrono::milliseconds m_status_lifetime;
   mutable std::chrono::time_point<std::chrono::steady_clock> m_status_last;
   mutable sjef::status m_status;
-  mutable std::thread m_backend_daemon;
+  mutable std::thread m_backend_watcher;
   // put the flag into a container to deal conveniently with std:atomic_flag's lack of move constructor
-  struct backend_daemon_flag_container {
+  struct backend_watcher_flag_container {
     std::atomic_flag shutdown_flag;
-    backend_daemon_flag_container() {}
-    backend_daemon_flag_container(const backend_daemon_flag_container& source) {}
-    backend_daemon_flag_container(const backend_daemon_flag_container&& source) {}
+    backend_watcher_flag_container() {}
+    backend_watcher_flag_container(const backend_watcher_flag_container& source) {}
+    backend_watcher_flag_container(const backend_watcher_flag_container&& source) {}
     std::mutex m_property_set_mutex;
   };
-  mutable backend_daemon_flag_container m_unmovables;
+  mutable backend_watcher_flag_container m_unmovables;
  public:
   static const std::string s_propertyFile;
   /*!
@@ -273,8 +273,8 @@ class Project {
   std::string propertyFile() const;
   std::string cache(const Backend& backend) const;
   void force_file_names(const std::string& oldname);
-  static void backend_daemon(sjef::Project& project, const std::string& backend, int wait_milliseconds);
-  void shutdown_backend_daemon();
+  static void backend_watcher(sjef::Project& project, const std::string& backend, int wait_milliseconds) noexcept;
+  void shutdown_backend_watcher();
   /*!
    * @brief Take a line from a program input file, and figure out whether it references some other files that would influence the program behaviour. If so, return the contents of those files; otherwise, return the line.
    * @param line

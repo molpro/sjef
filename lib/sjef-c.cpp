@@ -102,9 +102,19 @@ int sjef_project_export(const char* project, const char* file) {
 
 int sjef_project_run_needed(const char* project) {
   try {
+    constexpr bool debug = false;
 //    fprintf(stderr,"sjef_project_run_needed: need to open the project? %d\n",projects.count(project) == 0);
+    clock_t start_time = clock();
     if (projects.count(project) == 0) sjef_project_open(project);
-    return (projects.at(project).run_needed() ? 1 : 0);
+    if (debug) {
+      int result = (projects.at(project).run_needed() ? 1 : 0);
+      fprintf(stderr,
+              "sjef_project_run_needed() returns %d after %lu ms CPU\n",
+              result,
+              (clock() - start_time) * 1000 / CLOCKS_PER_SEC);
+      return result;
+    } else
+      return (projects.at(project).run_needed() ? 1 : 0);
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}

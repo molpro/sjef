@@ -208,8 +208,9 @@ class Project {
    * @brief Set a variable
    * @param property
    * @param value
+   * @param save whether to write the updated property set to disk. Do not set to false unless you are sure you are going to immediately do something else that does save the properties - there is potential for data race with other objects mapping the project.
    */
-  void property_set(const std::string& property, const std::string& value);
+  void property_set(const std::string& property, const std::string& value, bool save = true);
   /*!
    * @brief Get the value of a variable
    * @param property
@@ -219,8 +220,9 @@ class Project {
   /*!
    * @brief Remove a variable
    * @param property
+   * @param save whether to write the updated property set to disk. Do not set to false unless you are sure you are going to immediately do something else that does save the properties - there is potential for data race with other objects mapping the project.
    */
-  void property_delete(const std::string& property);
+  void property_delete(const std::string& property, bool save = true);
   /*!
    * @brief Set the pointer for property_next() to the beginning of the list of variables.
    */

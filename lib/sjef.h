@@ -19,6 +19,7 @@ enum status : int {
   running = 1,
   waiting = 2,
   completed = 3,
+  unevaluated = 4
 };
 class Project {
  protected:

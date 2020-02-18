@@ -100,7 +100,7 @@ Project::Project(const std::string& filename,
     m_backend_doc(std::make_unique<pugi_xml_document>()),
     m_status_lifetime(0),
     m_status_last(std::chrono::steady_clock::now()),
-    m_status(unknown) {
+    m_status(unevaluated) {
 //  std::cerr << "Project constructor filename="<<filename << "address "<< this<<std::endl;
   auto recent_projects_directory = expand_path(std::string{"~/.sjef/"} + m_project_suffix);
   fs::create_directories(recent_projects_directory);
@@ -754,11 +754,13 @@ std::string Project::file_contents(const std::string& suffix, const std::string&
 }
 
 status Project::status(int verbosity, bool cached) const {
-//  if (std::chrono::steady_clock::now() - m_status_last < m_status_lifetime)
+//  if (cached and m_status != unevaluated)
 //    std::cerr << "using cached status " << m_status << std::endl;
+//  else if (cached)
+//    std::cerr << "want to use cached status but cannot because not yet evaluated " << m_status << std::endl;
 //  else
-//    std::cerr << "cannot use cached status " << m_status << std::endl;
-  if (cached) return m_status;
+//    std::cerr << "do not want to use cached status " << m_status << std::endl;
+  if (cached and m_status != unevaluated) return m_status;
 //  if (std::chrono::steady_clock::now() - m_status_last < m_status_lifetime) return m_status;
   if (property_get("backend").empty()) return unknown;
   auto start_time = std::chrono::steady_clock::now();

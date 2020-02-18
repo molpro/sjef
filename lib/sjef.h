@@ -76,7 +76,8 @@ class Project {
                    const std::string& default_suffix = "",
                    const std::map<std::string, std::string>& suffixes = {{"inp", "inp"}, {"out", "out"},
                                                                          {"xml", "xml"}});
-  Project(Project&& source) = default;
+  Project(const Project& source) = delete;
+  Project(const Project&& source) = delete;
   virtual ~Project();
   /*!
    * @brief Copy the project to another location

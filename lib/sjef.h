@@ -57,6 +57,7 @@ class Project {
     std::mutex m_property_set_mutex;
   };
   mutable backend_watcher_flag_container m_unmovables;
+  void report_shutdown(const std::string& message) const;
  public:
   static const std::string s_propertyFile;
   /*!
@@ -273,7 +274,7 @@ class Project {
   std::string propertyFile() const;
   std::string cache(const Backend& backend) const;
   void force_file_names(const std::string& oldname);
-  static void backend_watcher(sjef::Project& project, const std::string& backend, int wait_milliseconds) noexcept;
+  static void backend_watcher(sjef::Project& project, const std::string& backend, int minimum_wait_milliseconds, int maximum_wait_milliseconds=0) noexcept;
   void shutdown_backend_watcher();
   /*!
    * @brief Take a line from a program input file, and figure out whether it references some other files that would influence the program behaviour. If so, return the contents of those files; otherwise, return the line.

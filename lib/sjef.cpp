@@ -230,6 +230,9 @@ std::string Project::cache(const Backend& backend) const {
 bool Project::synchronize(std::string name, int verbosity) const {
   if (name.empty()) name = property_get("backend");
   if (name.empty()) name = sjef::Backend::default_name;
+  std::cerr << "name="<<name<<std::endl;
+  std::cerr << "m_backends.size()="<<m_backends.size()<<std::endl;
+  std::cerr << "m_backends.count(name)="<<m_backends.count(name)<<std::endl;
   if (m_backends.count(name) == 0)
     throw std::runtime_error("Non-existent backend " + name);
   return synchronize(m_backends.at(name), verbosity);
@@ -522,7 +525,7 @@ bool Project::run(std::string name, std::vector<std::string> options, int verbos
   std::string optionstring;
   for (const auto& o : options) optionstring += o + " ";
   property_set("run_options", optionstring);
-  std::cerr << "setting run_input_hash to input_hash()=" << input_hash() << std::endl;
+//  std::cerr << "setting run_input_hash to input_hash()=" << input_hash() << std::endl;
   property_set("run_input_hash", std::to_string(input_hash()));
   if (verbosity > 0 and backend.name != sjef::Backend::dummy_name) optionstring += "-v ";
 //  std::cerr << "backend.run_command before expand "<<backend.run_command<<std::endl;
@@ -730,8 +733,8 @@ std::string Project::xml() const {
 
 std::string Project::file_contents(const std::string& suffix, const std::string& name, bool sync) const {
 
-  std::cerr << "file_contents " << suffix << ": " << property_get("_private_sjef_project_backend_inactive_synced")
-            << std::endl;
+//  std::cerr << "file_contents " << suffix << ": " << property_get("_private_sjef_project_backend_inactive_synced")
+//            << std::endl;
   auto be = property_get("backend");
   if (sync
       and not be.empty()
@@ -766,7 +769,7 @@ status Project::status(int verbosity, bool cached) const {
   if (verbosity > 1)
     std::cerr << "job number " << pid << std::endl;
   if (pid.empty() or std::stoi(pid) < 0) return unknown;
-  std::cerr << "did not return unknown for empty pid "<<pid << std::endl;
+//  std::cerr << "did not return unknown for empty pid "<<pid << std::endl;
   const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", "0");
   if (property_get("_private_sjef_project_completed_job") == be.host + ":" + pid) {
 //      std::cerr << "status return complete because _private_sjef_project_completed_job is valid"<<std::endl;
@@ -1242,38 +1245,53 @@ void sjef::Project::ensure_remote_server() const {
 
 void sjef::Project::shutdown_backend_watcher() {
   m_unmovables.shutdown_flag.test_and_set();
+//  std::cerr << "shutdown_backend_watcher "<<std::endl;
   if (m_backend_watcher.joinable())
     m_backend_watcher.join();
 }
 
+//TODO this function is just for debugging and should be tidied away when done
+void sjef::Project::report_shutdown(const std::string& message) const {
+  auto value = m_unmovables.shutdown_flag.test_and_set();
+  if (!value) m_unmovables.shutdown_flag.clear();
+  std::cerr << "report_shutdown "<<message <<": "<< value << std::endl;
+}
+
 void sjef::Project::change_backend(std::string backend) {
   if (backend.empty()) backend = sjef::Backend::default_name;
-  std::cerr << "change_backend " << backend << std::endl;
+//  std::cerr << "change_backend " << backend << std::endl;
   property_set("backend",backend);
   shutdown_backend_watcher();
   m_unmovables.shutdown_flag.clear();
-  m_backend_watcher = std::thread(backend_watcher, std::ref(*this), backend, 1000);
-  std::cerr << "change_backend returns " << backend << std::endl;
+  m_backend_watcher = std::thread(backend_watcher, std::ref(*this), backend, 10, 1000);
+//  std::cerr << "change_backend returns " << backend << std::endl;
 }
 
-void sjef::Project::backend_watcher(sjef::Project &project, const std::string &backend, int wait_milliseconds) noexcept {
+void sjef::Project::backend_watcher(sjef::Project &project, const std::string &backend, int min_wait_milliseconds, int max_wait_milliseconds) noexcept {
+  if (max_wait_milliseconds <=0 ) max_wait_milliseconds = min_wait_milliseconds;
+  constexpr auto radix = 2;
+  auto wait = std::max(min_wait_milliseconds,1);
   try {
-    std::cerr << "sjef::Project::backend_watcher() start for backend " << backend << ", "
-              << project.property_get("backend") << std::endl;
-    while (!project.m_unmovables.shutdown_flag.test_and_set()) {
+//    std::cerr << "sjef::Project::backend_watcher() start for backend " << backend << ", "
+//              << project.property_get("backend") << std::endl;
+    for (auto iter = 0; !project.m_unmovables.shutdown_flag.test_and_set(); ++iter) {
       project.m_unmovables.shutdown_flag.clear();
+//      std::cerr << "iter " << iter << std::endl;
+//        std::cerr << "going to sleep for "<<wait<<"ms"<<std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(wait));
+        wait = std::min(wait*radix,max_wait_milliseconds);
+//        std::cerr << "... waking up"<<std::endl;
       project.synchronize(backend);
       try {
-        project.m_status = project.status(4, false);
+        project.m_status = project.status(0, false);
       }
       catch (const std::exception &ex) {
         std::cerr << "sjef::Project::backend_watcher() status() has thrown " << ex.what() << std::endl;
         project.m_status = unknown;
       }
-      std::cerr << "sjef::Project::backend_watcher() status " << project.m_status << std::endl;
-      std::this_thread::sleep_for(std::chrono::milliseconds(wait_milliseconds));
+//      std::cerr << "sjef::Project::backend_watcher() status " << project.m_status << std::endl;
     }
-    std::cerr << "sjef::Project::backend_watcher() stop" << std::endl;
+//    std::cerr << "sjef::Project::backend_watcher() stop" << std::endl;
   }
   catch (...) {
   }

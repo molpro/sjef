@@ -252,7 +252,9 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
               << " backend_inactive_synced="
               << property_get("_private_sjef_project_backend_inactive_synced") << std::endl;
   // TODO check if any files have changed locally somehow. If they haven't, and backend_inactive_synced is set, then we could return immediately
-  if (false and property_get("_private_sjef_project_backend_inactive_synced") == "1") return true;
+  if (m_property_file_modification_time == fs::last_write_time(propertyFile())
+    and property_get("_private_sjef_project_backend_inactive_synced") == "1") return true;
+//  std::cerr << "really syncing"<<std::endl;
   //TODO: implement more robust error checking
   fs::path current_path_save;
   try {

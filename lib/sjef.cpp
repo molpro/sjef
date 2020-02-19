@@ -99,7 +99,9 @@ Project::Project(const std::string& filename,
     m_suffixes(suffixes),
     m_backend_doc(std::make_unique<pugi_xml_document>()),
     m_status_lifetime(0),
-    m_status_last(std::chrono::steady_clock::now()) {
+    m_status_last(std::chrono::steady_clock::now()),
+    m_status(unevaluated) {
+//  std::cerr << "Project constructor filename="<<filename << "address "<< this<<std::endl;
   auto recent_projects_directory = expand_path(std::string{"~/.sjef/"} + m_project_suffix);
   fs::create_directories(recent_projects_directory);
   m_recent_projects_file = expand_path(recent_projects_directory + "/projects");
@@ -173,6 +175,20 @@ Project::Project(const std::string& filename,
   }
 //  for (const auto& be : m_backends) std::cerr << "m_backend "<<be.first<<std::endl;
 
+//std::cerr << "project constructor name()="<<name()<<std::endl;
+  if (not name().empty() and name().front() != '.')
+    change_backend(property_get("backend"));
+}
+
+Project::~Project() {
+//  std::cerr << "destructor for project "<<name() << "address "<< this << std::endl;
+//  std::cerr << "thread joinable? "<<m_backend_watcher.joinable()<<std::endl;
+//  std::cerr << "shutdown_backend_watcher() starting" << std::endl;
+  shutdown_backend_watcher();
+//  std::cerr << "shutdown_backend_watcher() finished" << std::endl;
+  properties_last_written_by_me(true);
+  if (m_erase_on_destroy) erase();
+//  std::cerr << "destructor for project "<<name() << "address "<< this << "finishes" << std::endl;
 }
 
 std::string Project::get_project_suffix(const std::string& filename, const std::string& default_suffix) const {
@@ -181,11 +197,6 @@ std::string Project::get_project_suffix(const std::string& filename, const std::
     throw std::runtime_error(
         "Cannot deduce project suffix for \"" + filename + "\" with default suffix \"" + default_suffix + "\"");
   return suffix.substr(1);
-}
-
-Project::~Project() {
-  properties_last_written_by_me(true);
-  if (m_erase_on_destroy) erase();
 }
 
 bool Project::import_file(std::string file, bool overwrite) {
@@ -225,6 +236,13 @@ std::string Project::cache(const Backend& backend) const {
 }
 
 bool Project::synchronize(std::string name, int verbosity) const {
+  if (name.empty()) name = property_get("backend");
+  if (name.empty()) name = sjef::Backend::default_name;
+//  std::cerr << "name="<<name<<std::endl;
+//  std::cerr << "m_backends.size()="<<m_backends.size()<<std::endl;
+//  std::cerr << "m_backends.count(name)="<<m_backends.count(name)<<std::endl;
+  if (m_backends.count(name) == 0)
+    throw std::runtime_error("Non-existent backend " + name);
   return synchronize(m_backends.at(name), verbosity);
 }
 
@@ -236,7 +254,9 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
               << " backend_inactive_synced="
               << property_get("_private_sjef_project_backend_inactive_synced") << std::endl;
   // TODO check if any files have changed locally somehow. If they haven't, and backend_inactive_synced is set, then we could return immediately
-  if (false and property_get("_private_sjef_project_backend_inactive_synced") == "1") return true;
+  if (m_property_file_modification_time == fs::last_write_time(propertyFile())
+    and property_get("_private_sjef_project_backend_inactive_synced") == "1") return true;
+//  std::cerr << "really syncing"<<std::endl;
   //TODO: implement more robust error checking
   fs::path current_path_save;
   try {
@@ -246,10 +266,13 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
     current_path_save = "";
   }
   fs::current_path(m_filename);
-  system(("ssh " + backend.host + " mkdir -p " + cache(backend)).c_str());
+//  system(("ssh " + backend.host + " mkdir -p " + cache(backend)).c_str());
+//  ensure_remote_server();
+  m_remote_server.in <<  " mkdir -p " << cache(backend).c_str() << std::endl;
+//  m_remote_server.in << "echo '@@@!!EOF'" << std::endl;
+//  std::string line; while (std::getline(m_remote_server.out, line) && line != "@@@!!EOF");
   // absolutely send reserved files
   std::string rsync = "rsync";
-  ensure_remote_server();
   if (not this->m_control_path_option.empty())
     rsync += " -e 'ssh " + m_control_path_option + "'";
   if (verbosity > 2)
@@ -284,9 +307,9 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
   if (property_get("_private_sjef_project_backend_inactive_synced") == "1") return true;
   auto cmd = rsync + " -a --update " + (verbosity > 0 ? std::string{"-v "} : std::string{""});
   for (const auto& rf : m_reserved_files) {
-    std::cerr << "reserved file pattern " << rf << std::endl;
+//    std::cerr << "reserved file pattern " << rf << std::endl;
     auto f = regex_replace(fs::path{rf}.filename().native(), std::regex(R"--(%)--"), name());
-    std::cerr << "reserved file resolved " << f << std::endl;
+//    std::cerr << "reserved file resolved " << f << std::endl;
     if (fs::exists(f))
       cmd += "--exclude=" + f + " ";
   }
@@ -346,7 +369,7 @@ bool Project::move(const std::string& destination_filename, bool force) {
 //  std::cerr << "move to "<<dest<<std::endl;
   if (force)
     fs::remove_all(dest);
-  if (!property_get("backend").empty()) synchronize(m_backends.at(property_get("backend")), 0);
+  if (!property_get("backend").empty()) synchronize();
   auto namesave = name();
   auto filenamesave = m_filename;
   if (copyDir(fs::path(m_filename), dest, true)) {
@@ -362,7 +385,7 @@ bool Project::copy(const std::string& destination_filename, bool force, bool kee
   auto dest = fs::absolute(expand_path(destination_filename, fs::path{m_filename}.extension().string().substr(1)));
   if (force)
     fs::remove_all(dest);
-  if (!property_get("backend").empty()) synchronize(m_backends.at(property_get("backend")), 0);
+  if (!property_get("backend").empty()) synchronize();
   copyDir(fs::path(m_filename), dest, false);
   Project dp(dest.string());
   dp.force_file_names(name());
@@ -375,6 +398,7 @@ bool Project::copy(const std::string& destination_filename, bool force, bool kee
 }
 
 void Project::erase() {
+  shutdown_backend_watcher();
   if (fs::remove_all(m_filename)) {
     recent_edit("", m_filename);
     m_filename = "";
@@ -497,9 +521,9 @@ std::map<std::string, std::string> Project::backend_parameters(const std::string
 bool Project::run(std::string name, std::vector<std::string> options, int verbosity, bool force, bool wait) {
   auto& backend = m_backends.at(name);
   if (status(verbosity) != unknown && status(0) != completed) return false;
-  if (verbosity > 0)
-    std::cerr << "Project::run() run_needed()=" << run_needed(verbosity) << std::endl;
-  if (not force and not run_needed()) return false;
+//  if (verbosity > 0)
+//    std::cerr << "Project::run() run_needed()=" << run_needed(verbosity) << std::endl;
+//  if (not force and not run_needed()) return false;
   property_set("backend", backend.name);
   fs::path current_path_save;
   try {
@@ -514,7 +538,7 @@ bool Project::run(std::string name, std::vector<std::string> options, int verbos
   std::string optionstring;
   for (const auto& o : options) optionstring += o + " ";
   property_set("run_options", optionstring);
-  std::cerr << "setting run_input_hash to input_hash()=" << input_hash() << std::endl;
+//  std::cerr << "setting run_input_hash to input_hash()=" << input_hash() << std::endl;
   property_set("run_input_hash", std::to_string(input_hash()));
   if (verbosity > 0 and backend.name != sjef::Backend::dummy_name) optionstring += "-v ";
 //  std::cerr << "backend.run_command before expand "<<backend.run_command<<std::endl;
@@ -583,8 +607,8 @@ bool Project::run(std::string name, std::vector<std::string> options, int verbos
     }
     while (std::getline(c_err, line))
       sstderr += line + "\n";
-    std::cerr << "Remote job number not captured for backend \"" + backend.name + "\":\n" << sstdout << "\n" << sstderr
-              << std::endl;
+//    std::cerr << "Remote job number not captured for backend \"" + backend.name + "\":\n" << sstdout << "\n" << sstderr
+//              << std::endl;
   }
   if (current_path_save != "")
     fs::current_path(current_path_save);
@@ -620,8 +644,8 @@ void Project::kill() {
     else
       bp::spawn(executable(be.kill_command), pid);
   } else {
-    std::cerr << "remote kill " << be.host << ":" << be.kill_command << ":" << pid << std::endl;
-    ensure_remote_server();
+//    std::cerr << "remote kill " << be.host << ":" << be.kill_command << ":" << pid << std::endl;
+//    ensure_remote_server();
     m_remote_server.in << be.kill_command << " " << pid << std::endl;
     m_remote_server.in << "echo '@@@!!EOF'" << std::endl;
     std::string line;
@@ -705,16 +729,6 @@ bool Project::run_needed(int verbosity) {
       }
       return true;
     }
-    if (i_run_input_hash != input_hash()) {
-      if (verbosity > 1) {
-        std::cerr << "sjef::Project::run_needed returning true" << std::endl;
-        std::cerr << "ending time " << std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - start_time).count()
-                  << std::endl;
-        std::cerr << "because i_run_input_hash != input_hash()" << std::endl;
-      }
-      return true;
-    }
   }
   if (verbosity > 1) {
     std::cerr << "sjef::Project::run_needed returning false" << std::endl;
@@ -732,8 +746,8 @@ std::string Project::xml() const {
 
 std::string Project::file_contents(const std::string& suffix, const std::string& name, bool sync) const {
 
-  std::cerr << "file_contents " << suffix << ": " << property_get("_private_sjef_project_backend_inactive_synced")
-            << std::endl;
+//  std::cerr << "file_contents " << suffix << ": " << property_get("_private_sjef_project_backend_inactive_synced")
+//            << std::endl;
   auto be = property_get("backend");
   if (sync
       and not be.empty()
@@ -748,21 +762,28 @@ std::string Project::file_contents(const std::string& suffix, const std::string&
   return result;
 }
 
-status Project::status(int verbosity, bool wait) const {
-//  if (std::chrono::steady_clock::now() - m_status_last < m_status_lifetime)
-//    std::cerr << "using cached status " << m_status << std::endl;
+status Project::status(int verbosity, bool cached) const {
+//  if (cached and m_status != unevaluated)
+//    std::cerr << "using cached status " << m_status << ", so returning immediately" << std::endl;
+//  else if (cached)
+//    std::cerr << "want to use cached status but cannot because not yet evaluated " << m_status << std::endl;
 //  else
-//    std::cerr << "cannot use cached status " << m_status << std::endl;
-  if (std::chrono::steady_clock::now() - m_status_last < m_status_lifetime) return m_status;
+//    std::cerr << "do not want to use cached status " << m_status << std::endl;
+  if (cached and m_status != unevaluated) return m_status;
   if (property_get("backend").empty()) return unknown;
   auto start_time = std::chrono::steady_clock::now();
-  auto be = m_backends.at(property_get("backend"));
+  auto bes = property_get("backend");
+  if (bes.empty()) bes = sjef::Backend::default_name;
+  if (bes.empty() or m_backends.count(bes) == 0)
+    throw std::runtime_error("Invalid backend: " + bes);
+  auto be = m_backends.at(bes);
   if (verbosity > 1)
     std::cerr << "status() backend:\n====" << be.str() << "\n====" << std::endl;
   auto pid = property_get("jobnumber");
   if (verbosity > 1)
     std::cerr << "job number " << pid << std::endl;
   if (pid.empty() or std::stoi(pid) < 0) return unknown;
+//  std::cerr << "did not return unknown for empty pid "<<pid << std::endl;
   const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", "0");
   if (property_get("_private_sjef_project_completed_job") == be.host + ":" + pid) {
 //      std::cerr << "status return complete because _private_sjef_project_completed_job is valid"<<std::endl;
@@ -771,7 +792,6 @@ status Project::status(int verbosity, bool wait) const {
   }
   auto result = pid == "" ? unknown : completed;
   if (be.host == "localhost") {
-    if (not wait) return unknown; // asynchronous mode not implemented for local host
     auto spacepos = be.status_command.find_first_of(" ");
     bp::child c;
     bp::ipstream is;
@@ -797,7 +817,7 @@ status Project::status(int verbosity, bool wait) const {
   } else {
     if (verbosity > 1)
       std::cerr << "remote status " << be.host << ":" << be.status_command << ":" << pid << std::endl;
-    ensure_remote_server();
+//    ensure_remote_server();
     m_remote_server.in << be.status_command << " " << pid << std::endl;
     m_remote_server.in << "echo '@@@!!EOF'" << std::endl;
     if (verbosity > 2)
@@ -886,6 +906,7 @@ void Project::property_set(const std::string& property, const std::string& value
 //  std::cerr << "property_set " << property << " = " << value << std::endl;
   property_delete(property, false);
   {
+    std::lock_guard<std::mutex> guard(m_unmovables.m_property_set_mutex);
     if (!m_properties->child("plist")) m_properties->append_child("plist");
     if (!m_properties->child("plist").child("dict")) m_properties->child("plist").append_child("dict");
     auto keynode = m_properties->child("plist").child("dict").append_child("key");
@@ -1023,7 +1044,10 @@ void Project::check_property_file() const {
     m_property_file_modification_time = lastwrite;
   }
 }
+
+std::mutex save_property_file_mutex;
 void Project::save_property_file() const {
+  const std::lock_guard<std::mutex> lock(save_property_file_mutex);
 //  std::cout << "save_property_file" << std::endl;
 //  system((std::string{"cat "} + propertyFile()).c_str());
   struct plist_writer writer;
@@ -1194,14 +1218,19 @@ std::vector<std::string> sjef::Project::backend_names() const {
 }
 
 void sjef::Project::ensure_remote_server() const {
+//  std::cerr << "ensure_remote_server called"<<std::endl;
   if (m_remote_server.process.running()
       and m_remote_server.host == this->backend_get(property_get("backend"), "host")
       )
     return;
+//  std::cerr << "ensure_remote_server fires"<<std::endl;
   fs::path control_path_directory = expand_path("$HOME/.sjef/.ssh/ctl");
   fs::create_directories(control_path_directory);
   auto control_path_option = "-o ControlPath=\"" + (control_path_directory / "%L-%r@%h:%p").string() + "\"";
-  m_remote_server.host = this->backend_get(property_get("backend"), "host");
+  auto backend = property_get("backend");
+  if (backend.empty()) backend = sjef::Backend::default_name;
+  m_remote_server.host = this->backend_get(backend, "host");
+  if (m_remote_server.host == "localhost") return;
 //  std::cerr << "ssh " + control_path_option + " -O check " + m_remote_server.host << std::endl;
   auto c = boost::process::child("ssh " + control_path_option + " -O check " + m_remote_server.host,
                                  bp::std_out > bp::null,
@@ -1231,6 +1260,83 @@ void sjef::Project::ensure_remote_server() const {
                                       bp::std_in < m_remote_server.in,
                                       bp::std_err > m_remote_server.err,
                                       bp::std_out > m_remote_server.out);
+//  std::cerr << "started remote_server "<<std::endl;
+}
+
+void sjef::Project::shutdown_backend_watcher() {
+  m_unmovables.shutdown_flag.test_and_set();
+//  std::cerr << "shutdown_backend_watcher for project at " << this << " joinable=" << m_backend_watcher.joinable()
+//            << std::endl;
+  if (m_backend_watcher.joinable())
+    m_backend_watcher.join();
+//  std::cerr << "shutdown_backend_watcher for project at " << this << " is complete " << std::endl;
+}
+
+//TODO this function is just for debugging and should be tidied away when done
+void sjef::Project::report_shutdown(const std::string& message) const {
+  auto value = m_unmovables.shutdown_flag.test_and_set();
+  if (!value) m_unmovables.shutdown_flag.clear();
+  std::cerr << "report_shutdown " << message << ": " << value << std::endl;
+}
+
+void sjef::Project::change_backend(std::string backend) {
+  if (backend.empty()) backend = sjef::Backend::default_name;
+//  std::cerr << "change_backend " << backend << "for project " << name() <<" at address "<<this<< std::endl;
+  property_set("backend", backend);
+  shutdown_backend_watcher();
+  m_unmovables.shutdown_flag.clear();
+  m_backend_watcher = std::thread(backend_watcher, std::ref(*this), backend, 100, 1000);
+//  std::cerr << "change_backend returns " << backend <<" and watcher joinable=" <<m_backend_watcher.joinable() << std::endl;
+}
+
+void sjef::Project::backend_watcher(sjef::Project& project,
+                                    const std::string& backend,
+                                    int min_wait_milliseconds,
+                                    int max_wait_milliseconds) noexcept {
+  if (max_wait_milliseconds <= 0) max_wait_milliseconds = min_wait_milliseconds;
+  constexpr auto radix = 2;
+  auto wait = std::max(min_wait_milliseconds, 1);
+  try {
+//    std::cerr << "sjef::Project::backend_watcher() start for project "<<project.name()<<" at address "<<&project<<", backend "<< backend
+//    << ", " << project.property_get("backend")
+//              << std::endl;
+//    std::cerr << "ensure_remote_server call from server"<<std::endl;
+    project.ensure_remote_server();
+//    std::cerr << "ensure_remote_server returns to server"<<std::endl;
+    for (auto iter = 0; !project.m_unmovables.shutdown_flag.test_and_set(); ++iter) {
+      project.m_unmovables.shutdown_flag.clear();
+//      std::cerr << "iter " << iter << std::endl;
+//      std::cerr << "going to sleep for " << wait << "ms" << std::endl;
+      std::this_thread::sleep_for(std::chrono::milliseconds(wait));
+      wait = std::min(wait * radix, max_wait_milliseconds);
+//      std::cerr << "... watcher for project " << &project << " waking up" << std::endl;
+      auto abort = project.m_unmovables.shutdown_flag.test_and_set();
+//      std::cerr << "abort="<<abort<<std::endl;
+      if (not abort) {
+        project.m_unmovables.shutdown_flag.clear();
+        try {
+          project.synchronize(backend,0);
+        }
+        catch (const std::exception& ex) {
+          std::cerr << "sjef::Project::backend_watcher() synchronize() has thrown " << ex.what() << std::endl;
+          project.m_status = unknown;
+        }
+//      std::cerr << "... watcher for project "<<&project<<" back from synchronize"<<std::endl;
+        try {
+          project.m_status = project.status(0, false);
+        }
+        catch (const std::exception& ex) {
+          std::cerr << "sjef::Project::backend_watcher() status() has thrown " << ex.what() << std::endl;
+          project.m_status = unknown;
+        }
+//      std::cerr << "... watcher for project "<<&project<<" back from status"<<std::endl;
+//      std::cerr << "sjef::Project::backend_watcher() status " << project.m_status << std::endl;
+      }
+    }
+//    std::cerr << "sjef::Project::backend_watcher() stop" << std::endl;
+  }
+  catch (...) {
+  }
 }
 
 } // namespace sjef

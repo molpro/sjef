@@ -7,6 +7,8 @@
 #include <memory>
 #include <boost/filesystem/path.hpp>
 #include <boost/process/child.hpp>
+#include <thread>
+#include "sjef-backend.h"
 
 namespace sjef {
 class Backend; ///< @private
@@ -17,6 +19,7 @@ enum status : int {
   running = 1,
   waiting = 2,
   completed = 3,
+  unevaluated = 4
 };
 class Project {
  protected:
@@ -45,6 +48,17 @@ class Project {
   mutable std::chrono::milliseconds m_status_lifetime;
   mutable std::chrono::time_point<std::chrono::steady_clock> m_status_last;
   mutable sjef::status m_status;
+  mutable std::thread m_backend_watcher;
+  // put the flag into a container to deal conveniently with std:atomic_flag's lack of move constructor
+  struct backend_watcher_flag_container {
+    std::atomic_flag shutdown_flag;
+    backend_watcher_flag_container() {}
+    backend_watcher_flag_container(const backend_watcher_flag_container& source) {}
+    backend_watcher_flag_container(const backend_watcher_flag_container&& source) {}
+    std::mutex m_property_set_mutex;
+  };
+  mutable backend_watcher_flag_container m_unmovables;
+  void report_shutdown(const std::string& message) const;
  public:
   static const std::string s_propertyFile;
   /*!
@@ -63,7 +77,8 @@ class Project {
                    const std::string& default_suffix = "",
                    const std::map<std::string, std::string>& suffixes = {{"inp", "inp"}, {"out", "out"},
                                                                          {"xml", "xml"}});
-  Project(Project&& source) = default;
+  Project(const Project& source) = delete;
+  Project(const Project&& source) = delete;
   virtual ~Project();
   /*!
    * @brief Copy the project to another location
@@ -118,7 +133,7 @@ class Project {
    * @param verbosity If >0, show underlying processing
    * @return
    */
-  bool synchronize(std::string name, int verbosity = 0) const;
+  bool synchronize(std::string name="", int verbosity = 0) const;
  private:
   bool synchronize(const Backend& backend, int verbosity = 0, bool nostatus = false) const;
  public:
@@ -141,14 +156,14 @@ class Project {
    * @param verbosity
    * - 0 print nothing
    * - 1 show result from underlying status commands
-   * @param wait If true, complete the status request before returning. If false,
+   * @param cached If true, don't actually get status, but instead use the last cached value.
    * initiate the request and return immediately; a subsequent call with wait=true will complete
    * @return
    * - 0 not found
    * - 1 running
    * - 2 queued
    */
-  sjef::status status(int verbosity = 0, bool wait = true) const;
+  sjef::status status(int verbosity = 0, bool cached = true) const;
   /*!
    * @brief Wait unconditionally for status() to return 'completed'
    * @param maximum_microseconds The poll interval is successively increased between calls to status() until reaching this value.
@@ -245,6 +260,11 @@ class Project {
    */
   std::string recent(int number = 1) const;
   void ensure_remote_server() const;
+  /*!
+   * @brief Change the active backend
+   * @param backend The name of the backend. If not a valid name, the function throws std::invalid_argument.
+   */
+  void change_backend(std::string backend = std::string{""});
  protected:
   std::string get_project_suffix(const std::string& filename, const std::string& default_suffix) const;
   void recent_edit(const std::string& add, const std::string& remove = "");
@@ -256,6 +276,8 @@ class Project {
   std::string propertyFile() const;
   std::string cache(const Backend& backend) const;
   void force_file_names(const std::string& oldname);
+  static void backend_watcher(sjef::Project& project, const std::string& backend, int minimum_wait_milliseconds, int maximum_wait_milliseconds=0) noexcept;
+  void shutdown_backend_watcher();
   /*!
    * @brief Take a line from a program input file, and figure out whether it references some other files that would influence the program behaviour. If so, return the contents of those files; otherwise, return the line.
    * @param line

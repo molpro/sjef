@@ -203,7 +203,6 @@ int main(int argc, char* argv[]) {
     else if (command == "wait") {
       proj.wait();
     } else if (command == "status") {
-      proj.ensure_remote_server();
       auto status = proj.status(verboseSwitch.getValue());
       std::cout << "Status: " << status_message[status];
       if (status != sjef::status::unknown && !proj.property_get("jobnumber").empty())

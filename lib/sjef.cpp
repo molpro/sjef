@@ -1043,7 +1043,10 @@ void Project::check_property_file() const {
     m_property_file_modification_time = lastwrite;
   }
 }
+
+std::mutex save_property_file_mutex;
 void Project::save_property_file() const {
+  const std::lock_guard<std::mutex> lock(save_property_file_mutex);
 //  std::cout << "save_property_file" << std::endl;
 //  system((std::string{"cat "} + propertyFile()).c_str());
   struct plist_writer writer;

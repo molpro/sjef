@@ -175,7 +175,9 @@ Project::Project(const std::string& filename,
   }
 //  for (const auto& be : m_backends) std::cerr << "m_backend "<<be.first<<std::endl;
 
-  change_backend(property_get("backend"));
+//std::cerr << "project constructor name()="<<name()<<std::endl;
+  if (not name().empty() and name().front() != '.')
+    change_backend(property_get("backend"));
 }
 
 Project::~Project() {
@@ -762,13 +764,12 @@ std::string Project::file_contents(const std::string& suffix, const std::string&
 
 status Project::status(int verbosity, bool cached) const {
 //  if (cached and m_status != unevaluated)
-//    std::cerr << "using cached status " << m_status << std::endl;
+//    std::cerr << "using cached status " << m_status << ", so returning immediately" << std::endl;
 //  else if (cached)
 //    std::cerr << "want to use cached status but cannot because not yet evaluated " << m_status << std::endl;
 //  else
 //    std::cerr << "do not want to use cached status " << m_status << std::endl;
   if (cached and m_status != unevaluated) return m_status;
-//  if (std::chrono::steady_clock::now() - m_status_last < m_status_lifetime) return m_status;
   if (property_get("backend").empty()) return unknown;
   auto start_time = std::chrono::steady_clock::now();
   auto bes = property_get("backend");
@@ -1259,6 +1260,7 @@ void sjef::Project::ensure_remote_server() const {
                                       bp::std_in < m_remote_server.in,
                                       bp::std_err > m_remote_server.err,
                                       bp::std_out > m_remote_server.out);
+//  std::cerr << "started remote_server "<<std::endl;
 }
 
 void sjef::Project::shutdown_backend_watcher() {

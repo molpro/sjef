@@ -443,7 +443,7 @@ TEST(project,project_name_embedded_space) {
   savestate x;
   sjef::Project p("completely new", nullptr, true, true, "molpro");
   std::ofstream(p.filename("inp")) << "geometry={He};rhf\n";
-  p.run(sjef::Backend::dummy_name, {}, 99, true);
+  p.run(sjef::Backend::dummy_name, {}, 0, true);
   p.wait();
   EXPECT_EQ(p.file_contents("out"), "dummy");
   EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");

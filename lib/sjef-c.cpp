@@ -26,7 +26,7 @@
 #include <sys/wait.h>
 #endif
 namespace fs = boost::filesystem;
-static std::map<std::string, sjef::Project> projects;
+static std::map<std::string, std::unique_ptr<sjef::Project>> projects;
 struct sjef::pugi_xml_document : public pugi::xml_document {};
 
 static void error(std::exception& e) {
@@ -39,7 +39,7 @@ int sjef_project_open(const char* project) {
   try {
     if (projects.count(project) > 0)
       throw std::runtime_error(std::string{"Attempt to open already-registered sjef_project "} + project);
-    projects.emplace(std::make_pair(std::string{project}, sjef::Project(project)));
+    projects.emplace(std::make_pair(std::string{project}, std::make_unique<sjef::Project>(project)));
     return 1;
   }
   catch (std::exception& e) { error(e); }
@@ -56,7 +56,7 @@ void sjef_project_close(const char* project) {
 int sjef_project_copy(const char* project, const char* destination_filename, int keep_hash) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    return (projects.at(project).copy(destination_filename, keep_hash != 0) ? 1 : 0);
+    return (projects.at(project)->copy(destination_filename, keep_hash != 0) ? 1 : 0);
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -65,7 +65,7 @@ int sjef_project_copy(const char* project, const char* destination_filename, int
 int sjef_project_move(const char* project, const char* destination_filename) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    auto success = projects.at(project).move(destination_filename);
+    auto success = projects.at(project)->move(destination_filename);
     sjef_project_close(project);
     return (success ? 1 : 0);
   }
@@ -84,7 +84,7 @@ void sjef_project_erase(const char* project) {
 int sjef_project_import(const char* project, const char* file) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    return (projects.at(project).import_file(file) ? 1 : 0);
+    return (projects.at(project)->import_file(file) ? 1 : 0);
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -93,7 +93,7 @@ int sjef_project_import(const char* project, const char* file) {
 int sjef_project_export(const char* project, const char* file) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    return (projects.at(project).export_file(file) ? 1 : 0);
+    return (projects.at(project)->export_file(file) ? 1 : 0);
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -107,14 +107,14 @@ int sjef_project_run_needed(const char* project) {
     clock_t start_time = clock();
     if (projects.count(project) == 0) sjef_project_open(project);
     if (debug) {
-      int result = (projects.at(project).run_needed() ? 1 : 0);
+      int result = (projects.at(project)->run_needed() ? 1 : 0);
       fprintf(stderr,
               "sjef_project_run_needed() returns %d after %lu ms CPU\n",
               result,
               (clock() - start_time) * 1000 / CLOCKS_PER_SEC);
       return result;
     } else
-      return (projects.at(project).run_needed() ? 1 : 0);
+      return (projects.at(project)->run_needed() ? 1 : 0);
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -124,7 +124,7 @@ int sjef_project_run_needed(const char* project) {
 int sjef_project_synchronize(const char* project, const char* backend, int verbosity) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    return (projects.at(project).synchronize(backend, verbosity) ? 1 : 0);
+    return (projects.at(project)->synchronize(backend, verbosity) ? 1 : 0);
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -138,7 +138,7 @@ int sjef_project_run(const char* project,
                      int wait) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    return (projects.at(project).run(backend,
+    return (projects.at(project)->run(backend,
                                      std::vector<std::string>(1, options),
                                      verbosity, force != 0, wait != 0) ? 1 : 0);
   }
@@ -149,7 +149,7 @@ int sjef_project_run(const char* project,
 static int sjef_project_status_asynchronous(const char* project, int verbosity, int wait) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    return static_cast<int>(projects.at(project).status(verbosity, wait != 0));
+    return static_cast<int>(projects.at(project)->status(verbosity, wait != 0));
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -164,7 +164,7 @@ int sjef_project_status_initiate(const char* project, int verbosity) {
 void sjef_project_kill(const char* project) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    projects.at(project).kill();
+    projects.at(project)->kill();
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -172,7 +172,7 @@ void sjef_project_kill(const char* project) {
 void sjef_project_property_set(const char* project, const char* key, const char* value) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    projects.at(project).property_set(std::string{key}, std::string{value});
+    projects.at(project)->property_set(std::string{key}, std::string{value});
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -181,7 +181,7 @@ char* sjef_project_property_get(const char* project,
                                 const char* key) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    return strdup(projects.at(project).property_get(std::string{key}).c_str());
+    return strdup(projects.at(project)->property_get(std::string{key}).c_str());
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -190,7 +190,7 @@ char* sjef_project_property_get(const char* project,
 void sjef_project_property_delete(const char* project, const char* key) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    projects.at(project).property_delete(std::string{key});
+    projects.at(project)->property_delete(std::string{key});
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -198,7 +198,7 @@ void sjef_project_property_delete(const char* project, const char* key) {
 void sjef_project_property_rewind(const char* project) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    projects.at(project).property_rewind();
+    projects.at(project)->property_rewind();
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -206,7 +206,7 @@ void sjef_project_property_rewind(const char* project) {
 char* sjef_project_property_next(const char* project) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    return strdup(projects.at(project).property_next().c_str());
+    return strdup(projects.at(project)->property_next().c_str());
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -215,7 +215,7 @@ char* sjef_project_property_next(const char* project) {
 char* sjef_project_filename(const char* project) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    return strdup(projects.at(project).filename().c_str());
+    return strdup(projects.at(project)->filename().c_str());
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -224,7 +224,7 @@ char* sjef_project_filename(const char* project) {
 char* sjef_project_name(const char* project) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    return strdup(projects.at(project).name().c_str());
+    return strdup(projects.at(project)->name().c_str());
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -233,7 +233,7 @@ char* sjef_project_name(const char* project) {
 size_t sjef_project_project_hash(const char* project) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    return projects.at(project).project_hash();
+    return projects.at(project)->project_hash();
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -242,7 +242,7 @@ size_t sjef_project_project_hash(const char* project) {
 size_t sjef_project_input_hash(const char* project) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    return projects.at(project).input_hash();
+    return projects.at(project)->input_hash();
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -265,7 +265,7 @@ char* sjef_backend_value(const char* project, const char* backend, const char* k
   std::string backendName{((backend != nullptr and *backend != 0) ? backend : sjef::Backend::default_name)};
   try {
     auto& p = projects.at(project);
-    return strdup(p.backend_get(backendName, key).c_str());
+    return strdup(p->backend_get(backendName, key).c_str());
   }
   catch (const std::out_of_range& e) {
     return nullptr;
@@ -277,7 +277,7 @@ char* sjef_project_backend_parameter_get(const char* project,
                                          const char* parameter) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    return strdup(projects.at(project).backend_parameter_get(backend, parameter).c_str());
+    return strdup(projects.at(project)->backend_parameter_get(backend, parameter).c_str());
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -290,7 +290,7 @@ void sjef_project_backend_parameter_set(const char* project,
                                         const char* value) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    projects.at(project).backend_parameter_set(backend, parameter, value);
+    projects.at(project)->backend_parameter_set(backend, parameter, value);
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -299,7 +299,7 @@ void sjef_project_backend_parameter_set(const char* project,
 void sjef_project_backend_parameter_delete(const char* project, const char* backend, const char* parameter) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    projects.at(project).backend_parameter_delete(backend, parameter);
+    projects.at(project)->backend_parameter_delete(backend, parameter);
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -309,7 +309,7 @@ char** sjef_project_backend_parameters(const char* project, const char* backend,
   char** result = NULL;
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    auto parameters = projects.at(project).backend_parameters(backend);
+    auto parameters = projects.at(project)->backend_parameters(backend);
     result = (char**) malloc(sizeof(char*) * (parameters.size() + 1));
     size_t i = 0;
     for (const auto& p : parameters)
@@ -325,7 +325,7 @@ char** sjef_project_backend_names(const char* project) {
   char** result = NULL;
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    auto names = projects.at(project).backend_names();
+    auto names = projects.at(project)->backend_names();
     result = (char**) malloc(sizeof(char*) * (names.size() + 1));
     size_t i = 0;
     for (const auto& p : names)

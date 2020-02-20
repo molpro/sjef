@@ -15,6 +15,6 @@ if (NOT TARGET pugixml)
 endif ()
 set_target_properties(pugixml PROPERTIES COMPILE_FLAGS "-fPIC")
 
-target_link_libraries(${LIB_NAME} PUBLIC Boost::filesystem)
+target_link_libraries(${LIB_NAME} PUBLIC Boost::filesystem pthread)
 target_link_libraries(${LIB_NAME} PRIVATE pugixml::pugixml)
 configure_library(${LIB_NAME} pugixml)

@@ -703,7 +703,16 @@ bool Project::run_needed(int verbosity) {
   if (verbosity > 1)
     std::cerr << "after property_get, time " << std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now() - start_time).count() << std::endl;
-  if (not run_input_hash.empty()) {
+  if (run_input_hash.empty()) { // if there's no input hash, look at the xml file instead
+//      std::cerr << input_from_output() << std::endl;
+//    std::cerr << file_contents("inp") << std::endl;
+    if (verbosity > 1)
+      std::cerr << "There's no run_input_hash, so compare output and input: " <<
+                (std::regex_replace(file_contents("inp"), std::regex{" *\n\n*"}, "\n") != input_from_output())
+                << std::endl;
+    return (std::regex_replace(file_contents("inp"), std::regex{" *\n\n*"}, "\n") != input_from_output());
+  }
+  {
     if (verbosity > 1)
       std::cerr << "sjef::Project::run_needed, input_hash =" << input_hash() << std::endl;
     std::stringstream sstream(run_input_hash);
@@ -1010,7 +1019,9 @@ struct plist_writer : pugi::xml_writer {
 
 constexpr static bool use_writer = false;
 
+std::mutex load_property_file_mutex;
 void Project::load_property_file() const {
+  const std::lock_guard<std::mutex> lock(load_property_file_mutex);
   if (!m_properties->load_file(propertyFile().c_str()))
     throw std::runtime_error("error in loading " + propertyFile());
   m_property_file_modification_time = fs::last_write_time(propertyFile());

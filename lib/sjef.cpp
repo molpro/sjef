@@ -881,17 +881,18 @@ status Project::status(int verbosity, bool cached) const {
   return result;
 }
 
-std::string status_message(int verbosity) {
+std::string sjef::Project::status_message(int verbosity) const {
   std::map<sjef::status, std::string> message;
   message[sjef::status::unknown] = "Not found";
   message[sjef::status::running] = "Running";
   message[sjef::status::waiting] = "Waiting";
   message[sjef::status::completed] = "Completed";
-  auto status = this->status(verbosity);
-  auto result = message[status];
-  if (status != sjef::status::unknown && !proj.property_get("jobnumber").empty())
-    result +=", job number " + proj.property_get("jobnumber") + " on backend "
-              + proj.property_get("backend");
+  message[sjef::status::unevaluated] = "Unevaluated";
+  auto statu = this->status(verbosity);
+  auto result = message[statu];
+  if (statu != sjef::status::unknown && !property_get("jobnumber").empty())
+    result +=", job number " + property_get("jobnumber") + " on backend "
+              + property_get("backend");
   return result;
 }
 

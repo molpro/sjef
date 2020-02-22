@@ -22,7 +22,7 @@ int sjef_project_run(const char* project,
                      int force,
                      int wait);
 int sjef_project_status(const char* project, int verbosity);
-char* sjef_project_status_message(const char* project, int verbosity);
+const char* sjef_project_status_message(const char* project, int verbosity);
 int sjef_project_status_initiate(const char* project, int verbosity);
 void sjef_project_kill(const char* project);
 void sjef_project_property_set(const char* project, const char* key, const char* value);

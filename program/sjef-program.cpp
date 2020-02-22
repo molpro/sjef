@@ -203,12 +203,7 @@ int main(int argc, char* argv[]) {
     else if (command == "wait") {
       proj.wait();
     } else if (command == "status") {
-      auto status = proj.status(verboseSwitch.getValue());
-      std::cout << "Status: " << status_message[status];
-      if (status != sjef::status::unknown && !proj.property_get("jobnumber").empty())
-        std::cout << ", job number " << proj.property_get("jobnumber") << " on backend "
-                  << proj.property_get("backend");
-      std::cout << std::endl;
+      std::cout << proj.status_message(verboseSwitch.getValue()) << std::endl;
     } else if (command == "kill")
       proj.kill();
     else if (command == "run") {

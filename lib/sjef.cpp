@@ -290,18 +290,18 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
     if (!rfs.empty())
       system((rsync + " -L -a " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + rfs + " " + backend.host
           + ":"
-          + cache(backend)).c_str());
+          + cache(backend)).c_str()); // TODO replace with bp::
     // send any files that do not exist on the backend yet
     system((rsync + " -L --ignore-existing -a " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + ". "
         + backend.host
         + ":"
-        + cache(backend)).c_str());
+        + cache(backend)).c_str()); // TODO replace with bp::
   } else {
     auto cmd =
         rsync + " -L -a --update " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + ". " + backend.host + ":"
             + cache(backend);
     if (verbosity > 1) std::cerr << cmd << std::endl;
-    system(cmd.c_str());
+    system(cmd.c_str()); // TODO replace with bp::
   }
   // fetch all newer files from backend
   if (property_get("_private_sjef_project_backend_inactive_synced") == "1") return true;
@@ -315,7 +315,7 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
   }
   cmd += backend.host + ":" + cache(backend) + "/ .";
   if (verbosity > 1) std::cerr << cmd << std::endl;
-  system(cmd.c_str());
+  system(cmd.c_str()); // TODO replace with bp::
   if (current_path_save != "")
     fs::current_path(current_path_save);
   if (not nostatus) // to avoid infinite loop with call from status()
@@ -878,6 +878,20 @@ status Project::status(int verbosity, bool cached) const {
   m_status_last = std::chrono::steady_clock::now();
   m_status = result;
 //  std::cerr << "m_status set to " << m_status << std::endl;
+  return result;
+}
+
+std::string status_message(int verbosity) {
+  std::map<sjef::status, std::string> message;
+  message[sjef::status::unknown] = "Not found";
+  message[sjef::status::running] = "Running";
+  message[sjef::status::waiting] = "Waiting";
+  message[sjef::status::completed] = "Completed";
+  auto status = this->status(verbosity);
+  auto result = message[status];
+  if (status != sjef::status::unknown && !proj.property_get("jobnumber").empty())
+    result +=", job number " + proj.property_get("jobnumber") + " on backend "
+              + proj.property_get("backend");
   return result;
 }
 

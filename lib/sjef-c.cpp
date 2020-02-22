@@ -158,6 +158,15 @@ static int sjef_project_status_asynchronous(const char* project, int verbosity, 
 int sjef_project_status(const char* project, int verbosity) {
   return sjef_project_status_asynchronous(project, verbosity, 1);
 }
+const char* sjef_project_status_message(const char* project, int verbosity) {
+  try {
+    if (projects.count(project) == 0) sjef_project_open(project);
+    return projects.at(project)->status_message(verbosity).c_str();
+  }
+  catch (std::exception& e) { error(e); }
+  catch (...) {}
+  return NULL;
+}
 int sjef_project_status_initiate(const char* project, int verbosity) {
   return sjef_project_status_asynchronous(project, verbosity, 0);
 }

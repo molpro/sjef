@@ -165,6 +165,11 @@ class Project {
    */
   sjef::status status(int verbosity = 0, bool cached = true) const;
   /*!
+   *
+   * @return An informative string about job status
+   */
+  std::string status_message(int verbosity = 0) const;
+  /*!
    * @brief Wait unconditionally for status() to return 'completed'
    * @param maximum_microseconds The poll interval is successively increased between calls to status() until reaching this value.
    */

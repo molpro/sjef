@@ -114,7 +114,7 @@ int sjef_project_run_needed(const char* project) {
               (clock() - start_time) * 1000 / CLOCKS_PER_SEC);
       return result;
     } else
-      return (projects.at(project)->run_needed() ? 1 : 0);
+      return (projects.at(project)->run_needed(0) ? 1 : 0);
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}

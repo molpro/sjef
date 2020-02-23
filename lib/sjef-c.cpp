@@ -161,7 +161,7 @@ int sjef_project_status(const char* project, int verbosity) {
 const char* sjef_project_status_message(const char* project, int verbosity) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    return projects.at(project)->status_message(verbosity).c_str();
+    return strdup(projects.at(project)->status_message(verbosity).c_str());
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}

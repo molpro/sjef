@@ -184,7 +184,7 @@ class Project {
    * @param verbosity Show information on decision if greater than 0
    * @return true if the output is not up to date, false otherwise
    */
-  bool run_needed(int verbosity = 0);
+  bool run_needed(int verbosity = 0) const;
   /*!
  * @brief If possible, construct the input embedded in the output file
  * @return The input used to construct the output, or, if that can't be deduced, an empty string.

@@ -653,7 +653,7 @@ void Project::kill() {
   }
 }
 
-bool Project::run_needed(int verbosity) {
+bool Project::run_needed(int verbosity) const {
   auto start_time = std::chrono::steady_clock::now();
   if (verbosity > 0) std::cerr << "sjef::Project::run_needed, status=" << status() << std::endl;
   if (verbosity > 1)
@@ -791,7 +791,14 @@ status Project::status(int verbosity, bool cached) const {
   auto pid = property_get("jobnumber");
   if (verbosity > 1)
     std::cerr << "job number " << pid << std::endl;
-  if (pid.empty() or std::stoi(pid) < 0) return unknown;
+  if (pid.empty() or std::stoi(pid) < 0) {
+    auto ih = std::to_string(input_hash());
+    auto rih = property_get("run_input_hash");
+//    std::cerr << ih << " : " << rih<<std::endl;
+    if (! rih.empty()) return (rih == ih) ? completed : unknown;
+    return (std::regex_replace(file_contents("inp"), std::regex{" *\n\n*"}, "\n") != input_from_output())
+    ? unknown : completed;
+  }
 //  std::cerr << "did not return unknown for empty pid "<<pid << std::endl;
   const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", "0");
   if (property_get("_private_sjef_project_completed_job") == be.host + ":" + pid) {

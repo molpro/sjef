@@ -367,8 +367,8 @@ class Project {
   std::string backend_parameter_default(const std::string& backend, const std::string& name) const {
     auto p = property_get("Backend/" + backend + "/" + name);
     if (p.find("!") != std::string::npos ) p = p.substr(p.find("!"));
-    if (p.find("%") == std::string::npos ) return "";
-    return p.substr(p.find("%")+1);
+    if (p.find(":") == std::string::npos ) return "";
+    return p.substr(p.find(":")+1);
   }
 
   /*!

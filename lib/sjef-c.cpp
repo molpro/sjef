@@ -281,6 +281,31 @@ char* sjef_backend_value(const char* project, const char* backend, const char* k
   }
 }
 
+char* sjef_project_backend_parameter_documentation(const char* project,
+                                                   const char* backend,
+                                                   const char* parameter) {
+  try {
+    if (projects.count(project) == 0) sjef_project_open(project);
+    return strdup(projects.at(project)->backend_parameter_documentation(backend, parameter).c_str());
+  }
+  catch (std::exception& e) { error(e); }
+  catch (...) {}
+  return NULL;
+}
+
+
+char* sjef_project_backend_parameter_default(const char* project,
+                                         const char* backend,
+                                         const char* parameter) {
+  try {
+    if (projects.count(project) == 0) sjef_project_open(project);
+    return strdup(projects.at(project)->backend_parameter_default(backend, parameter).c_str());
+  }
+  catch (std::exception& e) { error(e); }
+  catch (...) {}
+  return NULL;
+}
+
 char* sjef_project_backend_parameter_get(const char* project,
                                          const char* backend,
                                          const char* parameter) {

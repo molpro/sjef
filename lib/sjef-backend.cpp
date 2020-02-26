@@ -1,5 +1,6 @@
 #include "sjef-backend.h"
 #include <sstream>
+#include <mutex>
 
 std::string sjef::Backend::default_name = "local";
 std::string sjef::Backend::dummy_name = "__dummy";

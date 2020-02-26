@@ -341,7 +341,34 @@ class Project {
   }
 
   std::string backend_parameter_get(const std::string& backend, const std::string& name) const {
-    return property_get("Backend/" + backend + "/" + name);
+    auto p = property_get("Backend/" + backend + "/" + name);
+    if (p.find("!") == std::string::npos ) return p;
+    return p.substr(0,p.find("!"));
+  }
+
+  /*!
+   * @brief Return the documentation associated with a backend run parameter
+   * @param backend The name of the backend
+   * @param name The parameter
+   * @return
+   */
+  std::string backend_parameter_documentation(const std::string& backend, const std::string& name) const {
+    auto p = property_get("Backend/" + backend + "/" + name);
+    if (p.find("!") == std::string::npos ) return "";
+    return p.substr(p.find("!")+1);
+  }
+
+  /*!
+   * @brief Return the default value associated with a backend run parameter
+   * @param backend The name of the backend
+   * @param name The parameter
+   * @return
+   */
+  std::string backend_parameter_default(const std::string& backend, const std::string& name) const {
+    auto p = property_get("Backend/" + backend + "/" + name);
+    if (p.find("!") != std::string::npos ) p = p.substr(p.find("!"));
+    if (p.find("%") == std::string::npos ) return "";
+    return p.substr(p.find("%")+1);
   }
 
   /*!

@@ -21,8 +21,8 @@ If jobs are to be run informally on the remote, this is all that is needed, prov
 
 Within the definition of `run_command`, a simple keyword substitution mechanism is available:
 
-- `{prologue text%param}` is replaced by the value of parameter `param` if it is defined, prefixed by `prologue text`. Otherwise, the entire contents between `{}` is elided.
-- `{prologue %param:default value}` works similarly, with substitution of `default value` instead of elision if `param` is not defined.
+- `{prologue text%param!documentation}` is replaced by the value of parameter `param` if it is defined, prefixed by `prologue text`. Otherwise, the entire contents between `{}` is elided.
+- `{prologue %param:default value!documentation}` works similarly, with substitution of `default value` instead of elision if `param` is not defined. `!documentation` is ignored in constructing the completed run command, but can be queried by programs using the library, so it is good practice to write a description that would help a user to understand if and how the parameter should be specified.
 
 The key/value pairs are normally specified through the library call to run the job (`sjef::Project::run()`, `pysjef.Project.run()`, `sjef run`) but are then cached in the properties of the project using the backend, so that the defaults for subsequent runs for the same project are the values of the parameters used most recently. 
 

@@ -4,7 +4,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
-#include <stdlib.h>
+#include <stddef.h>
 int sjef_project_open(const char* project);
 void sjef_project_close(const char* project);
 int sjef_project_copy(const char* project, const char* destination_filename, int keep_hash);

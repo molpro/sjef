@@ -4,6 +4,17 @@
 
 std::string sjef::Backend::default_name = "local";
 std::string sjef::Backend::dummy_name = "__dummy";
+const std::vector<std::string> sjef::Backend::s_keys = std::vector<std::string>{
+    "name",
+    "host",
+    "cache",
+    "run_command",
+    "run_jobnumber",
+    "status_command",
+    "status_waiting",
+    "status_running",
+    "kill_command"
+};
 
 std::string sjef::Backend::str() const {
   std::stringstream ss;

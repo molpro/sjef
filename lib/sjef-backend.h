@@ -38,17 +38,7 @@ class Backend {
         status_waiting(std::move(status_waiting)),
         kill_command(std::move(kill_command)) {
   }
-  inline static const auto s_keys = std::vector<std::string>{
-      "name",
-      "host",
-      "cache",
-      "run_command",
-      "run_jobnumber",
-      "status_command",
-      "status_waiting",
-      "status_running",
-      "kill_command"
-  };
+  static const std::vector<std::string> s_keys ;
   std::string str() const;
 };
 }

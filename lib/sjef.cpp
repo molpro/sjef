@@ -27,6 +27,8 @@
 namespace bp = boost::process;
 namespace fs = boost::filesystem;
 
+std::mutex remote_server_mutex;
+
 ///> @private
 struct sjef::pugi_xml_document : public pugi::xml_document {};
 
@@ -267,10 +269,14 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
   }
   fs::current_path(m_filename);
 //  system(("ssh " + backend.host + " mkdir -p " + cache(backend)).c_str());
-//  ensure_remote_server();
-  m_remote_server.in <<  " mkdir -p " << cache(backend).c_str() << std::endl;
-//  m_remote_server.in << "echo '@@@!!EOF'" << std::endl;
-//  std::string line; while (std::getline(m_remote_server.out, line) && line != "@@@!!EOF");
+  ensure_remote_server();
+  {
+    const std::lock_guard<std::mutex> lock(remote_server_mutex);
+    m_remote_server.in << "mkdir -p " << cache(backend).c_str() << std::endl;
+    m_remote_server.in << "echo '@@@!!EOF'" << std::endl;
+    std::string line;
+    while (std::getline(m_remote_server.out, line) && line != "@@@!!EOF");
+  }
   // absolutely send reserved files
   std::string rsync = "rsync";
   if (not this->m_control_path_option.empty())
@@ -646,10 +652,13 @@ void Project::kill() {
   } else {
 //    std::cerr << "remote kill " << be.host << ":" << be.kill_command << ":" << pid << std::endl;
 //    ensure_remote_server();
+    {
+    const std::lock_guard<std::mutex> lock(remote_server_mutex);
     m_remote_server.in << be.kill_command << " " << pid << std::endl;
     m_remote_server.in << "echo '@@@!!EOF'" << std::endl;
     std::string line;
     while (std::getline(m_remote_server.out, line) && line != "@@@!!EOF");
+    }
   }
 }
 
@@ -834,6 +843,8 @@ status Project::status(int verbosity, bool cached) const {
     if (verbosity > 1)
       std::cerr << "remote status " << be.host << ":" << be.status_command << ":" << pid << std::endl;
 //    ensure_remote_server();
+    {
+    const std::lock_guard<std::mutex> lock(remote_server_mutex);
     m_remote_server.in << be.status_command << " " << pid << std::endl;
     m_remote_server.in << "echo '@@@!!EOF'" << std::endl;
     if (verbosity > 2)
@@ -855,6 +866,7 @@ status Project::status(int verbosity, bool cached) const {
           result = waiting;
         }
       }
+    }
     }
   }
   if (verbosity > 2) std::cerr << "received status " << result << std::endl;
@@ -1251,7 +1263,10 @@ std::vector<std::string> sjef::Project::backend_names() const {
 }
 
 void sjef::Project::ensure_remote_server() const {
+  const std::lock_guard<std::mutex> lock(remote_server_mutex);
 //  std::cerr << "ensure_remote_server called"<<std::endl;
+//  std::cerr << "m_remote_server.process.running" << m_remote_server.process.running() <<std::endl;
+//  std::cerr << "m_remote_server.host "<<m_remote_server.host << std::endl;
   if (m_remote_server.process.running()
       and m_remote_server.host == this->backend_get(property_get("backend"), "host")
       )
@@ -1259,13 +1274,13 @@ void sjef::Project::ensure_remote_server() const {
 //  std::cerr << "ensure_remote_server fires"<<std::endl;
   fs::path control_path_directory = expand_path("$HOME/.sjef/.ssh/ctl");
   fs::create_directories(control_path_directory);
-  auto control_path_option = "-o ControlPath=\"" + (control_path_directory / "%L-%r@%h:%p").string() + "\"";
+  m_control_path_option = "-o ControlPath=\"" + (control_path_directory / "%r@%h:%p").string() + "\"";
   auto backend = property_get("backend");
   if (backend.empty()) backend = sjef::Backend::default_name;
   m_remote_server.host = this->backend_get(backend, "host");
   if (m_remote_server.host == "localhost") return;
-//  std::cerr << "ssh " + control_path_option + " -O check " + m_remote_server.host << std::endl;
-  auto c = boost::process::child("ssh " + control_path_option + " -O check " + m_remote_server.host,
+//  std::cerr << "ssh " + m_control_path_option + " -O check " + m_remote_server.host << std::endl;
+  auto c = boost::process::child("ssh " + m_control_path_option + " -O check " + m_remote_server.host,
                                  bp::std_out > bp::null,
                                  bp::std_err > bp::null);
   c.wait();
@@ -1275,24 +1290,37 @@ void sjef::Project::ensure_remote_server() const {
 //    std::cerr << "ssh ControlMaster already running" << std::endl;
 //  if (c.exit_code() != 0)
 //    std::cerr
-//        << "ssh -nNf " + control_path_option + " -o ControlMaster=yes -o ControlPersist=60 " + m_remote_server.host
+//        << "ssh -nNf " + m_control_path_option + " -o ControlMaster=yes -o ControlPersist=60 " + m_remote_server.host
 //        << std::endl;
   if (c.exit_code() != 0)
     c = boost::process::child(
-        "ssh -nNf " + control_path_option + " -o ControlMaster=yes -o ControlPersist=60 " + m_remote_server.host,
+        "ssh -nNf " + m_control_path_option + " -o ControlMaster=yes -o ControlPersist=60 " + m_remote_server.host,
         bp::std_out > bp::null,
         bp::std_err > bp::null);
   c.wait();
-  m_control_path_option = (c.exit_code() == 0) ? control_path_option : "";
-
+//  std::cerr << "exit code "<<c.exit_code()<<std::endl;
+  m_control_path_option = (c.exit_code() == 0) ? m_control_path_option : "";
+  c = boost::process::child("ssh " + m_control_path_option + " -O check " + m_remote_server.host,
+                                 bp::std_out > bp::null,
+                                 bp::std_err > bp::null);
+  c.wait();
+  m_control_path_option = (c.exit_code() == 0) ? m_control_path_option : "";
 //  std::cerr << "Start remote_server " << std::endl;
+//  std::cerr << "m_control_path_option="<<m_control_path_option << std::endl;
   m_remote_server.process.terminate();
-  m_remote_server.process = bp::child(bp::search_path("ssh"),
-                                      m_control_path_option,
-                                      m_remote_server.host,
-                                      bp::std_in < m_remote_server.in,
-                                      bp::std_err > m_remote_server.err,
-                                      bp::std_out > m_remote_server.out);
+  if (!m_control_path_option.empty())
+    m_remote_server.process = bp::child(bp::search_path("ssh"),
+                                        m_control_path_option,
+                                        m_remote_server.host,
+                                        bp::std_in < m_remote_server.in,
+                                        bp::std_err > m_remote_server.err,
+                                        bp::std_out > m_remote_server.out);
+  else
+    m_remote_server.process = bp::child(bp::search_path("ssh"),
+                                        m_remote_server.host,
+                                        bp::std_in < m_remote_server.in,
+                                        bp::std_err > m_remote_server.err,
+                                        bp::std_out > m_remote_server.out);
 //  std::cerr << "started remote_server "<<std::endl;
 }
 

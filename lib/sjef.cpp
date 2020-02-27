@@ -784,7 +784,7 @@ bool Project::run_needed(int verbosity) const {
 }
 
 std::string Project::xml(bool sync) const {
-  return xmlRepair(file_contents(m_suffixes.at("xml"),"",sync));
+  return xmlRepair(file_contents(m_suffixes.at("xml"), "", sync));
 }
 
 std::string Project::file_contents(const std::string& suffix, const std::string& name, bool sync) const {
@@ -1305,19 +1305,19 @@ void sjef::Project::ensure_remote_server() const {
   if (backend.empty()) backend = sjef::Backend::default_name;
   m_remote_server.host = this->backend_get(backend, "host");
   if (m_remote_server.host == "localhost") return;
-  std::cerr << "ssh " + m_control_path_option + " -O check " + m_remote_server.host << std::endl;
+//  std::cerr << "ssh " + m_control_path_option + " -O check " + m_remote_server.host << std::endl;
   auto c = boost::process::child(bp::search_path("ssh"), m_control_path_option, "-O check", m_remote_server.host,
                                  bp::std_out > bp::null,
                                  bp::std_err > bp::null);
   c.wait();
-  if (c.exit_code() != 0)
-    std::cerr << "Attempting to start ssh ControlMaster" << std::endl;
-  else
-    std::cerr << "ssh ControlMaster already running" << std::endl;
-  if (c.exit_code() != 0)
-    std::cerr
-        << "ssh -nNf " + m_control_path_option + " -o ControlMaster=yes -o ControlPersist=60 " + m_remote_server.host
-        << std::endl;
+//  if (c.exit_code() != 0)
+//    std::cerr << "Attempting to start ssh ControlMaster" << std::endl;
+//  else
+//    std::cerr << "ssh ControlMaster already running" << std::endl;
+//  if (c.exit_code() != 0)
+//    std::cerr
+//        << "ssh -nNf " + m_control_path_option + " -o ControlMaster=yes -o ControlPersist=60 " + m_remote_server.host
+//        << std::endl;
   if (c.exit_code() != 0)
     c = boost::process::child(
         bp::search_path("ssh").native() +
@@ -1328,7 +1328,7 @@ void sjef::Project::ensure_remote_server() const {
         bp::std_out > bp::null,
         bp::std_err > bp::null);
   c.wait();
-  std::cerr << "exit code " << c.exit_code() << std::endl;
+//  std::cerr << "exit code " << c.exit_code() << std::endl;
   m_control_path_option = (c.exit_code() == 0) ? m_control_path_option : "";
   c = boost::process::child(bp::search_path("ssh"), m_control_path_option, "-O check", m_remote_server.host,
                             bp::std_out > bp::null,

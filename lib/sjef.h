@@ -188,15 +188,17 @@ class Project {
   bool run_needed(int verbosity = 0) const;
   /*!
  * @brief If possible, construct the input embedded in the output file
+ * @param sync Whether to force a synchronisation with backend before getting the file contents
  * @return The input used to construct the output, or, if that can't be deduced, an empty string.
  */
-  std::string input_from_output() const;
+  std::string input_from_output(bool sync = true) const;
   void rewrite_input_file(const std::string& input_file_name, const std::string& old_name);
   /*!
    * @brief Get the xml output, completing any open tags if necessary
+   * @param sync Whether to force a synchronisation with backend before getting the file contents
    * @return
    */
-  std::string xml() const;
+  std::string xml(bool sync = true) const;
   /*!
    * @brief Obtain the contents of a project file
    * @param suffix If present without \c name, look for a primary file with that type. If absent, the file name of the bundle is instead selected

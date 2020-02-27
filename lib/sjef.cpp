@@ -257,7 +257,8 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
               << property_get("_private_sjef_project_backend_inactive_synced") << std::endl;
   // TODO check if any files have changed locally somehow. If they haven't, and backend_inactive_synced is set, then we could return immediately
   if (m_property_file_modification_time == fs::last_write_time(propertyFile())
-    and property_get("_private_sjef_project_backend_inactive_synced") == "1") return true;
+      and property_get("_private_sjef_project_backend_inactive_synced") == "1")
+    return true;
 //  std::cerr << "really syncing"<<std::endl;
   //TODO: implement more robust error checking
   fs::path current_path_save;
@@ -653,11 +654,11 @@ void Project::kill() {
 //    std::cerr << "remote kill " << be.host << ":" << be.kill_command << ":" << pid << std::endl;
 //    ensure_remote_server();
     {
-    const std::lock_guard<std::mutex> lock(remote_server_mutex);
-    m_remote_server.in << be.kill_command << " " << pid << std::endl;
-    m_remote_server.in << "echo '@@@!!EOF'" << std::endl;
-    std::string line;
-    while (std::getline(m_remote_server.out, line) && line != "@@@!!EOF");
+      const std::lock_guard<std::mutex> lock(remote_server_mutex);
+      m_remote_server.in << be.kill_command << " " << pid << std::endl;
+      m_remote_server.in << "echo '@@@!!EOF'" << std::endl;
+      std::string line;
+      while (std::getline(m_remote_server.out, line) && line != "@@@!!EOF");
     }
   }
 }
@@ -804,9 +805,9 @@ status Project::status(int verbosity, bool cached) const {
     auto ih = std::to_string(input_hash());
     auto rih = property_get("run_input_hash");
 //    std::cerr << ih << " : " << rih<<std::endl;
-    if (! rih.empty()) return (rih == ih) ? completed : unknown;
+    if (!rih.empty()) return (rih == ih) ? completed : unknown;
     return (std::regex_replace(file_contents("inp"), std::regex{" *\n\n*"}, "\n") != input_from_output())
-    ? unknown : completed;
+           ? unknown : completed;
   }
 //  std::cerr << "did not return unknown for empty pid "<<pid << std::endl;
   const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", "0");
@@ -844,29 +845,29 @@ status Project::status(int verbosity, bool cached) const {
       std::cerr << "remote status " << be.host << ":" << be.status_command << ":" << pid << std::endl;
 //    ensure_remote_server();
     {
-    const std::lock_guard<std::mutex> lock(remote_server_mutex);
-    m_remote_server.in << be.status_command << " " << pid << std::endl;
-    m_remote_server.in << "echo '@@@!!EOF'" << std::endl;
-    if (verbosity > 2)
-      std::cerr << "sending " << be.status_command << " " << pid << std::endl;
-    std::string line;
-    while (std::getline(m_remote_server.out, line)
-        && line != "@@@!!EOF"
-        ) {
-      if (verbosity > 0) std::cerr << "line received: " << line << std::endl;
-      if ((" " + line).find(" " + pid + " ") != std::string::npos) {
-        std::smatch match;
-        if (verbosity > 2) std::cerr << "line" << line << std::endl;
-        if (verbosity > 2) std::cerr << "status_running " << be.status_running << std::endl;
-        if (verbosity > 2) std::cerr << "status_waiting " << be.status_waiting << std::endl;
-        if (std::regex_search(line, match, std::regex{be.status_running})) {
-          result = running;
-        }
-        if (std::regex_search(line, match, std::regex{be.status_waiting})) {
-          result = waiting;
+      const std::lock_guard<std::mutex> lock(remote_server_mutex);
+      m_remote_server.in << be.status_command << " " << pid << std::endl;
+      m_remote_server.in << "echo '@@@!!EOF'" << std::endl;
+      if (verbosity > 2)
+        std::cerr << "sending " << be.status_command << " " << pid << std::endl;
+      std::string line;
+      while (std::getline(m_remote_server.out, line)
+          && line != "@@@!!EOF"
+          ) {
+        if (verbosity > 0) std::cerr << "line received: " << line << std::endl;
+        if ((" " + line).find(" " + pid + " ") != std::string::npos) {
+          std::smatch match;
+          if (verbosity > 2) std::cerr << "line" << line << std::endl;
+          if (verbosity > 2) std::cerr << "status_running " << be.status_running << std::endl;
+          if (verbosity > 2) std::cerr << "status_waiting " << be.status_waiting << std::endl;
+          if (std::regex_search(line, match, std::regex{be.status_running})) {
+            result = running;
+          }
+          if (std::regex_search(line, match, std::regex{be.status_waiting})) {
+            result = waiting;
+          }
         }
       }
-    }
     }
   }
   if (verbosity > 2) std::cerr << "received status " << result << std::endl;
@@ -910,8 +911,8 @@ std::string sjef::Project::status_message(int verbosity) const {
   auto statu = this->status(verbosity);
   auto result = message[statu];
   if (statu != sjef::status::unknown && !property_get("jobnumber").empty())
-    result +=", job number " + property_get("jobnumber") + " on backend "
-              + property_get("backend");
+    result += ", job number " + property_get("jobnumber") + " on backend "
+        + property_get("backend");
   return result;
 }
 
@@ -1301,8 +1302,8 @@ void sjef::Project::ensure_remote_server() const {
 //  std::cerr << "exit code "<<c.exit_code()<<std::endl;
   m_control_path_option = (c.exit_code() == 0) ? m_control_path_option : "";
   c = boost::process::child("ssh " + m_control_path_option + " -O check " + m_remote_server.host,
-                                 bp::std_out > bp::null,
-                                 bp::std_err > bp::null);
+                            bp::std_out > bp::null,
+                            bp::std_err > bp::null);
   c.wait();
   m_control_path_option = (c.exit_code() == 0) ? m_control_path_option : "";
 //  std::cerr << "Start remote_server " << std::endl;
@@ -1376,7 +1377,7 @@ void sjef::Project::backend_watcher(sjef::Project& project,
       if (not abort) {
         project.m_unmovables.shutdown_flag.clear();
         try {
-          project.synchronize(backend,0);
+          project.synchronize(backend, 0);
         }
         catch (const std::exception& ex) {
           std::cerr << "sjef::Project::backend_watcher() synchronize() has thrown " << ex.what() << std::endl;

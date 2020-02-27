@@ -41,7 +41,7 @@ Example:
     <backend name="slurmcluster"
              host="{%user}@slurmcluster.somewhere.edu"
              cache="/scratch/{%user}/sjef-project"
-             run_command="/software/molpro/release/bin/qmolpro {-t %t} {-n %n} {-m %m} {-G %G} {-q %q:compute}"
+             run_command="/software/molpro/release/bin/qmolpro {-t %t!time limit in seconds} {-n %n!number of MPI processes} {-m %m!memory} {-G %G!Global Arrays memory} {-q %q:compute!batch queue}"
              run_jobnumber="Submitted batch job *([0-9]+)"
              kill_command="scancel"
              status_command="squeue -j"

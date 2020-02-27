@@ -8,10 +8,10 @@
 struct sjef::pugi_xml_document : public pugi::xml_document {};
 
 // Functions for sjef that allow it to recognize stuff that occurs in particular applications
-std::string sjef::Project::input_from_output() const {
+std::string sjef::Project::input_from_output(bool sync) const {
   std::string result;
   sjef::pugi_xml_document outxml;
-  outxml.load_string(xml().c_str());
+  outxml.load_string(xml(sync).c_str());
 
   if (m_project_suffix == "molpro") { // look for Molpro input in Molpro output
     for (const auto& node : outxml.select_nodes("/molpro/job/input/p"))

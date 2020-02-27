@@ -248,7 +248,9 @@ bool Project::synchronize(std::string name, int verbosity) const {
   return synchronize(m_backends.at(name), verbosity);
 }
 
+std::mutex synchronize_mutex;
 bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) const {
+  const std::lock_guard<std::mutex> lock(synchronize_mutex);
   if (verbosity > 1) std::cerr << "synchronize with " << backend.name << " (" << backend.host << ")" << std::endl;
   if (backend.host == "localhost") return true;
   if (verbosity > 1)
@@ -280,10 +282,11 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
   }
   // absolutely send reserved files
   std::string rsync = "rsync";
+  std::string rsyncopt = "--timeout=5";
   if (not this->m_control_path_option.empty())
-    rsync += " -e 'ssh " + m_control_path_option + "'";
+    rsyncopt += " -e 'ssh " + m_control_path_option + "'";
   if (verbosity > 2)
-    std::cerr << "rsync: " << rsync << std::endl;
+    std::cerr << "rsyncopt: " << rsyncopt << std::endl;
   bool send_only_reserved = false;
   if (send_only_reserved) { // 2020-01-29 not safe under all circumstances, and probably not faster
     std::string rfs;
@@ -294,35 +297,55 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
       if (fs::exists(f))
         rfs += " " + f;
     }
-    if (!rfs.empty())
-      system((rsync + " -L -a " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + rfs + " " + backend.host
-          + ":"
-          + cache(backend)).c_str()); // TODO replace with bp::
+    if (!rfs.empty()) {
+      auto cmd = std::string{bp::search_path(rsync).native()} + " " +
+          rsyncopt +
+          " -L -a " +
+          (verbosity > 0 ? std::string{"-v "} : std::string{""}) +
+          rfs + " " +
+          backend.host + ":" + cache(backend);
+      if (verbosity > 1)
+        std::cerr << cmd << std::endl;
+      bp::child(cmd).wait();
+    }
     // send any files that do not exist on the backend yet
-    system((rsync + " -L --ignore-existing -a " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + ". "
-        + backend.host
-        + ":"
-        + cache(backend)).c_str()); // TODO replace with bp::
+    {
+      auto cmd = std::string{bp::search_path(rsync).native()} + " " +
+          rsyncopt + " -L --ignore-existing -a " +
+          (verbosity > 0 ? std::string{"-v "} : std::string{""}) +
+          "." +
+          backend.host + ":" + cache(backend);
+      if (verbosity > 1)
+        std::cerr << cmd << std::endl;
+      bp::child(cmd).wait();
+    }
   } else {
-    auto cmd =
-        rsync + " -L -a --update " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + ". " + backend.host + ":"
-            + cache(backend);
-    if (verbosity > 1) std::cerr << cmd << std::endl;
-    system(cmd.c_str()); // TODO replace with bp::
+    auto cmd = std::string{bp::search_path(rsync).native()} + " " +
+        rsyncopt + " " +
+        "-L -a --update " + " " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + ". " + backend.host + ":"
+        + cache(backend);
+    if (verbosity > 1)
+      std::cerr << cmd << std::endl;
+    bp::child(cmd).wait();
   }
   // fetch all newer files from backend
   if (property_get("_private_sjef_project_backend_inactive_synced") == "1") return true;
-  auto cmd = rsync + " -a --update " + (verbosity > 0 ? std::string{"-v "} : std::string{""});
-  for (const auto& rf : m_reserved_files) {
+  {
+    auto cmd = std::string{bp::search_path(rsync).native()} + " " +
+        rsyncopt +
+        " -a --update " + (verbosity > 0 ? std::string{"-v "} : std::string{""});
+    for (const auto& rf : m_reserved_files) {
 //    std::cerr << "reserved file pattern " << rf << std::endl;
-    auto f = regex_replace(fs::path{rf}.filename().native(), std::regex(R"--(%)--"), name());
+      auto f = regex_replace(fs::path{rf}.filename().native(), std::regex(R"--(%)--"), name());
 //    std::cerr << "reserved file resolved " << f << std::endl;
-    if (fs::exists(f))
-      cmd += "--exclude=" + f + " ";
+      if (fs::exists(f))
+        cmd += "--exclude=" + f + " ";
+    }
+    cmd += backend.host + ":" + cache(backend) + "/ .";
+    if (verbosity > 1)
+      std::cerr << cmd << std::endl;
+    bp::child(cmd).wait();
   }
-  cmd += backend.host + ":" + cache(backend) + "/ .";
-  if (verbosity > 1) std::cerr << cmd << std::endl;
-  system(cmd.c_str()); // TODO replace with bp::
   if (current_path_save != "")
     fs::current_path(current_path_save);
   if (not nostatus) // to avoid infinite loop with call from status()
@@ -607,6 +630,7 @@ bool Project::run(std::string name, std::vector<std::string> options, int verbos
           std::cerr << "... a match was found: " << match[1] << std::endl;
         if (verbosity > 1) status(verbosity - 2);
         property_set("jobnumber", match[1]);
+        auto cc = bp::child(bp::search_path("ssh"), backend.host, std::string{"ps -p "} + std::string{match[1]});
         fs::current_path(current_path_save);
         if (wait) this->wait();
         return true;
@@ -759,8 +783,8 @@ bool Project::run_needed(int verbosity) const {
   return false;
 }
 
-std::string Project::xml() const {
-  return xmlRepair(file_contents(m_suffixes.at("xml")));
+std::string Project::xml(bool sync) const {
+  return xmlRepair(file_contents(m_suffixes.at("xml"), "", sync));
 }
 
 std::string Project::file_contents(const std::string& suffix, const std::string& name, bool sync) const {
@@ -772,6 +796,7 @@ std::string Project::file_contents(const std::string& suffix, const std::string&
       and not be.empty()
       and be != "local"
       and property_get("_private_sjef_project_backend_inactive_synced") != "1"
+      and suffix != m_suffixes.at("inp")
       )
     synchronize(be);
   std::ifstream s(filename(suffix, name));
@@ -806,7 +831,7 @@ status Project::status(int verbosity, bool cached) const {
     auto rih = property_get("run_input_hash");
 //    std::cerr << ih << " : " << rih<<std::endl;
     if (!rih.empty()) return (rih == ih) ? completed : unknown;
-    return (std::regex_replace(file_contents("inp"), std::regex{" *\n\n*"}, "\n") != input_from_output())
+    return (std::regex_replace(file_contents("inp"), std::regex{" *\n\n*"}, "\n") != input_from_output(false))
            ? unknown : completed;
   }
 //  std::cerr << "did not return unknown for empty pid "<<pid << std::endl;
@@ -1281,7 +1306,7 @@ void sjef::Project::ensure_remote_server() const {
   m_remote_server.host = this->backend_get(backend, "host");
   if (m_remote_server.host == "localhost") return;
 //  std::cerr << "ssh " + m_control_path_option + " -O check " + m_remote_server.host << std::endl;
-  auto c = boost::process::child("ssh " + m_control_path_option + " -O check " + m_remote_server.host,
+  auto c = boost::process::child(bp::search_path("ssh"), m_control_path_option, "-O check", m_remote_server.host,
                                  bp::std_out > bp::null,
                                  bp::std_err > bp::null);
   c.wait();
@@ -1295,13 +1320,17 @@ void sjef::Project::ensure_remote_server() const {
 //        << std::endl;
   if (c.exit_code() != 0)
     c = boost::process::child(
-        "ssh -nNf " + m_control_path_option + " -o ControlMaster=yes -o ControlPersist=60 " + m_remote_server.host,
+        bp::search_path("ssh").native() +
+            " -nNf " +
+            m_control_path_option +
+            " -o ControlMaster=yes -o ControlPersist=60 " +
+            m_remote_server.host,
         bp::std_out > bp::null,
         bp::std_err > bp::null);
   c.wait();
-//  std::cerr << "exit code "<<c.exit_code()<<std::endl;
+//  std::cerr << "exit code " << c.exit_code() << std::endl;
   m_control_path_option = (c.exit_code() == 0) ? m_control_path_option : "";
-  c = boost::process::child("ssh " + m_control_path_option + " -O check " + m_remote_server.host,
+  c = boost::process::child(bp::search_path("ssh"), m_control_path_option, "-O check", m_remote_server.host,
                             bp::std_out > bp::null,
                             bp::std_err > bp::null);
   c.wait();

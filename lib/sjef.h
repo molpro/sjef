@@ -44,6 +44,8 @@ class Project {
     boost::process::ipstream out;
     boost::process::ipstream err;
     std::string host;
+    std::string last_out;
+    std::string last_err;
   } m_remote_server;
   mutable std::string m_control_path_option;
   mutable std::chrono::milliseconds m_status_lifetime;
@@ -60,6 +62,7 @@ class Project {
   };
   mutable backend_watcher_flag_container m_unmovables;
   void report_shutdown(const std::string& message) const;
+  std::string remote_server_run(const std::string& command, int verbosity=0) const;
  public:
   static const std::string s_propertyFile;
   /*!
@@ -134,7 +137,7 @@ class Project {
    * @param verbosity If >0, show underlying processing
    * @return
    */
-  bool synchronize(std::string name="", int verbosity = 0) const;
+  bool synchronize(std::string name = "", int verbosity = 0) const;
  private:
   bool synchronize(const Backend& backend, int verbosity = 0, bool nostatus = false) const;
  public:
@@ -284,7 +287,10 @@ class Project {
   std::string propertyFile() const;
   std::string cache(const Backend& backend) const;
   void force_file_names(const std::string& oldname);
-  static void backend_watcher(sjef::Project& project, const std::string& backend, int minimum_wait_milliseconds, int maximum_wait_milliseconds=0) noexcept;
+  static void backend_watcher(sjef::Project& project,
+                              const std::string& backend,
+                              int minimum_wait_milliseconds,
+                              int maximum_wait_milliseconds = 0) noexcept;
   void shutdown_backend_watcher();
   /*!
    * @brief Take a line from a program input file, and figure out whether it references some other files that would influence the program behaviour. If so, return the contents of those files; otherwise, return the line.
@@ -345,8 +351,8 @@ class Project {
 
   std::string backend_parameter_get(const std::string& backend, const std::string& name) const {
     auto p = property_get("Backend/" + backend + "/" + name);
-    if (p.find("!") == std::string::npos ) return p;
-    return p.substr(0,p.find("!"));
+    if (p.find("!") == std::string::npos) return p;
+    return p.substr(0, p.find("!"));
   }
 
   /*!
@@ -357,8 +363,8 @@ class Project {
    */
   std::string backend_parameter_documentation(const std::string& backend, const std::string& name) const {
     auto p = property_get("Backend/" + backend + "/" + name);
-    if (p.find("!") == std::string::npos ) return "";
-    return p.substr(p.find("!")+1);
+    if (p.find("!") == std::string::npos) return "";
+    return p.substr(p.find("!") + 1);
   }
 
   /*!
@@ -369,9 +375,9 @@ class Project {
    */
   std::string backend_parameter_default(const std::string& backend, const std::string& name) const {
     auto p = property_get("Backend/" + backend + "/" + name);
-    if (p.find("!") != std::string::npos ) p = p.substr(p.find("!"));
-    if (p.find(":") == std::string::npos ) return "";
-    return p.substr(p.find(":")+1);
+    if (p.find("!") != std::string::npos) p = p.substr(p.find("!"));
+    if (p.find(":") == std::string::npos) return "";
+    return p.substr(p.find(":") + 1);
   }
 
   /*!

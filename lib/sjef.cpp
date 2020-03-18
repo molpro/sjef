@@ -273,13 +273,7 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
   fs::current_path(m_filename);
 //  system(("ssh " + backend.host + " mkdir -p " + cache(backend)).c_str());
   ensure_remote_server();
-  {
-    const std::lock_guard<std::mutex> lock(remote_server_mutex);
-    m_remote_server.in << "mkdir -p " << cache(backend).c_str() << std::endl;
-    m_remote_server.in << "echo '@@@!!EOF'" << std::endl;
-    std::string line;
-    while (std::getline(m_remote_server.out, line) && line != "@@@!!EOF");
-  }
+  remote_server_run(std::string{"mkdir -p "} + cache(backend));
   // absolutely send reserved files
   std::string rsync = "rsync";
   std::string rsyncopt = "--timeout=5";
@@ -677,13 +671,7 @@ void Project::kill() {
   } else {
 //    std::cerr << "remote kill " << be.host << ":" << be.kill_command << ":" << pid << std::endl;
 //    ensure_remote_server();
-    {
-      const std::lock_guard<std::mutex> lock(remote_server_mutex);
-      m_remote_server.in << be.kill_command << " " << pid << std::endl;
-      m_remote_server.in << "echo '@@@!!EOF'" << std::endl;
-      std::string line;
-      while (std::getline(m_remote_server.out, line) && line != "@@@!!EOF");
-    }
+    remote_server_run(be.kill_command + " " + pid);
   }
 }
 
@@ -869,6 +857,7 @@ status Project::status(int verbosity, bool cached) const {
     if (verbosity > 1)
       std::cerr << "remote status " << be.host << ":" << be.status_command << ":" << pid << std::endl;
 //    ensure_remote_server();
+//    remote_server_run(be.status_command + " " + pid);
     {
       const std::lock_guard<std::mutex> lock(remote_server_mutex);
       m_remote_server.in << be.status_command << " " << pid << std::endl;
@@ -1288,6 +1277,35 @@ std::vector<std::string> sjef::Project::backend_names() const {
   return result;
 }
 
+std::string sjef::Project::remote_server_run(const std::string& command, int verbosity) const {
+  const std::lock_guard<std::mutex> lock(remote_server_mutex);
+  if (verbosity > 0)
+    std::cerr << command << std::endl;
+  const std::string terminator{"@@@!!EOF"};
+  m_remote_server.in << command << std::endl;
+  m_remote_server.in << ">&2 echo '" << terminator << "' $?" << std::endl;
+  m_remote_server.in << "echo '" << terminator << "'" << std::endl;
+  std::string line;
+  m_remote_server.last_out.clear();
+  while (std::getline(m_remote_server.out, line) && line != terminator)
+    m_remote_server.last_out += line + '\n';
+  if (verbosity > 1)
+    std::cerr << "out from remote command " << command << ": " << m_remote_server.last_out << std::endl;
+  m_remote_server.last_err.clear();
+  while (std::getline(m_remote_server.err, line) && line.substr(0, terminator.size()) != terminator)
+    m_remote_server.last_err += line + '\n';
+  if (verbosity > 1)
+    std::cerr << "err from remote command " << command << ": " << m_remote_server.last_err << std::endl;
+  if (verbosity > 1)
+    std::cerr << "last line=" << line << std::endl;
+  auto rc = std::stoi(line.substr(terminator.size() + 1));
+  if (verbosity > 1)
+    std::cerr << "rc=" << rc << std::endl;
+  if (rc != 0)
+    throw std::runtime_error("Failed remote command: " + command + "\nStandard output:\n" + m_remote_server.last_out
+                                 + "\nStandard error:\n" + m_remote_server.last_err);
+  return m_remote_server.last_out;
+}
 void sjef::Project::ensure_remote_server() const {
   const std::lock_guard<std::mutex> lock(remote_server_mutex);
 //  std::cerr << "ensure_remote_server called"<<std::endl;

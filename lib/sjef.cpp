@@ -897,8 +897,7 @@ status Project::status(int verbosity, bool cached) const {
                                            )
                                            ? "1" : "0");
   return_point:
-  auto
-      time_taken =
+  auto time_taken =
       std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time);
   if (time_taken < m_status_lifetime) m_status_lifetime = time_taken;
   m_status_last = std::chrono::steady_clock::now();

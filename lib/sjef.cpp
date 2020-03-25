@@ -626,6 +626,7 @@ bool Project::run(std::string name, std::vector<std::string> options, int verbos
         if (verbosity > 1) status(verbosity - 2);
         property_set("jobnumber", match[1]);
         auto cc = bp::child(bp::search_path("ssh"), backend.host, std::string{"ps -p "} + std::string{match[1]});
+	cc.wait();
         fs::current_path(current_path_save);
         if (wait) this->wait();
         return true;

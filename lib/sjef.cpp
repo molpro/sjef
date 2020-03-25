@@ -608,34 +608,22 @@ bool Project::run(std::string name, std::vector<std::string> options, int verbos
     auto jobstring =
         "cd " + cache(backend) + "; nohup " + run_command + " " + optionstring
             + this->name()
-            + ".inp& echo $! ";
+            + ".inp";
+    if (backend.run_jobnumber == "([0-9]+)") jobstring += "& echo $! "; // go asynchronous if a straight launch
+    if (verbosity > 3) std::cerr << "backend.run_jobnumber " << backend.run_jobnumber << std::endl;
     if (verbosity > 3) std::cerr << "jobstring " << jobstring << std::endl;
-    c = bp::child(bp::search_path("ssh"), backend.host, jobstring, bp::std_err > c_err, bp::std_out > c_out);
-    c.wait();
-    std::string sstdout, sstderr;
-    if (verbosity > 2)
-      std::cerr << "examine job submission output against regex: \"" << backend.run_jobnumber << "\"" << std::endl;
-    while (std::getline(c_out, line)) {
-      sstdout += line + "\n";
-      std::smatch match;
-      if (verbosity > 1)
-        std::cerr << "\"" << line << "\"" << std::endl;
-      if (std::regex_search(line, match, std::regex{backend.run_jobnumber})) {
-        if (verbosity > 2)
-          std::cerr << "... a match was found: " << match[1] << std::endl;
-        if (verbosity > 1) status(verbosity - 2);
-        property_set("jobnumber", match[1]);
-        auto cc = bp::child(bp::search_path("ssh"), backend.host, std::string{"ps -p "} + std::string{match[1]});
-	cc.wait();
-        fs::current_path(current_path_save);
-        if (wait) this->wait();
-        return true;
-      }
+    auto run_output = remote_server_run(jobstring);
+    if (verbosity > 3) std::cerr << "run_output " << run_output << std::endl;
+    std::smatch match;
+    if (std::regex_search(run_output, match, std::regex{backend.run_jobnumber})) {
+      if (verbosity > 2)
+        std::cerr << "... a match was found: " << match[1] << std::endl;
+      if (verbosity > 1) status(verbosity - 2);
+      property_set("jobnumber", match[1]);
+      fs::current_path(current_path_save);
+      if (wait) this->wait();
+      return true;
     }
-    while (std::getline(c_err, line))
-      sstderr += line + "\n";
-//    std::cerr << "Remote job number not captured for backend \"" + backend.name + "\":\n" << sstdout << "\n" << sstderr
-//              << std::endl;
   }
   if (current_path_save != "")
     fs::current_path(current_path_save);
@@ -895,7 +883,8 @@ status Project::status(int verbosity, bool cached) const {
 //    std::cerr << "result is not unknown, but is " << result << std::endl;
     if (result == running)
       const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced", "0");
-    const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", result == completed ? "1" : "0");
+    const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive",
+                                             result == completed ? "1" : "0");
     goto return_point;
   }
   if (verbosity > 2) std::cerr << "fallen through loop" << std::endl;
@@ -909,7 +898,8 @@ status Project::status(int verbosity, bool cached) const {
                                            ? "1" : "0");
   return_point:
   auto
-      time_taken = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time);
+      time_taken =
+      std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time);
   if (time_taken < m_status_lifetime) m_status_lifetime = time_taken;
   m_status_last = std::chrono::steady_clock::now();
   m_status = result;

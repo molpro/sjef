@@ -611,6 +611,7 @@ bool Project::run(std::string name, std::vector<std::string> options, int verbos
             + ".inp& echo $! ";
     if (verbosity > 3) std::cerr << "jobstring " << jobstring << std::endl;
     c = bp::child(bp::search_path("ssh"), backend.host, jobstring, bp::std_err > c_err, bp::std_out > c_out);
+    c.wait();
     std::string sstdout, sstderr;
     if (verbosity > 2)
       std::cerr << "examine job submission output against regex: \"" << backend.run_jobnumber << "\"" << std::endl;

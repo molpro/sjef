@@ -68,6 +68,10 @@ char** sjef_backend_keys();
  */
 char* sjef_backend_value(const char* project, const char* backend, const char* key);
 
+char* sjef_project_backend_parameter_documentation(const char* project,
+                                                   const char* backend,
+                                                   const char* parameter);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

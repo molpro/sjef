@@ -214,7 +214,6 @@ int main(int argc, char* argv[]) {
         proj.backend_parameter_set(backend, kv.substr(0, pos), kv.substr(pos + 1));
       }
       if ((success = proj.run(backend,
-                              extras,
                               verboseSwitch.getValue(),
                               forceArg.getValue(),
                               waitArg.getValue())))

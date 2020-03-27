@@ -452,7 +452,7 @@ TEST(project, project_name_embedded_space) {
 TEST(project, backend_parameter_expand) {
   savestate x;
   const auto& backend = sjef::Backend::dummy_name;
-  sjef::Project p("completely new", nullptr, true, true, "molpro");
+  sjef::Project p("backend_parameter_expand", nullptr, true, true, "molpro");
   p.property_set("backend", backend);
   p.backend_parameter_set(backend,"thing","its value");
   std::map<std::string, std::string> tests;

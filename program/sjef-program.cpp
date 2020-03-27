@@ -58,6 +58,10 @@ int main(int argc, char* argv[]) {
     description += "\nerase: Erase the project";
     allowedCommands.push_back("sync");
     description += "\nsync: Synchronize the project with the backend";
+    allowedCommands.push_back("get");
+    description += "\nget: Obtain the values of one or more parameters, whose names are given as additional arguments at the end of the command line";
+    allowedCommands.push_back("set");
+    description += "\nset: Set the values of one or more parameters, giving additional arguments at the end of the command line in the form key1=value1 key2=value2...; if any values are empty, the corresponding parameter is deleted";
     TCLAP::ValuesConstraint<std::string>
         allowedVals(allowedCommands);
     TCLAP::MultiSwitchArg verboseSwitch("v", "verbose", "show detail", cmd, 0);
@@ -156,7 +160,7 @@ int main(int argc, char* argv[]) {
         std::cout << " " << extra << std::endl;
       std::cout << std::endl;
     }
-    if (extras.size() > 1 and (command != "import" and command != "export" and command != "run"))
+    if (extras.size() > 1 and (command != "import" and command != "export" and command != "run" and command != "get" and command != "set"))
       throw TCLAP::CmdLineParseException("Too many arguments on command line");
     std::map<sjef::status, std::string> status_message;
     status_message[sjef::status::unknown] = "Not found";
@@ -245,6 +249,23 @@ int main(int argc, char* argv[]) {
       if (success) success = system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out") + "\\'").c_str());
     } else if (command == "clean") {
       proj.clean(true, false, false);
+    } else if (command == "get") {
+      for (const auto& key : extras) {
+        std::cout << "Property " << key << " = " << proj.property_get(key) << std::endl;
+      }
+    } else if (command == "set") {
+      for (const auto& keyval : extras) {
+        auto pos = keyval.find_first_of("=");
+        if (pos == std::string::npos)
+          throw std::runtime_error(keyval + " needs to be of the form key=value");
+        auto key = keyval.substr(0, pos);
+        auto val = keyval.substr(pos + 1);
+        if (val.empty())
+          proj.property_delete(key);
+        else
+          proj.property_set(key, val);
+        std::cout << "Property " << key << " = " << proj.property_get(key) << std::endl;
+      }
     } else
       throw TCLAP::CmdLineParseException("Unknown subcommand: " + command);
     }

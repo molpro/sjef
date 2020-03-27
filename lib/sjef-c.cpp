@@ -139,8 +139,7 @@ int sjef_project_run(const char* project,
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
     return (projects.at(project)->run(backend,
-                                     std::vector<std::string>(1, options),
-                                     verbosity, force != 0, wait != 0) ? 1 : 0);
+                                      verbosity, force != 0, wait != 0) ? 1 : 0);
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}

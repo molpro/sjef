@@ -366,7 +366,7 @@ TEST(project, spawn_many_dummy) {
   { std::ofstream(p.filename("inp")) << ""; }
   const auto& backend = sjef::Backend::dummy_name;
   for (auto i = 0; i < 50; ++i) {
-    ASSERT_TRUE(p.run(backend, {}, -1, true, true));
+    ASSERT_TRUE(p.run(backend, -1, true, true));
     EXPECT_NE(p.property_get("jobnumber"), "-1");
     EXPECT_EQ(p.status(), sjef::completed);
   }
@@ -379,7 +379,7 @@ TEST(project, spawn_many_molpro) {
   const auto& backend = sjef::Backend::default_name;
   if (not boost::process::search_path("molpro").empty()) // test the default backend only if it exists
     for (auto i = 0; i < 5; ++i) {
-      ASSERT_TRUE(p.run(backend, {}, -1, true, true));
+      ASSERT_TRUE(p.run(backend, -1, true, true));
       EXPECT_NE(p.property_get("jobnumber"), "-1");
       EXPECT_EQ(p.status(), sjef::completed);
     }
@@ -403,6 +403,33 @@ TEST(backend, backend_parameter_expand) {
               "thing " + prologue + "123 thing2");
     EXPECT_EQ(He.backend_parameter_expand(backend, "thing {" + prologue + "%present:default value} thing2"),
               "thing " + prologue + "123 thing2");
+  }
+  { // another set of tests
+    savestate x;
+    const auto& backend = sjef::Backend::dummy_name;
+    sjef::Project p("backend_parameter_expand", nullptr, true, true, "molpro");
+    p.property_set("backend", backend);
+    p.backend_parameter_set(backend, "thing", "its value");
+    std::map<std::string, std::string> tests;
+    std::vector<std::string> preambles{"stuff ", ""};
+    tests["{ -n %n}"] = "";
+    tests["{ -n %n! with documentation}"] = "";
+    tests["{ -n %n:99}"] = " -n 99";
+    tests["{ -n %n:99! with documentation}"] = " -n 99";
+    tests["{ -n %thing}"] = " -n its value";
+    tests["{ -n %thing! with documentation}"] = " -n its value";
+    tests["{ -n %thing:99}"] = " -n its value";
+    tests["{ -n %thing:99! with documentation}"] = " -n its value";
+    for (const auto& preamble : preambles)
+      for (const auto& test : tests)
+        EXPECT_EQ(p.backend_parameter_expand(backend, preamble + test.first + " more stuff"),
+                  preamble + test.second + " more stuff");
+    std::map<std::string, std::string> badtests;
+    badtests["{ -n !%n:99 This is an ill-formed parameter string because the % comes in the comment, so should be detected as absent}"] =
+        "";
+    for (const auto& preamble : preambles)
+      for (const auto& test : badtests)
+        EXPECT_THROW(p.backend_parameter_expand(backend, preamble + test.first + " more stuff"), std::runtime_error);
   }
 }
 
@@ -433,18 +460,19 @@ TEST(project, recent) {
 TEST(project, dummy_backend) {
   savestate x;
   sjef::Project p("completely_new", nullptr, true, true, "sjef");
-  p.run(sjef::Backend::dummy_name, {}, 0, true);
+  p.run(sjef::Backend::dummy_name, 0, true, false);
   p.wait();
   EXPECT_EQ(p.file_contents("out"), "dummy");
   EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
 }
 
-TEST(project,project_name_embedded_space) {
+TEST(project, project_name_embedded_space) {
   savestate x;
   sjef::Project p("completely new", nullptr, true, true, "molpro");
   std::ofstream(p.filename("inp")) << "geometry={He};rhf\n";
-  p.run(sjef::Backend::dummy_name, {}, 0, true);
+  p.run(sjef::Backend::dummy_name, 0, true, false);
   p.wait();
   EXPECT_EQ(p.file_contents("out"), "dummy");
   EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
 }
+

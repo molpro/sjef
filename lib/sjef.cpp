@@ -476,12 +476,22 @@ std::string Project::backend_get(const std::string& backend, const std::string& 
 }
 
 std::string Project::backend_parameter_expand(const std::string& backend, const std::string& templ) {
+//  std::cerr << "backend_parameter_expand backend="<<backend << ", templ="<<templ<<std::endl;
   std::string output_text;
-  std::regex re("\\{([^}]*)\\}");
+  std::regex re("[^$]\\{([^}]*)\\}");
   auto callback = [&](std::string m) {
+//    std::cerr << "callback "<<m<<std::endl;
     if (std::regex_match(m, re)) {
+//      std::cerr << "callback, matching m=" << m << std::endl;
+      auto first = m.front();
       m.pop_back();
       m.erase(0, 1);
+      if (first != '{') m[0] = first;
+//      std::cerr << "matched "<<m<<std::endl;
+      auto bang = m.find_first_of("!");
+      if (bang != std::string::npos)
+        m = m.substr(0, bang);
+//      std::cerr << "matched with comment removed=" << m << std::endl;
       auto percent = m.find_first_of("%");
       if (percent == std::string::npos)
         throw std::runtime_error("Invalid template: " + templ + "\nMissing % in expression {" + m + "}");
@@ -493,33 +503,50 @@ std::string Project::backend_parameter_expand(const std::string& backend, const 
         parameter_name.erase(defpos);
       }
       auto value = backend_parameter_get(backend, parameter_name);
+//      std::cerr << "parameter_name="<<parameter_name<<", value="<<value<<std::endl;
       if (value.empty()) {
+//        std::cerr << "value empty; def="<<def<<std::endl;
         if (not def.empty())
           output_text += m.substr(0, percent) + def;
+        else
+          output_text += m.front();
       } else {
         output_text += m.substr(0, percent) + value;
       }
-    } else
+    } else {
+//      std::cerr << "plain append of "<<m<<std::endl;
       output_text += m;
+    }
+//    std::cerr << "callback end has output_text="<<output_text<<std::endl;
   };
 
+  auto templ_ = std::string{" "} + templ;
   std::sregex_token_iterator
-      begin(templ.begin(), templ.end(), re, {-1, 0}),
+      begin(templ_.begin(), templ_.end(), re, {-1, 0}),
       end;
   std::for_each(begin, end, callback);
-  return output_text;
+//  std::cerr << "backend_parameter_expand returns output_text="<<output_text<<std::endl;
+  return output_text.substr(1);
 }
 
 std::map<std::string, std::string> Project::backend_parameters(const std::string& backend) const {
   std::map<std::string, std::string> result;
 
-  auto templ = m_backends.at(backend).run_command;
+  auto templ = std::string{" "} + m_backends.at(backend).run_command;
   std::string output_text;
-  std::regex re("\\{([^}]*)\\}");
+  std::regex re("[^$]\\{([^}]*)\\}");
   auto callback = [&](std::string m) {
     if (std::regex_match(m, re)) {
+//      std::cerr << "callback, matching m="<<m<<std::endl;
+      auto first = m.front();
       m.pop_back();
       m.erase(0, 1);
+      if (first != '{') m[0] = first;
+//      std::cerr << "matched "<<m<<std::endl;
+//      std::cerr << "callback, trimmed m="<<m<<std::endl;
+      auto bang = m.find_first_of("!");
+      if (bang != std::string::npos)
+        m = m.substr(0, bang);
       auto percent = m.find_first_of("%");
       if (percent == std::string::npos)
         throw std::runtime_error("Invalid template: " + templ + "\nMissing % in expression {" + m + "}");
@@ -542,7 +569,7 @@ std::map<std::string, std::string> Project::backend_parameters(const std::string
   return result;
 }
 
-bool Project::run(std::string name, std::vector<std::string> options, int verbosity, bool force, bool wait) {
+bool Project::run(std::string name, int verbosity, bool force, bool wait) {
   auto& backend = m_backends.at(name);
   if (status(verbosity) != unknown && status(0) != completed) return false;
 //  if (verbosity > 0)
@@ -560,26 +587,25 @@ bool Project::run(std::string name, std::vector<std::string> options, int verbos
   std::string line;
   bp::child c;
   std::string optionstring;
-  for (const auto& o : options) optionstring += o + " ";
-  property_set("run_options", optionstring);
 //  std::cerr << "setting run_input_hash to input_hash()=" << input_hash() << std::endl;
   property_set("run_input_hash", std::to_string(input_hash()));
   if (verbosity > 0 and backend.name != sjef::Backend::dummy_name) optionstring += "-v ";
 //  std::cerr << "backend.run_command before expand "<<backend.run_command<<std::endl;
   auto run_command = backend_parameter_expand(backend.name, backend.run_command);
-//  std::cerr << "backend.run_command after expand "<<backend.run_command<<std::endl;
+//  std::cerr << "run_command after expand "<<run_command<<std::endl;
   if (backend.host == "localhost") {
     property_set("_private_sjef_project_backend_inactive", "0");
     property_set("_private_sjef_project_backend_inactive_synced", "0");
     if (verbosity > 0) std::cerr << "run local job, backend=" << backend.name << std::endl;
-    auto spl = splitString(backend.run_command);
+    auto spl = splitString(run_command);
     run_command = spl.front();
 //    spl.erase(spl.begin());
 //    for (const auto& sp : spl)
     for (auto sp = spl.rbegin(); sp < spl.rend() - 1; sp++)
       optionstring = "'" + *sp + "' " + optionstring;
     if (verbosity > 1)
-      std::cerr << executable(run_command) << " " << optionstring << " " << fs::path(this->name() + ".inp")
+      std::cerr << "run local job executable=" << executable(run_command) << " " << optionstring << " "
+                << fs::path(this->name() + ".inp")
                 << std::endl;
     if (verbosity > 2)
       for (const auto& o : splitString(optionstring))
@@ -608,34 +634,22 @@ bool Project::run(std::string name, std::vector<std::string> options, int verbos
     auto jobstring =
         "cd " + cache(backend) + "; nohup " + run_command + " " + optionstring
             + this->name()
-            + ".inp& echo $! ";
+            + ".inp";
+    if (backend.run_jobnumber == "([0-9]+)") jobstring += "& echo $! "; // go asynchronous if a straight launch
+    if (verbosity > 3) std::cerr << "backend.run_jobnumber " << backend.run_jobnumber << std::endl;
     if (verbosity > 3) std::cerr << "jobstring " << jobstring << std::endl;
-    c = bp::child(bp::search_path("ssh"), backend.host, jobstring, bp::std_err > c_err, bp::std_out > c_out);
-    c.wait();
-    std::string sstdout, sstderr;
-    if (verbosity > 2)
-      std::cerr << "examine job submission output against regex: \"" << backend.run_jobnumber << "\"" << std::endl;
-    while (std::getline(c_out, line)) {
-      sstdout += line + "\n";
-      std::smatch match;
-      if (verbosity > 1)
-        std::cerr << "\"" << line << "\"" << std::endl;
-      if (std::regex_search(line, match, std::regex{backend.run_jobnumber})) {
-        if (verbosity > 2)
-          std::cerr << "... a match was found: " << match[1] << std::endl;
-        if (verbosity > 1) status(verbosity - 2);
-        property_set("jobnumber", match[1]);
-        auto cc = bp::child(bp::search_path("ssh"), backend.host, std::string{"ps -p "} + std::string{match[1]});
-	cc.wait();
-        fs::current_path(current_path_save);
-        if (wait) this->wait();
-        return true;
-      }
+    auto run_output = remote_server_run(jobstring);
+    if (verbosity > 3) std::cerr << "run_output " << run_output << std::endl;
+    std::smatch match;
+    if (std::regex_search(run_output, match, std::regex{backend.run_jobnumber})) {
+      if (verbosity > 2)
+        std::cerr << "... a match was found: " << match[1] << std::endl;
+      if (verbosity > 1) status(verbosity - 2);
+      property_set("jobnumber", match[1]);
+      fs::current_path(current_path_save);
+      if (wait) this->wait();
+      return true;
     }
-    while (std::getline(c_err, line))
-      sstderr += line + "\n";
-//    std::cerr << "Remote job number not captured for backend \"" + backend.name + "\":\n" << sstdout << "\n" << sstderr
-//              << std::endl;
   }
   if (current_path_save != "")
     fs::current_path(current_path_save);
@@ -895,7 +909,8 @@ status Project::status(int verbosity, bool cached) const {
 //    std::cerr << "result is not unknown, but is " << result << std::endl;
     if (result == running)
       const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced", "0");
-    const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", result == completed ? "1" : "0");
+    const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive",
+                                             result == completed ? "1" : "0");
     goto return_point;
   }
   if (verbosity > 2) std::cerr << "fallen through loop" << std::endl;
@@ -908,8 +923,8 @@ status Project::status(int verbosity, bool cached) const {
                                            )
                                            ? "1" : "0");
   return_point:
-  auto
-      time_taken = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time);
+  auto time_taken =
+      std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time);
   if (time_taken < m_status_lifetime) m_status_lifetime = time_taken;
   m_status_last = std::chrono::steady_clock::now();
   m_status = result;

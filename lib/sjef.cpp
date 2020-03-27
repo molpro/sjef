@@ -569,7 +569,7 @@ std::map<std::string, std::string> Project::backend_parameters(const std::string
   return result;
 }
 
-bool Project::run(std::string name, std::vector<std::string> options, int verbosity, bool force, bool wait) {
+bool Project::run(std::string name, int verbosity, bool force, bool wait) {
   auto& backend = m_backends.at(name);
   if (status(verbosity) != unknown && status(0) != completed) return false;
 //  if (verbosity > 0)
@@ -587,8 +587,6 @@ bool Project::run(std::string name, std::vector<std::string> options, int verbos
   std::string line;
   bp::child c;
   std::string optionstring;
-  for (const auto& o : options) optionstring += o + " ";
-  property_set("run_options", optionstring);
 //  std::cerr << "setting run_input_hash to input_hash()=" << input_hash() << std::endl;
   property_set("run_input_hash", std::to_string(input_hash()));
   if (verbosity > 0 and backend.name != sjef::Backend::dummy_name) optionstring += "-v ";

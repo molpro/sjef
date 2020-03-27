@@ -84,7 +84,7 @@ TEST(backend, C_values) {//TODO actually implement some of this for C
   auto allBackends = sjef_project_backend_names(projname);
   std::cerr << "back from making allBackends"<<std::endl;
 //char** allBackends = NULL;
-  EXPECT_EQ(sjef_backend_value(projname,"!*@£junk", "name"), nullptr);
+  EXPECT_THROW(sjef_backend_value(projname,"!*@£junk", "name"), std::runtime_error);
 //  while(sleep(5));
   if (false) {
 
@@ -95,7 +95,7 @@ TEST(backend, C_values) {//TODO actually implement some of this for C
   for (i = 0; allBackends[i] != nullptr; ++i) {
     EXPECT_EQ(std::string{allBackends[i]},allBackendsCpp[i]);
     std::cout << allBackends[i] << std::endl;
-    EXPECT_EQ(sjef_backend_value(projname,allBackends[i], "!*@£junk"), nullptr);
+    EXPECT_THROW(sjef_backend_value(projname,allBackends[i], "!*@£junk"), std::runtime_error);
     ASSERT_NE(sjef_backend_value(projname,allBackends[i], "name"), nullptr);
     localFound = localFound or std::string{sjef_backend_value(projname,allBackends[i], "name")} == "local";
     EXPECT_EQ(std::string{sjef_backend_value(projname,allBackends[i], "name")}, std::string{allBackends[i]});

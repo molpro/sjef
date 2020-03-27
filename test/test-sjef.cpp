@@ -454,8 +454,9 @@ TEST(project, backend_parameter_expand) {
   const auto& backend = sjef::Backend::dummy_name;
   sjef::Project p("backend_parameter_expand", nullptr, true, true, "molpro");
   p.property_set("backend", backend);
-  p.backend_parameter_set(backend,"thing","its value");
+  p.backend_parameter_set(backend, "thing", "its value");
   std::map<std::string, std::string> tests;
+  std::vector<std::string> preambles{"stuff ", ""};
   tests["{ -n %n}"] = "";
   tests["{ -n %n! with documentation}"] = "";
   tests["{ -n %n:99}"] = " -n 99";
@@ -464,11 +465,14 @@ TEST(project, backend_parameter_expand) {
   tests["{ -n %thing! with documentation}"] = " -n its value";
   tests["{ -n %thing:99}"] = " -n its value";
   tests["{ -n %thing:99! with documentation}"] = " -n its value";
-  for (const auto& test : tests)
-    EXPECT_EQ(p.backend_parameter_expand(backend, "stuff " + test.first + " more stuff"),
-              "stuff " + test.second + " more stuff");
+  for (const auto& preamble : preambles)
+    for (const auto& test : tests)
+      EXPECT_EQ(p.backend_parameter_expand(backend, preamble + test.first + " more stuff"),
+                preamble + test.second + " more stuff");
   std::map<std::string, std::string> badtests;
-  badtests["{ -n !%n:99 This is an ill-formed parameter string because the % comes in the comment, so should be detected as absent}"] = "";
-  for (const auto& test : badtests)
-    EXPECT_THROW(p.backend_parameter_expand(backend, "stuff " + test.first + " more stuff"),std::runtime_error);
+  badtests["{ -n !%n:99 This is an ill-formed parameter string because the % comes in the comment, so should be detected as absent}"] =
+      "";
+  for (const auto& preamble : preambles)
+    for (const auto& test : badtests)
+      EXPECT_THROW(p.backend_parameter_expand(backend, preamble + test.first + " more stuff"), std::runtime_error);
 }

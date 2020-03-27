@@ -478,17 +478,20 @@ std::string Project::backend_get(const std::string& backend, const std::string& 
 std::string Project::backend_parameter_expand(const std::string& backend, const std::string& templ) {
 //  std::cerr << "backend_parameter_expand backend="<<backend << ", templ="<<templ<<std::endl;
   std::string output_text;
-  std::regex re("\\{([^}]*)\\}");
+  std::regex re("[^$]\\{([^}]*)\\}");
   auto callback = [&](std::string m) {
 //    std::cerr << "callback "<<m<<std::endl;
     if (std::regex_match(m, re)) {
+//      std::cerr << "callback, matching m=" << m << std::endl;
+      auto first = m.front();
       m.pop_back();
       m.erase(0, 1);
+      if (first != '{') m[0] = first;
 //      std::cerr << "matched "<<m<<std::endl;
       auto bang = m.find_first_of("!");
       if (bang != std::string::npos)
-        m=m.substr(0,bang);
-//      std::cerr << "matched with comment removed "<<m<<std::endl;
+        m = m.substr(0, bang);
+//      std::cerr << "matched with comment removed=" << m << std::endl;
       auto percent = m.find_first_of("%");
       if (percent == std::string::npos)
         throw std::runtime_error("Invalid template: " + templ + "\nMissing % in expression {" + m + "}");
@@ -505,6 +508,8 @@ std::string Project::backend_parameter_expand(const std::string& backend, const 
 //        std::cerr << "value empty; def="<<def<<std::endl;
         if (not def.empty())
           output_text += m.substr(0, percent) + def;
+        else
+          output_text += m.front();
       } else {
         output_text += m.substr(0, percent) + value;
       }
@@ -515,24 +520,33 @@ std::string Project::backend_parameter_expand(const std::string& backend, const 
 //    std::cerr << "callback end has output_text="<<output_text<<std::endl;
   };
 
+  auto templ_ = std::string{" "} + templ;
   std::sregex_token_iterator
-      begin(templ.begin(), templ.end(), re, {-1, 0}),
+      begin(templ_.begin(), templ_.end(), re, {-1, 0}),
       end;
   std::for_each(begin, end, callback);
 //  std::cerr << "backend_parameter_expand returns output_text="<<output_text<<std::endl;
-  return output_text;
+  return output_text.substr(1);
 }
 
 std::map<std::string, std::string> Project::backend_parameters(const std::string& backend) const {
   std::map<std::string, std::string> result;
 
-  auto templ = m_backends.at(backend).run_command;
+  auto templ = std::string{" "} + m_backends.at(backend).run_command;
   std::string output_text;
-  std::regex re("\\{([^}]*)\\}");
+  std::regex re("[^$]\\{([^}]*)\\}");
   auto callback = [&](std::string m) {
     if (std::regex_match(m, re)) {
+//      std::cerr << "callback, matching m="<<m<<std::endl;
+      auto first = m.front();
       m.pop_back();
       m.erase(0, 1);
+      if (first != '{') m[0] = first;
+//      std::cerr << "matched "<<m<<std::endl;
+//      std::cerr << "callback, trimmed m="<<m<<std::endl;
+      auto bang = m.find_first_of("!");
+      if (bang != std::string::npos)
+        m = m.substr(0, bang);
       auto percent = m.find_first_of("%");
       if (percent == std::string::npos)
         throw std::runtime_error("Invalid template: " + templ + "\nMissing % in expression {" + m + "}");
@@ -592,7 +606,8 @@ bool Project::run(std::string name, std::vector<std::string> options, int verbos
     for (auto sp = spl.rbegin(); sp < spl.rend() - 1; sp++)
       optionstring = "'" + *sp + "' " + optionstring;
     if (verbosity > 1)
-      std::cerr << "run local job executable="<<executable(run_command) << " " << optionstring << " " << fs::path(this->name() + ".inp")
+      std::cerr << "run local job executable=" << executable(run_command) << " " << optionstring << " "
+                << fs::path(this->name() + ".inp")
                 << std::endl;
     if (verbosity > 2)
       for (const auto& o : splitString(optionstring))

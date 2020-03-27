@@ -221,7 +221,15 @@ bool Project::import_file(std::string file, bool overwrite) {
   return true;
 }
 
+void Project::throw_if_backend_invalid(std::string backend) const {
+  if (backend.empty()) backend = property_get("backend");
+  if (backend.empty()) throw std::runtime_error("No backend specified");
+  if (m_backends.count(backend) == 0)
+    throw std::runtime_error("Backend " + backend + " is not registered");
+}
+
 bool Project::export_file(std::string file, bool overwrite) {
+  throw_if_backend_invalid();
   if (!property_get("backend").empty())synchronize(m_backends.at(property_get("backend")), 0);
   auto from = fs::path{m_filename};
   from /= fs::path{file}.filename();
@@ -243,8 +251,7 @@ bool Project::synchronize(std::string name, int verbosity) const {
 //  std::cerr << "name="<<name<<std::endl;
 //  std::cerr << "m_backends.size()="<<m_backends.size()<<std::endl;
 //  std::cerr << "m_backends.count(name)="<<m_backends.count(name)<<std::endl;
-  if (m_backends.count(name) == 0)
-    throw std::runtime_error("Non-existent backend " + name);
+  throw_if_backend_invalid(name);
   return synchronize(m_backends.at(name), verbosity);
 }
 
@@ -452,6 +459,7 @@ static std::vector<std::string> splitString(std::string input, char c = ' ', cha
 }
 
 std::string Project::backend_get(const std::string& backend, const std::string& key) const {
+  throw_if_backend_invalid(backend);
   auto& be = m_backends.at(backend);
   if (key == "name")
     return be.name;
@@ -532,6 +540,7 @@ std::string Project::backend_parameter_expand(const std::string& backend, const 
 std::map<std::string, std::string> Project::backend_parameters(const std::string& backend) const {
   std::map<std::string, std::string> result;
 
+  throw_if_backend_invalid(backend);
   auto templ = std::string{" "} + m_backends.at(backend).run_command;
   std::string output_text;
   std::regex re("[^$]\\{([^}]*)\\}");
@@ -570,6 +579,7 @@ std::map<std::string, std::string> Project::backend_parameters(const std::string
 }
 
 bool Project::run(std::string name, int verbosity, bool force, bool wait) {
+  throw_if_backend_invalid(name);
   auto& backend = m_backends.at(name);
   if (status(verbosity) != unknown && status(0) != completed) return false;
 //  if (verbosity > 0)
@@ -674,6 +684,7 @@ void Project::clean(bool oldOutput, bool output, bool unused) {
 
 void Project::kill() {
   if (property_get("backend").empty()) return;
+  throw_if_backend_invalid();
   auto be = m_backends.at(property_get("backend"));
   auto pid = property_get("jobnumber");
   if (pid.empty()) return;
@@ -822,8 +833,7 @@ status Project::status(int verbosity, bool cached) const {
   auto start_time = std::chrono::steady_clock::now();
   auto bes = property_get("backend");
   if (bes.empty()) bes = sjef::Backend::default_name;
-  if (bes.empty() or m_backends.count(bes) == 0)
-    throw std::runtime_error("Invalid backend: " + bes);
+  throw_if_backend_invalid(bes);
   auto be = m_backends.at(bes);
   if (verbosity > 1)
     std::cerr << "status() backend:\n====" << be.str() << "\n====" << std::endl;

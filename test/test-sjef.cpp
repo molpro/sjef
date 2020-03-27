@@ -404,6 +404,33 @@ TEST(backend, backend_parameter_expand) {
     EXPECT_EQ(He.backend_parameter_expand(backend, "thing {" + prologue + "%present:default value} thing2"),
               "thing " + prologue + "123 thing2");
   }
+  { // another set of tests
+    savestate x;
+    const auto& backend = sjef::Backend::dummy_name;
+    sjef::Project p("backend_parameter_expand", nullptr, true, true, "molpro");
+    p.property_set("backend", backend);
+    p.backend_parameter_set(backend, "thing", "its value");
+    std::map<std::string, std::string> tests;
+    std::vector<std::string> preambles{"stuff ", ""};
+    tests["{ -n %n}"] = "";
+    tests["{ -n %n! with documentation}"] = "";
+    tests["{ -n %n:99}"] = " -n 99";
+    tests["{ -n %n:99! with documentation}"] = " -n 99";
+    tests["{ -n %thing}"] = " -n its value";
+    tests["{ -n %thing! with documentation}"] = " -n its value";
+    tests["{ -n %thing:99}"] = " -n its value";
+    tests["{ -n %thing:99! with documentation}"] = " -n its value";
+    for (const auto& preamble : preambles)
+      for (const auto& test : tests)
+        EXPECT_EQ(p.backend_parameter_expand(backend, preamble + test.first + " more stuff"),
+                  preamble + test.second + " more stuff");
+    std::map<std::string, std::string> badtests;
+    badtests["{ -n !%n:99 This is an ill-formed parameter string because the % comes in the comment, so should be detected as absent}"] =
+        "";
+    for (const auto& preamble : preambles)
+      for (const auto& test : badtests)
+        EXPECT_THROW(p.backend_parameter_expand(backend, preamble + test.first + " more stuff"), std::runtime_error);
+  }
 }
 
 TEST(sjef, atomic) {
@@ -449,30 +476,3 @@ TEST(project, project_name_embedded_space) {
   EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
 }
 
-TEST(project, backend_parameter_expand) {
-  savestate x;
-  const auto& backend = sjef::Backend::dummy_name;
-  sjef::Project p("backend_parameter_expand", nullptr, true, true, "molpro");
-  p.property_set("backend", backend);
-  p.backend_parameter_set(backend, "thing", "its value");
-  std::map<std::string, std::string> tests;
-  std::vector<std::string> preambles{"stuff ", ""};
-  tests["{ -n %n}"] = "";
-  tests["{ -n %n! with documentation}"] = "";
-  tests["{ -n %n:99}"] = " -n 99";
-  tests["{ -n %n:99! with documentation}"] = " -n 99";
-  tests["{ -n %thing}"] = " -n its value";
-  tests["{ -n %thing! with documentation}"] = " -n its value";
-  tests["{ -n %thing:99}"] = " -n its value";
-  tests["{ -n %thing:99! with documentation}"] = " -n its value";
-  for (const auto& preamble : preambles)
-    for (const auto& test : tests)
-      EXPECT_EQ(p.backend_parameter_expand(backend, preamble + test.first + " more stuff"),
-                preamble + test.second + " more stuff");
-  std::map<std::string, std::string> badtests;
-  badtests["{ -n !%n:99 This is an ill-formed parameter string because the % comes in the comment, so should be detected as absent}"] =
-      "";
-  for (const auto& preamble : preambles)
-    for (const auto& test : badtests)
-      EXPECT_THROW(p.backend_parameter_expand(backend, preamble + test.first + " more stuff"), std::runtime_error);
-}

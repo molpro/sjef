@@ -476,12 +476,19 @@ std::string Project::backend_get(const std::string& backend, const std::string& 
 }
 
 std::string Project::backend_parameter_expand(const std::string& backend, const std::string& templ) {
+//  std::cerr << "backend_parameter_expand backend="<<backend << ", templ="<<templ<<std::endl;
   std::string output_text;
   std::regex re("\\{([^}]*)\\}");
   auto callback = [&](std::string m) {
+//    std::cerr << "callback "<<m<<std::endl;
     if (std::regex_match(m, re)) {
       m.pop_back();
       m.erase(0, 1);
+//      std::cerr << "matched "<<m<<std::endl;
+      auto bang = m.find_first_of("!");
+      if (bang != std::string::npos)
+        m=m.substr(0,bang);
+//      std::cerr << "matched with comment removed "<<m<<std::endl;
       auto percent = m.find_first_of("%");
       if (percent == std::string::npos)
         throw std::runtime_error("Invalid template: " + templ + "\nMissing % in expression {" + m + "}");
@@ -493,20 +500,26 @@ std::string Project::backend_parameter_expand(const std::string& backend, const 
         parameter_name.erase(defpos);
       }
       auto value = backend_parameter_get(backend, parameter_name);
+//      std::cerr << "parameter_name="<<parameter_name<<", value="<<value<<std::endl;
       if (value.empty()) {
+//        std::cerr << "value empty; def="<<def<<std::endl;
         if (not def.empty())
           output_text += m.substr(0, percent) + def;
       } else {
         output_text += m.substr(0, percent) + value;
       }
-    } else
+    } else {
+//      std::cerr << "plain append of "<<m<<std::endl;
       output_text += m;
+    }
+//    std::cerr << "callback end has output_text="<<output_text<<std::endl;
   };
 
   std::sregex_token_iterator
       begin(templ.begin(), templ.end(), re, {-1, 0}),
       end;
   std::for_each(begin, end, callback);
+//  std::cerr << "backend_parameter_expand returns output_text="<<output_text<<std::endl;
   return output_text;
 }
 
@@ -567,19 +580,19 @@ bool Project::run(std::string name, std::vector<std::string> options, int verbos
   if (verbosity > 0 and backend.name != sjef::Backend::dummy_name) optionstring += "-v ";
 //  std::cerr << "backend.run_command before expand "<<backend.run_command<<std::endl;
   auto run_command = backend_parameter_expand(backend.name, backend.run_command);
-//  std::cerr << "backend.run_command after expand "<<backend.run_command<<std::endl;
+//  std::cerr << "run_command after expand "<<run_command<<std::endl;
   if (backend.host == "localhost") {
     property_set("_private_sjef_project_backend_inactive", "0");
     property_set("_private_sjef_project_backend_inactive_synced", "0");
     if (verbosity > 0) std::cerr << "run local job, backend=" << backend.name << std::endl;
-    auto spl = splitString(backend.run_command);
+    auto spl = splitString(run_command);
     run_command = spl.front();
 //    spl.erase(spl.begin());
 //    for (const auto& sp : spl)
     for (auto sp = spl.rbegin(); sp < spl.rend() - 1; sp++)
       optionstring = "'" + *sp + "' " + optionstring;
     if (verbosity > 1)
-      std::cerr << executable(run_command) << " " << optionstring << " " << fs::path(this->name() + ".inp")
+      std::cerr << "run local job executable="<<executable(run_command) << " " << optionstring << " " << fs::path(this->name() + ".inp")
                 << std::endl;
     if (verbosity > 2)
       for (const auto& o : splitString(optionstring))

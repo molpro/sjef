@@ -439,7 +439,7 @@ TEST(project, dummy_backend) {
   EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
 }
 
-TEST(project,project_name_embedded_space) {
+TEST(project, project_name_embedded_space) {
   savestate x;
   sjef::Project p("completely new", nullptr, true, true, "molpro");
   std::ofstream(p.filename("inp")) << "geometry={He};rhf\n";
@@ -447,4 +447,28 @@ TEST(project,project_name_embedded_space) {
   p.wait();
   EXPECT_EQ(p.file_contents("out"), "dummy");
   EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
+}
+
+TEST(project, backend_parameter_expand) {
+  savestate x;
+  const auto& backend = sjef::Backend::dummy_name;
+  sjef::Project p("completely new", nullptr, true, true, "molpro");
+  p.property_set("backend", backend);
+  p.backend_parameter_set(backend,"thing","its value");
+  std::map<std::string, std::string> tests;
+  tests["{ -n %n}"] = "";
+  tests["{ -n %n! with documentation}"] = "";
+  tests["{ -n %n:99}"] = " -n 99";
+  tests["{ -n %n:99! with documentation}"] = " -n 99";
+  tests["{ -n %thing}"] = " -n its value";
+  tests["{ -n %thing! with documentation}"] = " -n its value";
+  tests["{ -n %thing:99}"] = " -n its value";
+  tests["{ -n %thing:99! with documentation}"] = " -n its value";
+  for (const auto& test : tests)
+    EXPECT_EQ(p.backend_parameter_expand(backend, "stuff " + test.first + " more stuff"),
+              "stuff " + test.second + " more stuff");
+  std::map<std::string, std::string> badtests;
+  badtests["{ -n !%n:99 This is an ill-formed parameter string because the % comes in the comment, so should be detected as absent}"] = "";
+  for (const auto& test : badtests)
+    EXPECT_THROW(p.backend_parameter_expand(backend, "stuff " + test.first + " more stuff"),std::runtime_error);
 }

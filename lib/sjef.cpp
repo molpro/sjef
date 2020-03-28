@@ -583,8 +583,8 @@ bool Project::run(std::string name, int verbosity, bool force, bool wait) {
   throw_if_backend_invalid(name);
   auto& backend = m_backends.at(name);
   if (status(verbosity) != unknown && status(0) != completed) return false;
-//  if (verbosity > 0)
-  std::cerr << "Project::run() run_needed()=" << run_needed(verbosity) << std::endl;
+  if (verbosity > 0)
+    std::cerr << "Project::run() run_needed()=" << run_needed(verbosity) << std::endl;
 //  if (not force and not run_needed()) return false;
   change_backend(backend.name);
   fs::path current_path_save;
@@ -1301,7 +1301,8 @@ std::string xmlRepair(const std::string& source,
 std::vector<std::string> sjef::Project::backend_names() const {
   std::vector<std::string> result;
   for (const auto& be : this->m_backends)
-    result.push_back(be.first);
+    if (be.first != sjef::Backend::dummy_name)
+      result.push_back(be.first);
   return result;
 }
 

@@ -271,8 +271,9 @@ class Project {
   /*!
    * @brief Change the active backend
    * @param backend The name of the backend. If not a valid name, the function throws std::invalid_argument.
+   * @param force If false, and the current backend is equal to backend, do nothing
    */
-  void change_backend(std::string backend = std::string{""});
+  void change_backend(std::string backend = std::string{""}, bool force=false);
  protected:
   void throw_if_backend_invalid(std::string backend="") const;
   std::string get_project_suffix(const std::string& filename, const std::string& default_suffix) const;

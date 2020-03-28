@@ -179,7 +179,7 @@ Project::Project(const std::string& filename,
 
 //std::cerr << "project constructor name()="<<name()<<std::endl;
   if (not name().empty() and name().front() != '.')
-    change_backend(property_get("backend"));
+    change_backend(property_get("backend"), true);
 }
 
 Project::~Project() {
@@ -279,6 +279,7 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
   }
   fs::current_path(m_filename);
 //  system(("ssh " + backend.host + " mkdir -p " + cache(backend)).c_str());
+  const_cast<Project*>(this)->change_backend(backend.name);
   ensure_remote_server();
   remote_server_run(std::string{"mkdir -p "} + cache(backend));
   // absolutely send reserved files
@@ -583,9 +584,9 @@ bool Project::run(std::string name, int verbosity, bool force, bool wait) {
   auto& backend = m_backends.at(name);
   if (status(verbosity) != unknown && status(0) != completed) return false;
 //  if (verbosity > 0)
-//    std::cerr << "Project::run() run_needed()=" << run_needed(verbosity) << std::endl;
+  std::cerr << "Project::run() run_needed()=" << run_needed(verbosity) << std::endl;
 //  if (not force and not run_needed()) return false;
-  property_set("backend", backend.name);
+  change_backend(backend.name);
   fs::path current_path_save;
   try {
     current_path_save = fs::current_path();
@@ -1415,10 +1416,15 @@ void sjef::Project::report_shutdown(const std::string& message) const {
   std::cerr << "report_shutdown " << message << ": " << value << std::endl;
 }
 
-void sjef::Project::change_backend(std::string backend) {
+void sjef::Project::change_backend(std::string backend, bool force) {
   if (backend.empty()) backend = sjef::Backend::default_name;
+  bool unchanged = property_get("backend") == backend;
+  if (not force and unchanged) return;
 //  std::cerr << "change_backend " << backend << "for project " << name() <<" at address "<<this<< std::endl;
-  property_set("backend", backend);
+  if (not unchanged) {
+    property_delete("jobnumber");
+    property_set("backend", backend);
+  }
   shutdown_backend_watcher();
   m_unmovables.shutdown_flag.clear();
   m_backend_watcher = std::thread(backend_watcher, std::ref(*this), backend, 100, 1000);

@@ -174,7 +174,7 @@ int main(int argc, char* argv[]) {
     auto backend = backendSwitch.getValue();
     if (backend.empty()) backend = proj.property_get("backend");
     if (backend.empty()) backend = "local";
-    proj.property_set("backend",backend);
+    proj.change_backend(backend);
     if (verboseSwitch.getValue() > 1
         or std::find(allowedBackends.begin(), allowedBackends.end(), backend)
             == allowedBackends.end()) {

@@ -270,14 +270,6 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
     return true;
 //  std::cerr << "really syncing"<<std::endl;
   //TODO: implement more robust error checking
-  fs::path current_path_save;
-  try {
-    current_path_save = fs::current_path();
-  }
-  catch (...) {
-    current_path_save = "";
-  }
-  fs::current_path(m_filename);
 //  system(("ssh " + backend.host + " mkdir -p " + cache(backend)).c_str());
   const_cast<Project*>(this)->change_backend(backend.name);
   ensure_remote_server();
@@ -289,47 +281,14 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
     rsyncopt += " -e 'ssh " + m_control_path_option + "'";
   if (verbosity > 2)
     std::cerr << "rsyncopt: " << rsyncopt << std::endl;
-  bool send_only_reserved = false;
-  if (send_only_reserved) { // 2020-01-29 not safe under all circumstances, and probably not faster
-    std::string rfs;
-    for (const auto& rf : m_reserved_files) {
-      std::cerr << "reserved file pattern " << rf << std::endl;
-      auto f = regex_replace(rf, std::regex(R"--(%)--"), name());
-      std::cerr << "reserved file resolved " << f << std::endl;
-      if (fs::exists(f))
-        rfs += " " + f;
-    }
-    if (!rfs.empty()) {
-      auto cmd = std::string{bp::search_path(rsync).native()} + " " +
-          rsyncopt +
-          " -L -a " +
-          (verbosity > 0 ? std::string{"-v "} : std::string{""}) +
-          rfs + " " +
-          backend.host + ":" + cache(backend);
-      if (verbosity > 1)
-        std::cerr << cmd << std::endl;
-      bp::child(cmd).wait();
-    }
-    // send any files that do not exist on the backend yet
-    {
-      auto cmd = std::string{bp::search_path(rsync).native()} + " " +
-          rsyncopt + " -L --ignore-existing -a " +
-          (verbosity > 0 ? std::string{"-v "} : std::string{""}) +
-          "." +
-          backend.host + ":" + cache(backend);
-      if (verbosity > 1)
-        std::cerr << cmd << std::endl;
-      bp::child(cmd).wait();
-    }
-  } else {
-    auto cmd = std::string{bp::search_path(rsync).native()} + " " +
-        rsyncopt + " " +
-        "-L -a --update " + " " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + ". " + backend.host + ":"
-        + cache(backend);
-    if (verbosity > 1)
-      std::cerr << cmd << std::endl;
-    bp::child(cmd).wait();
-  }
+  auto cmd = std::string{bp::search_path(rsync).native()} + " " +
+      rsyncopt + " " +
+      "-L -a --update " + " " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + m_filename + "/ "
+      + backend.host + ":"
+      + cache(backend);
+  if (verbosity > 1)
+    std::cerr << "rsync 3: " << cmd << std::endl;
+  bp::child(cmd).wait();
   // fetch all newer files from backend
   if (property_get("_private_sjef_project_backend_inactive_synced") == "1") return true;
   {
@@ -343,13 +302,11 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
       if (fs::exists(f))
         cmd += "--exclude=" + f + " ";
     }
-    cmd += backend.host + ":" + cache(backend) + "/ .";
+    cmd += backend.host + ":" + cache(backend) + "/ " + m_filename;
     if (verbosity > 1)
       std::cerr << cmd << std::endl;
     bp::child(cmd).wait();
   }
-  if (current_path_save != "")
-    fs::current_path(current_path_save);
   if (not nostatus) // to avoid infinite loop with call from status()
     status(0); // to get backend_inactive
 //  std::cerr << "synchronize backend_inactive=" << property_get("_private_sjef_project_backend_inactive") << std::endl;
@@ -587,14 +544,6 @@ bool Project::run(std::string name, int verbosity, bool force, bool wait) {
     std::cerr << "Project::run() run_needed()=" << run_needed(verbosity) << std::endl;
 //  if (not force and not run_needed()) return false;
   change_backend(backend.name);
-  fs::path current_path_save;
-  try {
-    current_path_save = fs::current_path();
-  }
-  catch (...) {
-    current_path_save = "";
-  }
-  fs::current_path(m_filename);
   std::string line;
   bp::child c;
   std::string optionstring;
@@ -616,23 +565,22 @@ bool Project::run(std::string name, int verbosity, bool force, bool wait) {
       optionstring = "'" + *sp + "' " + optionstring;
     if (verbosity > 1)
       std::cerr << "run local job executable=" << executable(run_command) << " " << optionstring << " "
-                << fs::path(this->name() + ".inp")
+                << fs::path{m_filename} / fs::path(this->name() + ".inp")
                 << std::endl;
     if (verbosity > 2)
       for (const auto& o : splitString(optionstring))
         std::cerr << "option " << o << std::endl;
     if (optionstring.empty())
       c = bp::child(executable(run_command),
-                    fs::path(this->name() + ".inp"));
+                   fs::path{m_filename} /  fs::path(this->name() + ".inp"));
     else
       c = bp::child(executable(run_command),
                     bp::args(splitString(optionstring)),
-                    fs::path(this->name() + ".inp"));
+                   fs::path{m_filename} /  fs::path(this->name() + ".inp"));
     auto result = c.running();
     c.detach();
     property_set("jobnumber", std::to_string(c.id()));
     if (verbosity > 1) std::cerr << "jobnumber " << c.id() << ", running=" << c.running() << std::endl;
-    fs::current_path(current_path_save);
     if (result and wait) this->wait();
     return result;
   } else { // remote host
@@ -657,13 +605,10 @@ bool Project::run(std::string name, int verbosity, bool force, bool wait) {
         std::cerr << "... a match was found: " << match[1] << std::endl;
       if (verbosity > 1) status(verbosity - 2);
       property_set("jobnumber", match[1]);
-      fs::current_path(current_path_save);
       if (wait) this->wait();
       return true;
     }
   }
-  if (current_path_save != "")
-    fs::current_path(current_path_save);
   return false;
 }
 
@@ -1421,15 +1366,20 @@ void sjef::Project::change_backend(std::string backend, bool force) {
   if (backend.empty()) backend = sjef::Backend::default_name;
   bool unchanged = property_get("backend") == backend;
   if (not force and unchanged) return;
-//  std::cerr << "change_backend " << backend << "for project " << name() <<" at address "<<this<< std::endl;
+//  std::cerr << "change_backend to " << backend << "for project " << name() << " at address " << this << std::endl;
+//  std::cerr << "current backend " << property_get("backend") << ", unchanged=" << unchanged << std::endl;
   if (not unchanged) {
     property_delete("jobnumber");
+//    std::cerr << "deleted property jobnumber; its value now is " << property_get("jobnumber") << std::endl;
     property_set("backend", backend);
   }
   shutdown_backend_watcher();
   m_unmovables.shutdown_flag.clear();
   m_backend_watcher = std::thread(backend_watcher, std::ref(*this), backend, 100, 1000);
 //  std::cerr << "change_backend returns " << backend <<" and watcher joinable=" <<m_backend_watcher.joinable() << std::endl;
+//  std::cerr << "current backend " << property_get("backend") << ", unchanged=" << unchanged << std::endl;
+//  std::cerr << "change_backend " << backend << "for project " << name() << " finished " << property_get("backend")
+//            << std::endl;
 }
 
 void sjef::Project::backend_watcher(sjef::Project& project,

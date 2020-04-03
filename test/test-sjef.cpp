@@ -406,24 +406,30 @@ TEST(backend, backend_parameter_expand) {
   }
   { // another set of tests
     savestate x;
-    const auto& backend = sjef::Backend::dummy_name;
+    auto& backend = sjef::Backend::dummy_name;
     sjef::Project p("backend_parameter_expand", nullptr, true, true, "molpro");
     p.property_set("backend", backend);
     p.backend_parameter_set(backend, "thing", "its value");
     std::map<std::string, std::string> tests;
     std::vector<std::string> preambles{"stuff ", ""};
-    tests["{ -n %n}"] = "";
-    tests["{ -n %n! with documentation}"] = "";
-    tests["{ -n %n:99}"] = " -n 99";
-    tests["{ -n %n:99! with documentation}"] = " -n 99";
-    tests["{ -n %thing}"] = " -n its value";
-    tests["{ -n %thing! with documentation}"] = " -n its value";
-    tests["{ -n %thing:99}"] = " -n its value";
-    tests["{ -n %thing:99! with documentation}"] = " -n its value";
-    for (const auto& preamble : preambles)
-      for (const auto& test : tests)
-        EXPECT_EQ(p.backend_parameter_expand(backend, preamble + test.first + " more stuff"),
-                  preamble + test.second + " more stuff");
+    auto test = [&preambles, &p, &backend](const std::string& run_command, const std::string& expect_resolved, const std::string& expect_documentation) {
+      for (const auto& preamble : preambles) {
+        p.m_backends[backend].run_command = preamble + run_command + " more stuff";
+//        std::cout << "run_command set to "<<p.m_backends[backend].run_command<<std::endl;
+//        std::cout << "documentation returned "<<p.backend_parameter_documentation(backend,"n")<<std::endl;
+//        std::cout << "documentation expected "<<expect_documentation<<std::endl;
+        EXPECT_EQ(p.backend_parameter_documentation(backend,"n"), expect_documentation );
+        EXPECT_EQ(p.backend_parameter_expand(backend), preamble + expect_resolved + " more stuff");
+      }
+    };
+    test("{ -n %n}","","");
+    test("{ -n %n! with documentation}",""," with documentation");
+    test("{ -n %n:99}"," -n 99","");
+    test("{ -n %n:99! with documentation}"," -n 99"," with documentation");
+    test("{ -n %thing}"," -n its value","");
+    test("{ -n %thing! with documentation}"," -n its value","");
+    test("{ -n %thing:99}"," -n its value","");
+    test("{ -n %thing:99! with documentation}"," -n its value","");
     std::map<std::string, std::string> badtests;
     badtests["{ -n !%n:99 This is an ill-formed parameter string because the % comes in the comment, so should be detected as absent}"] =
         "";

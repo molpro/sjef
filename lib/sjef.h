@@ -35,7 +35,9 @@ class Project {
   std::unique_ptr<pugi_xml_document> m_properties;
   std::map<std::string, std::string> m_suffixes; ///< File suffixes for the standard files
   std::string m_recent_projects_file;
+ public:
   std::map<std::string, Backend> m_backends;
+ protected:
   std::unique_ptr<pugi_xml_document> m_backend_doc;
   mutable std::unique_ptr<boost::process::ipstream> m_status_stream;
   mutable struct {
@@ -62,7 +64,7 @@ class Project {
   };
   mutable backend_watcher_flag_container m_unmovables;
   void report_shutdown(const std::string& message) const;
-  std::string remote_server_run(const std::string& command, int verbosity=0) const;
+  std::string remote_server_run(const std::string& command, int verbosity = 0) const;
  public:
   static const std::string s_propertyFile;
   /*!
@@ -273,9 +275,9 @@ class Project {
    * @param backend The name of the backend. If not a valid name, the function throws std::invalid_argument.
    * @param force If false, and the current backend is equal to backend, do nothing
    */
-  void change_backend(std::string backend = std::string{""}, bool force=false);
+  void change_backend(std::string backend = std::string{""}, bool force = false);
  protected:
-  void throw_if_backend_invalid(std::string backend="") const;
+  void throw_if_backend_invalid(std::string backend = "") const;
   std::string get_project_suffix(const std::string& filename, const std::string& default_suffix) const;
   void recent_edit(const std::string& add, const std::string& remove = "");
   mutable time_t m_property_file_modification_time;
@@ -329,16 +331,18 @@ class Project {
    * @param templ The template to be expanded
    * - <tt>{prologue text%%param}</tt> is replaced by the value of project property <tt>Backend/</tt>backend<tt>/param</tt> if it is defined, prefixed by <tt>prologue text</tt>. Otherwise, the entire contents between <tt>{}</tt> is elided.
    * - <tt>{prologue %%param:default value}</tt> works similarly, with substitution of <tt>default value</tt> instead of elision if <tt>param</tt> is not defined.
+   * If templ is not specified, the run_command of backend will be used.
    * @return The expanded string
    */
-  std::string backend_parameter_expand(const std::string& backend, const std::string& templ);
+  std::string backend_parameter_expand(const std::string& backend, std::string templ = "") const;
 
   /*!
    * @brief Get all of the parameters referenced in the run_command of a backend
    * @param backend The name of the backend
+   * @param doc Whether to return documentation instead of default values
    * @return A map where the keys are the parameter names, and the values the defaults.
    */
-  std::map<std::string, std::string> backend_parameters(const std::string& backend) const;
+  std::map<std::string, std::string> backend_parameters(const std::string& backend, bool doc = false) const;
 
   void backend_parameter_set(const std::string& backend, const std::string& name, const std::string& value) {
     property_set("Backend/" + backend + "/" + name, value);
@@ -361,9 +365,9 @@ class Project {
    * @return
    */
   std::string backend_parameter_documentation(const std::string& backend, const std::string& name) const {
-    auto p = property_get("Backend/" + backend + "/" + name);
-    if (p.find("!") == std::string::npos) return "";
-    return p.substr(p.find("!") + 1);
+    auto ps = backend_parameters(backend, true);
+    if (ps.count(name) == 0) return "";
+    return ps.at(name);
   }
 
   /*!
@@ -373,10 +377,9 @@ class Project {
    * @return
    */
   std::string backend_parameter_default(const std::string& backend, const std::string& name) const {
-    auto p = property_get("Backend/" + backend + "/" + name);
-    if (p.find("!") != std::string::npos) p = p.substr(p.find("!"));
-    if (p.find(":") == std::string::npos) return "";
-    return p.substr(p.find(":") + 1);
+    auto ps = backend_parameters(backend, false);
+    if (ps.count(name) == 0) return "";
+    return ps.at(name);
   }
 
   /*!

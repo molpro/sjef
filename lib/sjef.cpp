@@ -441,7 +441,8 @@ std::string Project::backend_get(const std::string& backend, const std::string& 
     throw std::out_of_range("Invalid key " + key);
 }
 
-std::string Project::backend_parameter_expand(const std::string& backend, const std::string& templ) {
+std::string Project::backend_parameter_expand(const std::string& backend, std::string templ) const {
+  if (templ.empty()) templ = backend_get(backend,"run_command");
 //  std::cerr << "backend_parameter_expand backend="<<backend << ", templ="<<templ<<std::endl;
   std::string output_text;
   std::regex re("[^$]\\{([^}]*)\\}");
@@ -495,7 +496,7 @@ std::string Project::backend_parameter_expand(const std::string& backend, const 
   return output_text.substr(1);
 }
 
-std::map<std::string, std::string> Project::backend_parameters(const std::string& backend) const {
+std::map<std::string, std::string> Project::backend_parameters(const std::string& backend, bool doc) const {
   std::map<std::string, std::string> result;
 
   throw_if_backend_invalid(backend);
@@ -511,9 +512,12 @@ std::map<std::string, std::string> Project::backend_parameters(const std::string
       if (first != '{') m[0] = first;
 //      std::cerr << "matched "<<m<<std::endl;
 //      std::cerr << "callback, trimmed m="<<m<<std::endl;
+      std::string docu;
       auto bang = m.find_first_of("!");
-      if (bang != std::string::npos)
+      if (bang != std::string::npos) {
+        docu = m.substr(bang+1);
         m = m.substr(0, bang);
+      }
       auto percent = m.find_first_of("%");
       if (percent == std::string::npos)
         throw std::runtime_error("Invalid template: " + templ + "\nMissing % in expression {" + m + "}");
@@ -524,7 +528,7 @@ std::map<std::string, std::string> Project::backend_parameters(const std::string
         def = parameter_name.substr(defpos + 1);
         parameter_name.erase(defpos);
       }
-      result[parameter_name] = def;
+      result[parameter_name] = doc ? docu : def;
     }
   };
 

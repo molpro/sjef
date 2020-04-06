@@ -574,6 +574,16 @@ bool Project::run(std::string name, int verbosity, bool force, bool wait) {
     if (verbosity > 2)
       for (const auto& o : splitString(optionstring))
         std::cerr << "option " << o << std::endl;
+    system((std::string{"ls -l "}+m_filename).c_str());
+    fs::path current_path_save;
+    try {
+      current_path_save = fs::current_path();
+    }
+    catch (...) {
+      current_path_save = "";
+    }
+    fs::current_path(m_filename);
+
     if (optionstring.empty())
       c = bp::child(executable(run_command),
                    fs::path{m_filename} /  fs::path(this->name() + ".inp"));
@@ -581,6 +591,7 @@ bool Project::run(std::string name, int verbosity, bool force, bool wait) {
       c = bp::child(executable(run_command),
                     bp::args(splitString(optionstring)),
                    fs::path{m_filename} /  fs::path(this->name() + ".inp"));
+    fs::current_path(current_path_save);
     auto result = c.running();
     c.detach();
     property_set("jobnumber", std::to_string(c.id()));

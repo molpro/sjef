@@ -283,7 +283,10 @@ int main(int argc, char* argv[]) {
           while (arguments.front() == ' ') arguments.erase(0, 1);
 //        std::cout << command << std::endl;
 //        std::cout << arguments << std::endl;
-          if (command == "status")
+          if (command == "?" or command == "help")
+            std::cout << "Allowed commands: status, backend, sync, run, kill, wait, property, clean, edit, browse"
+                      << std::endl;
+          else if (command == "status")
             std::cout << "Status: " << status_message[proj.status()] << std::endl;
           else if (command == "backend") {
             proj.change_backend(arguments);

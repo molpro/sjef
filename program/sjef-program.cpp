@@ -302,6 +302,15 @@ int main(int argc, char* argv[]) {
           } else if (command == "property") {
             auto argv = std::vector<std::string>{arguments};
             property_process(argv);
+          } else if (command == "edit")
+            system(("eval ${VISUAL:-${EDITOR:-vi}} \\'" + proj.filename("inp") + "\\'").c_str());
+          else if (command == "browse") {
+            if (
+                !proj.property_get("backend").empty()
+                    and
+                        proj.synchronize((proj.property_get("backend")), verboseSwitch.getValue())
+                )
+              system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out") + "\\'").c_str());
           } else
             std::cout << "Unknown command: " << line << std::endl;
         }

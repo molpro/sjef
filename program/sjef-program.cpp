@@ -62,6 +62,8 @@ int main(int argc, char* argv[]) {
     description += "\nget: Obtain the values of one or more parameters, whose names are given as additional arguments at the end of the command line";
     allowedCommands.push_back("set");
     description += "\nset: Set the values of one or more parameters, giving additional arguments at the end of the command line in the form key1=value1 key2=value2...; if any values are empty, the corresponding parameter is deleted";
+    allowedCommands.push_back("interactive");
+    description += "\ninteractive: Enter interactive mode";
     TCLAP::ValuesConstraint<std::string>
         allowedVals(allowedCommands);
     TCLAP::MultiSwitchArg verboseSwitch("v", "verbose", "show detail", cmd, 0);
@@ -160,7 +162,7 @@ int main(int argc, char* argv[]) {
         std::cout << " " << extra << std::endl;
       std::cout << std::endl;
     }
-    if (extras.size() > 1 and (command != "import" and command != "export" and command != "run" and command != "get" and command != "set"))
+    if (extras.size() > 1 and (command != "import" and command != "export" and command != "run" and command != "property"))
       throw TCLAP::CmdLineParseException("Too many arguments on command line");
     std::map<sjef::status, std::string> status_message;
     status_message[sjef::status::unknown] = "Not found";
@@ -187,6 +189,23 @@ int main(int argc, char* argv[]) {
     if (std::find(allowedBackends.begin(), allowedBackends.end(), backend) == allowedBackends.end())
       throw std::runtime_error("Backend " + backend + " not defined or invalid");
 
+    auto property_process = [&proj](std::vector<std::string>& extras) {
+      for (const auto& keyval : extras) {
+        auto pos = keyval.find_first_of("=");
+        auto key = keyval;
+        std::string val;
+        if (pos != std::string::npos) {
+          key = keyval.substr(0, pos);
+          val = keyval.substr(pos + 1);
+          if (val.empty())
+            proj.property_delete(key);
+          else
+            proj.property_set(key, val);
+        }
+        std::cout << "Property " << key << " = " << proj.property_get(key) << std::endl;
+      }
+    };
+
     bool success = true;
     for (int repeat=0; repeat < std::stoi(repeatArg.getValue()); ++repeat) {
     if (command == "import")
@@ -201,9 +220,6 @@ int main(int argc, char* argv[]) {
       success = proj.move(extras.front(), forceArg.getValue());
     else if (command == "erase")
       proj.erase();
-    else if (command == "property")
-      for (const auto& key : extras)
-        std::cout << "Property " << key << ": " << proj.property_get(key) << std::endl;
     else if (command == "wait") {
       proj.wait();
     } else if (command == "status") {
@@ -249,22 +265,41 @@ int main(int argc, char* argv[]) {
       if (success) success = system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out") + "\\'").c_str());
     } else if (command == "clean") {
       proj.clean(true, false, false);
-    } else if (command == "get") {
-      for (const auto& key : extras) {
-        std::cout << "Property " << key << " = " << proj.property_get(key) << std::endl;
-      }
-    } else if (command == "set") {
-      for (const auto& keyval : extras) {
-        auto pos = keyval.find_first_of("=");
-        if (pos == std::string::npos)
-          throw std::runtime_error(keyval + " needs to be of the form key=value");
-        auto key = keyval.substr(0, pos);
-        auto val = keyval.substr(pos + 1);
-        if (val.empty())
-          proj.property_delete(key);
-        else
-          proj.property_set(key, val);
-        std::cout << "Property " << key << " = " << proj.property_get(key) << std::endl;
+    } else if (command == "property") {
+      property_process(extras);
+    } else if (command == "interactive") {
+      std::cout << "Interactive mode for project " << proj.filename() << std::endl;
+      proj.ensure_remote_server();
+      std::string line;
+      std::string prompt{"? "};
+      for (std::cout << prompt; std::getline(std::cin, line) and line != "exit"; std::cout << prompt) {
+        auto pos = line.find(" ");
+        auto command = (pos != std::string::npos ? line.substr(0, pos) : line);
+        auto arguments = (pos != std::string::npos ? line.substr(pos) : std::string{});
+        while (arguments.front() == ' ') arguments.erase(0, 1);
+//        std::cout << command << std::endl;
+//        std::cout << arguments << std::endl;
+        if (command == "status")
+          std::cout << "Status: " << status_message[proj.status()] << std::endl;
+        else if (command == "backend") {
+          proj.change_backend(arguments);
+          std::cout << "backend changed to " << proj.property_get("backend") << std::endl;
+        } else if (command == "sync") {
+          proj.synchronize(proj.property_get("backend"), verboseSwitch.getValue());
+        } else if (command == "run") {
+          if (proj.run(backend, verboseSwitch.getValue(), true, false))
+            std::cout << "Job number: " << proj.property_get("jobnumber") << std::endl;
+          else
+            std::cout << "Job submission failed" << std::endl;
+        } else if (command == "kill") {
+          proj.kill();
+        } else if (command == "wait") {
+            proj.wait();
+        } else if (command == "property") {
+          auto argv = std::vector<std::string>{arguments};
+          property_process(argv);
+        } else
+          std::cout << "Unknown command: " << line << std::endl;
       }
     } else
       throw TCLAP::CmdLineParseException("Unknown subcommand: " + command);

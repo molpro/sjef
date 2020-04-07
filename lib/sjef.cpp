@@ -574,7 +574,6 @@ bool Project::run(std::string name, int verbosity, bool force, bool wait) {
     if (verbosity > 2)
       for (const auto& o : splitString(optionstring))
         std::cerr << "option " << o << std::endl;
-    system((std::string{"ls -l "}+m_filename).c_str());
     fs::path current_path_save;
     try {
       current_path_save = fs::current_path();

@@ -302,6 +302,8 @@ int main(int argc, char* argv[]) {
           } else if (command == "property") {
             auto argv = std::vector<std::string>{arguments};
             property_process(argv);
+          } else if (command == "clean") {
+            proj.clean(true, false, false);
           } else if (command == "edit")
             system(("eval ${VISUAL:-${EDITOR:-vi}} \\'" + proj.filename("inp") + "\\'").c_str());
           else if (command == "browse") {

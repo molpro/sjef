@@ -1,7 +1,7 @@
 #include <iostream>
 #include "sjef.h"
 using Project = sjef::Project;
-static const auto program_name=std::string("Simple Job Execution Framework");
+static const auto program_name = std::string("Simple Job Execution Framework");
 #include <tclap/CmdLine.h>
 #include <vector>
 #include <map>
@@ -59,9 +59,13 @@ int main(int argc, char* argv[]) {
     allowedCommands.push_back("sync");
     description += "\nsync: Synchronize the project with the backend";
     allowedCommands.push_back("get");
-    description += "\nget: Obtain the values of one or more parameters, whose names are given as additional arguments at the end of the command line";
+    description +=
+        "\nget: Obtain the values of one or more parameters, whose names are given as additional arguments at the end of the command line";
     allowedCommands.push_back("set");
-    description += "\nset: Set the values of one or more parameters, giving additional arguments at the end of the command line in the form key1=value1 key2=value2...; if any values are empty, the corresponding parameter is deleted";
+    description +=
+        "\nset: Set the values of one or more parameters, giving additional arguments at the end of the command line in the form key1=value1 key2=value2...; if any values are empty, the corresponding parameter is deleted";
+    allowedCommands.push_back("interactive");
+    description += "\ninteractive: Enter interactive mode";
     TCLAP::ValuesConstraint<std::string>
         allowedVals(allowedCommands);
     TCLAP::MultiSwitchArg verboseSwitch("v", "verbose", "show detail", cmd, 0);
@@ -110,12 +114,12 @@ int main(int argc, char* argv[]) {
                         cmd);
     TCLAP::ValueArg<std::string>
         suffixXmlSwitch("",
-                     "suffix-xml",
-                     "Specify the filename extension (without the leading .) for marked-up output files",
-                     false,
-                     "xml",
-                     "string",
-                     cmd);
+                        "suffix-xml",
+                        "Specify the filename extension (without the leading .) for marked-up output files",
+                        false,
+                        "xml",
+                        "string",
+                        cmd);
     TCLAP::SwitchArg
         forceArg("f", "force", "Allow operations that would result in overwriting an existing file", false);
     cmd.add(forceArg);
@@ -124,12 +128,12 @@ int main(int argc, char* argv[]) {
     cmd.add(waitArg);
     TCLAP::ValueArg<std::string>
         repeatArg("r",
-                     "repeat",
-                     "Just for debugging",
-                     false,
-                     "1",
-                     "integer",
-                     cmd);
+                  "repeat",
+                  "Just for debugging",
+                  false,
+                  "1",
+                  "integer",
+                  cmd);
     TCLAP::UnlabeledValueArg<std::string>
         projectArg("project",
                    "The file name of the project bundle. If it has no extension and the -s flag has not been used, the extension .sjef is appended. If -s has been used, and the extension is absent or different to that specified, the -s extension is appended.",
@@ -160,7 +164,8 @@ int main(int argc, char* argv[]) {
         std::cout << " " << extra << std::endl;
       std::cout << std::endl;
     }
-    if (extras.size() > 1 and (command != "import" and command != "export" and command != "run" and command != "get" and command != "set"))
+    if (extras.size() > 1
+        and (command != "import" and command != "export" and command != "run" and command != "property"))
       throw TCLAP::CmdLineParseException("Too many arguments on command line");
     std::map<sjef::status, std::string> status_message;
     status_message[sjef::status::unknown] = "Not found";
@@ -168,7 +173,8 @@ int main(int argc, char* argv[]) {
     status_message[sjef::status::waiting] = "Waiting";
     status_message[sjef::status::completed] = "Completed";
     Project proj(project, nullptr, false, true, suffixSwitch.getValue(),
-                 {{"inp",suffixInpSwitch.getValue()},{"out",suffixOutSwitch.getValue()},{"xml",suffixXmlSwitch.getValue()}});
+                 {{"inp", suffixInpSwitch.getValue()}, {"out", suffixOutSwitch.getValue()},
+                  {"xml", suffixXmlSwitch.getValue()}});
 
     auto allowedBackends = proj.backend_names();
     auto backend = backendSwitch.getValue();
@@ -187,87 +193,134 @@ int main(int argc, char* argv[]) {
     if (std::find(allowedBackends.begin(), allowedBackends.end(), backend) == allowedBackends.end())
       throw std::runtime_error("Backend " + backend + " not defined or invalid");
 
-    bool success = true;
-    for (int repeat=0; repeat < std::stoi(repeatArg.getValue()); ++repeat) {
-    if (command == "import")
-      success = proj.import_file(extras, forceArg.getValue());
-    else if (command == "export")
-      success = proj.export_file(extras, forceArg.getValue());
-    else if (command == "new") {
-      success = proj.import_file(extras, forceArg.getValue());
-    } else if (command == "copy")
-      proj.copy(extras.front(), forceArg.getValue());
-    else if (command == "move")
-      success = proj.move(extras.front(), forceArg.getValue());
-    else if (command == "erase")
-      proj.erase();
-    else if (command == "property")
-      for (const auto& key : extras)
-        std::cout << "Property " << key << ": " << proj.property_get(key) << std::endl;
-    else if (command == "wait") {
-      proj.wait();
-    } else if (command == "status") {
-      std::cout << proj.status_message(verboseSwitch.getValue()) << std::endl;
-    } else if (command == "kill")
-      proj.kill();
-    else if (command == "run") {
-      for (const auto& kv : backendParameterArg) {
-        auto pos = kv.find_first_of("=");
-        if (pos == std::string::npos)
-          throw std::runtime_error("--parameter value must be of the form key=value");
-        proj.backend_parameter_set(backend, kv.substr(0, pos), kv.substr(pos + 1));
-      }
-      if ((success = proj.run(backend,
-                              verboseSwitch.getValue(),
-                              forceArg.getValue(),
-                              waitArg.getValue())))
-        std::cout << "Job number: " << proj.property_get("jobnumber") << std::endl;
-      else if (proj.run_needed() or forceArg.getValue())
-        std::cerr << "Run failed to start, or job number could not be captured" << std::endl
-                  << "Status: " << status_message[proj.status(verboseSwitch.getValue())] << std::endl;
-      else
-        std::cerr << "Run not needed, so not started" << std::endl;
-    } else if (command == "sync") {
-//      Project proj(project);
-      if (verboseSwitch.getValue() > 0) std::cerr << "Synchronize project " << proj.filename() << std::endl;
-      auto cbe = proj.property_get("backend");
-      if (cbe.empty()) {
-        if (!extras.empty())
-          success = proj.synchronize(extras.front(), verboseSwitch.getValue());
-      } else {
-        if (!extras.empty())
-          throw TCLAP::CmdLineParseException(
-              "Cannot synchronize with backend " + extras.front() + " because backend " + cbe + " is active");
-        success = proj.synchronize(cbe, verboseSwitch.getValue());
-      }
-    } else if (command == "edit")
-      success = system(("eval ${VISUAL:-${EDITOR:-vi}} \\'" + proj.filename("inp") + "\\'").c_str());
-    else if (command == "browse") {
-      if (!proj.property_get("backend").empty())
-        success = proj.synchronize((proj.property_get("backend")),
-                                   verboseSwitch.getValue());
-      if (success) success = system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out") + "\\'").c_str());
-    } else if (command == "clean") {
-      proj.clean(true, false, false);
-    } else if (command == "get") {
-      for (const auto& key : extras) {
-        std::cout << "Property " << key << " = " << proj.property_get(key) << std::endl;
-      }
-    } else if (command == "set") {
+    auto property_process = [&proj](std::vector<std::string>& extras) {
       for (const auto& keyval : extras) {
         auto pos = keyval.find_first_of("=");
-        if (pos == std::string::npos)
-          throw std::runtime_error(keyval + " needs to be of the form key=value");
-        auto key = keyval.substr(0, pos);
-        auto val = keyval.substr(pos + 1);
-        if (val.empty())
-          proj.property_delete(key);
-        else
-          proj.property_set(key, val);
+        auto key = keyval;
+        std::string val;
+        if (pos != std::string::npos) {
+          key = keyval.substr(0, pos);
+          val = keyval.substr(pos + 1);
+          if (val.empty())
+            proj.property_delete(key);
+          else
+            proj.property_set(key, val);
+        }
         std::cout << "Property " << key << " = " << proj.property_get(key) << std::endl;
       }
-    } else
-      throw TCLAP::CmdLineParseException("Unknown subcommand: " + command);
+    };
+
+    bool success = true;
+    for (int repeat = 0; repeat < std::stoi(repeatArg.getValue()); ++repeat) {
+      if (command == "import")
+        success = proj.import_file(extras, forceArg.getValue());
+      else if (command == "export")
+        success = proj.export_file(extras, forceArg.getValue());
+      else if (command == "new") {
+        success = proj.import_file(extras, forceArg.getValue());
+      } else if (command == "copy")
+        proj.copy(extras.front(), forceArg.getValue());
+      else if (command == "move")
+        success = proj.move(extras.front(), forceArg.getValue());
+      else if (command == "erase")
+        proj.erase();
+      else if (command == "wait") {
+        proj.wait();
+      } else if (command == "status") {
+        std::cout << proj.status_message(verboseSwitch.getValue()) << std::endl;
+      } else if (command == "kill")
+        proj.kill();
+      else if (command == "run") {
+        for (const auto& kv : backendParameterArg) {
+          auto pos = kv.find_first_of("=");
+          if (pos == std::string::npos)
+            throw std::runtime_error("--parameter value must be of the form key=value");
+          proj.backend_parameter_set(backend, kv.substr(0, pos), kv.substr(pos + 1));
+        }
+        if ((success = proj.run(backend,
+                                verboseSwitch.getValue(),
+                                forceArg.getValue(),
+                                waitArg.getValue())))
+          std::cout << "Job number: " << proj.property_get("jobnumber") << std::endl;
+        else if (proj.run_needed() or forceArg.getValue())
+          std::cerr << "Run failed to start, or job number could not be captured" << std::endl
+                    << "Status: " << status_message[proj.status(verboseSwitch.getValue())] << std::endl;
+        else
+          std::cerr << "Run not needed, so not started" << std::endl;
+      } else if (command == "sync") {
+//      Project proj(project);
+        if (verboseSwitch.getValue() > 0) std::cerr << "Synchronize project " << proj.filename() << std::endl;
+        auto cbe = proj.property_get("backend");
+        if (cbe.empty()) {
+          if (!extras.empty())
+            success = proj.synchronize(extras.front(), verboseSwitch.getValue());
+        } else {
+          if (!extras.empty())
+            throw TCLAP::CmdLineParseException(
+                "Cannot synchronize with backend " + extras.front() + " because backend " + cbe + " is active");
+          success = proj.synchronize(cbe, verboseSwitch.getValue());
+        }
+      } else if (command == "edit")
+        success = system(("eval ${VISUAL:-${EDITOR:-vi}} \\'" + proj.filename("inp") + "\\'").c_str());
+      else if (command == "browse") {
+        if (!proj.property_get("backend").empty())
+          success = proj.synchronize((proj.property_get("backend")),
+                                     verboseSwitch.getValue());
+        if (success) success = system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out") + "\\'").c_str());
+      } else if (command == "clean") {
+        proj.clean(true, false, false);
+      } else if (command == "property") {
+        property_process(extras);
+      } else if (command == "interactive") {
+        std::cout << "Interactive mode for project " << proj.filename() << std::endl;
+        proj.ensure_remote_server();
+        std::string line;
+        std::string prompt{"? "};
+        for (std::cout << prompt; std::getline(std::cin, line) and line != "exit"; std::cout << prompt) {
+          auto pos = line.find(" ");
+          auto command = (pos != std::string::npos ? line.substr(0, pos) : line);
+          auto arguments = (pos != std::string::npos ? line.substr(pos) : std::string{});
+          while (arguments.front() == ' ') arguments.erase(0, 1);
+//        std::cout << command << std::endl;
+//        std::cout << arguments << std::endl;
+          if (command == "?" or command == "help")
+            std::cout << "Allowed commands: status, backend, sync, run, kill, wait, property, clean, edit, browse"
+                      << std::endl;
+          else if (command == "status")
+            std::cout << "Status: " << status_message[proj.status()] << std::endl;
+          else if (command == "backend") {
+            proj.change_backend(arguments);
+            std::cout << "backend changed to " << proj.property_get("backend") << std::endl;
+          } else if (command == "sync") {
+            proj.synchronize(proj.property_get("backend"), verboseSwitch.getValue());
+          } else if (command == "run") {
+            if (proj.run(backend, verboseSwitch.getValue(), true, false))
+              std::cout << "Job number: " << proj.property_get("jobnumber") << std::endl;
+            else
+              std::cout << "Job submission failed" << std::endl;
+          } else if (command == "kill") {
+            proj.kill();
+          } else if (command == "wait") {
+            proj.wait();
+          } else if (command == "property") {
+            auto argv = std::vector<std::string>{arguments};
+            property_process(argv);
+          } else if (command == "clean") {
+            proj.clean(true, false, false);
+          } else if (command == "edit")
+            system(("eval ${VISUAL:-${EDITOR:-vi}} \\'" + proj.filename("inp") + "\\'").c_str());
+          else if (command == "browse") {
+            if (
+                !proj.property_get("backend").empty()
+                    and
+                        proj.synchronize((proj.property_get("backend")), verboseSwitch.getValue())
+                )
+              system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out") + "\\'").c_str());
+          } else
+            std::cout << "Unknown command: " << line << std::endl;
+        }
+      } else
+        throw TCLAP::CmdLineParseException("Unknown subcommand: " + command);
     }
     return success ? 0 : 1;
 

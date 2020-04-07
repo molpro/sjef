@@ -3,7 +3,8 @@
 
 #include <stddef.h>
 #include <pugixml.hpp>
-#include "sjef.h"
+#include <vector>
+#include <string>
 namespace sjef {
 
 class Backend {

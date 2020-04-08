@@ -345,9 +345,7 @@ void Project::force_file_names(const std::string& oldname) {
     }
   }
 
-  property_rewind();
-  std::string key = property_next();
-  for (; !key.empty(); key = property_next()) {
+  for (const auto& key : property_names()) {
     auto value = property_get(key);
     boost::replace_first(value, oldname + ".", name() + ".");
     property_set(key, value);
@@ -932,11 +930,6 @@ void Project::wait(unsigned int maximum_microseconds) const {
   }
 }
 
-static int property_sequence;
-void Project::property_rewind() {
-  property_sequence = 0;
-}
-
 void Project::property_delete(const std::string& property, bool save) {
   check_property_file();
 //  std::cerr << "property_delete " << property << " save=" << save << std::endl;
@@ -976,10 +969,11 @@ std::string Project::property_get(const std::string& property) const {
   return m_properties->select_node(query.c_str()).node().child_value();
 }
 
-std::string Project::property_next() {
-  property_sequence++;
-  std::string query{"/plist/dict/key[position()='" + std::to_string(property_sequence) + "']"};
-  return m_properties->select_node(query.c_str()).node().child_value();
+std::vector<std::string> Project::property_names() const {
+  std::vector<std::string> result;
+  for (const auto& node : m_properties->select_nodes(((std::string) {"/plist/dict/key"}).c_str()))
+    result.push_back(node.node().child_value());
+  return result;
 }
 
 void Project::recent_edit(const std::string& add, const std::string& remove) {

@@ -236,14 +236,10 @@ class Project {
    */
   void property_delete(const std::string& property, bool save = true);
   /*!
-   * @brief Set the pointer for property_next() to the beginning of the list of variables.
-   */
-  void property_rewind();
-  /*!
-   * @brief Get the sequentially next variable.
+   * @brief Get the names of all assigned properties
    * @return
    */
-  std::string property_next();
+  std::vector<std::string> property_names() const;
   /*!
    * @brief Get the file name of the bundle, or a primary file of particular type, or a general file in the bundle
    * @param suffix If present without \c name, look for a primary file with that type. If absent, the file name of the bundle is instead selected

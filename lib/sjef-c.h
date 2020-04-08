@@ -28,8 +28,6 @@ void sjef_project_kill(const char* project);
 void sjef_project_property_set(const char* project, const char* key, const char* value);
 char* sjef_project_property_get(const char* project, const char* key);
 void sjef_project_property_delete(const char* project, const char* key);
-void sjef_project_property_rewind(const char* project);
-char* sjef_project_property_next(const char* project);
 char* sjef_project_filename(const char* project);
 char* sjef_project_name(const char* project);
 size_t sjef_project_project_hash(const char* project);

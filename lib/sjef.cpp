@@ -926,7 +926,7 @@ std::string sjef::Project::status_message(int verbosity) const {
 
 void Project::wait(unsigned int maximum_microseconds) const {
   unsigned int microseconds = 1;
-  while (status() != completed) {
+  while (status() == running or status() == waiting) {
     std::this_thread::sleep_for(std::chrono::microseconds(microseconds));
     if (microseconds < maximum_microseconds) microseconds *= 2;
   }

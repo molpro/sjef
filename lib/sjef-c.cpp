@@ -203,23 +203,6 @@ void sjef_project_property_delete(const char* project, const char* key) {
   catch (std::exception& e) { error(e); }
   catch (...) {}
 }
-void sjef_project_property_rewind(const char* project) {
-  try {
-    if (projects.count(project) == 0) sjef_project_open(project);
-    projects.at(project)->property_rewind();
-  }
-  catch (std::exception& e) { error(e); }
-  catch (...) {}
-}
-char* sjef_project_property_next(const char* project) {
-  try {
-    if (projects.count(project) == 0) sjef_project_open(project);
-    return strdup(projects.at(project)->property_next().c_str());
-  }
-  catch (std::exception& e) { error(e); }
-  catch (...) {}
-  return NULL;
-}
 char* sjef_project_filename(const char* project) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);

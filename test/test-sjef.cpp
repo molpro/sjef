@@ -124,12 +124,14 @@ TEST(project, moveMolpro) {
   sjef::Project p(filename_old, nullptr, true);
   std::ofstream(p.filename("inp")) << "geometry=" + p.name() + ".xyz" + "\n";
   std::ofstream(p.filename("xyz")) << "1\n\nHe 0 0 0\n";
+  p.property_set("inpFile", p.name() + ".inp");
   p.move(filename_new, true);
   EXPECT_FALSE(fs::exists(sjef::expand_path(filename_old)));
   EXPECT_TRUE(fs::exists(sjef::expand_path(filename_new)));
   std::string inp;
   std::ifstream(p.filename("inp")) >> inp;
   EXPECT_EQ(inp, "geometry=" + p.name() + ".xyz");
+  EXPECT_EQ(p.property_get("inpFile"), p.name() + ".inp");
 }
 
 TEST(project, copyMolpro) {
@@ -195,10 +197,9 @@ TEST(project, clean) {
 TEST(project, properties) {
   sjef::Project::erase("$TMPDIR/try.sjef"); // remove any previous contents
   sjef::Project x("$TMPDIR/try.sjef", nullptr, true);
-  x.property_rewind();
+  const auto keys = x.property_names();
   std::string key;
-  int ninitial;
-  for (ninitial = 0; (key = x.property_next()) != ""; ++ninitial);
+  int ninitial = keys.size();
   std::map<std::string, std::string> data;
   data["first key"] = "first value";
   data["second key"] = "second value";
@@ -209,23 +210,21 @@ TEST(project, properties) {
 //    std::cout << "key "<<keyval.first<<" expect value: "<<keyval.second<<" actual value: "<<x.property_get(keyval.first)<<std::endl;
     ASSERT_EQ(x.property_get(keyval.first), keyval.second);
   }
-  x.property_rewind();
-  int n;
-  for (n = 0; (key = x.property_next()) != ""; ++n) {
+  const auto keysnew = x.property_names();
+  for (const auto& key : keysnew) {
+//  for (n = 0; (key = x.property_next()) != ""; ++n) {
 //    std::cout << "key "<<key<<std::endl;
     if (data.count("key") != 0)
       ASSERT_EQ(x.property_get(key), data[key]);
   }
 //  std::cout << "data.size() "<<data.size()<<std::endl;
-  ASSERT_EQ(n, data.size() + ninitial);
-  x.property_rewind();
-  for (x.property_rewind(); (key = x.property_next()) != ""; x.property_rewind()) {
+  ASSERT_EQ(keysnew.size(), data.size() + ninitial);
+  for (const auto& key : x.property_names()) {
 //    system(("echo start deletion loop key="+key+"; cat "+x.filename()+"/Info.plist").c_str());
     x.property_delete(key);
 //    system(("echo end deletion loop key="+key+"; cat "+x.filename()+"/Info.plist").c_str());
   }
-  x.property_rewind();
-  ASSERT_EQ(x.property_next(), "");
+  ASSERT_TRUE(x.property_names().empty());
 
   ASSERT_EQ(x.property_get("vacuous"), "");
   x.property_set("empty", "");
@@ -412,24 +411,26 @@ TEST(backend, backend_parameter_expand) {
     p.backend_parameter_set(backend, "thing", "its value");
     std::map<std::string, std::string> tests;
     std::vector<std::string> preambles{"stuff ", ""};
-    auto test = [&preambles, &p, &backend](const std::string& run_command, const std::string& expect_resolved, const std::string& expect_documentation) {
+    auto test = [&preambles, &p, &backend](const std::string& run_command,
+                                           const std::string& expect_resolved,
+                                           const std::string& expect_documentation) {
       for (const auto& preamble : preambles) {
         p.m_backends[backend].run_command = preamble + run_command + " more stuff";
 //        std::cout << "run_command set to "<<p.m_backends[backend].run_command<<std::endl;
 //        std::cout << "documentation returned "<<p.backend_parameter_documentation(backend,"n")<<std::endl;
 //        std::cout << "documentation expected "<<expect_documentation<<std::endl;
-        EXPECT_EQ(p.backend_parameter_documentation(backend,"n"), expect_documentation );
+        EXPECT_EQ(p.backend_parameter_documentation(backend, "n"), expect_documentation);
         EXPECT_EQ(p.backend_parameter_expand(backend), preamble + expect_resolved + " more stuff");
       }
     };
-    test("{ -n %n}","","");
-    test("{ -n %n! with documentation}",""," with documentation");
-    test("{ -n %n:99}"," -n 99","");
-    test("{ -n %n:99! with documentation}"," -n 99"," with documentation");
-    test("{ -n %thing}"," -n its value","");
-    test("{ -n %thing! with documentation}"," -n its value","");
-    test("{ -n %thing:99}"," -n its value","");
-    test("{ -n %thing:99! with documentation}"," -n its value","");
+    test("{ -n %n}", "", "");
+    test("{ -n %n! with documentation}", "", " with documentation");
+    test("{ -n %n:99}", " -n 99", "");
+    test("{ -n %n:99! with documentation}", " -n 99", " with documentation");
+    test("{ -n %thing}", " -n its value", "");
+    test("{ -n %thing! with documentation}", " -n its value", "");
+    test("{ -n %thing:99}", " -n its value", "");
+    test("{ -n %thing:99! with documentation}", " -n its value", "");
     std::map<std::string, std::string> badtests;
     badtests["{ -n !%n:99 This is an ill-formed parameter string because the % comes in the comment, so should be detected as absent}"] =
         "";

@@ -9,7 +9,6 @@
 #include <boost/process/child.hpp>
 #include <thread>
 #include <mutex>
-#include "sjef-backend.h"
 
 namespace sjef {
 class Backend; ///< @private

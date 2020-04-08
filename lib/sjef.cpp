@@ -28,6 +28,7 @@ namespace bp = boost::process;
 namespace fs = boost::filesystem;
 
 std::mutex remote_server_mutex;
+int backend_watcher_wait_milliseconds;
 
 ///> @private
 struct sjef::pugi_xml_document : public pugi::xml_document {};
@@ -553,6 +554,7 @@ bool Project::run(std::string name, int verbosity, bool force, bool wait) {
 //  if (not force and not run_needed()) return false;
   change_backend(backend.name);
   m_status = unevaluated;
+  backend_watcher_wait_milliseconds = 0;
   std::string line;
   bp::child c;
   std::string optionstring;
@@ -1407,7 +1409,7 @@ void sjef::Project::backend_watcher(sjef::Project& project,
                                     int max_wait_milliseconds) noexcept {
   if (max_wait_milliseconds <= 0) max_wait_milliseconds = min_wait_milliseconds;
   constexpr auto radix = 2;
-  auto wait = std::max(min_wait_milliseconds, 1);
+  backend_watcher_wait_milliseconds = std::max(min_wait_milliseconds, 1);
   try {
 //    std::cerr << "sjef::Project::backend_watcher() start for project "<<project.name()<<" at address "<<&project<<", backend "<< backend
 //    << ", " << project.property_get("backend")
@@ -1418,9 +1420,11 @@ void sjef::Project::backend_watcher(sjef::Project& project,
     for (auto iter = 0; !project.m_unmovables.shutdown_flag.test_and_set(); ++iter) {
       project.m_unmovables.shutdown_flag.clear();
 //      std::cerr << "iter " << iter << std::endl;
-//      std::cerr << "going to sleep for " << wait << "ms" << std::endl;
-      std::this_thread::sleep_for(std::chrono::milliseconds(wait));
-      wait = std::min(wait * radix, max_wait_milliseconds);
+//      std::cerr << "going to sleep for " << backend_watcher_wait_milliseconds << "ms" << std::endl;
+      std::this_thread::sleep_for(std::chrono::milliseconds(backend_watcher_wait_milliseconds));
+      backend_watcher_wait_milliseconds = std::max(std::min(backend_watcher_wait_milliseconds * radix,
+                                                            max_wait_milliseconds),
+                                                   min_wait_milliseconds <= 0 ? 1 : min_wait_milliseconds);
 //      std::cerr << "... watcher for project " << &project << " waking up" << std::endl;
       auto abort = project.m_unmovables.shutdown_flag.test_and_set();
 //      std::cerr << "abort="<<abort<<std::endl;

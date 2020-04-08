@@ -26,8 +26,8 @@ class Backend {
           std::string run_command = "sjef",
           std::string run_jobnumber = "([0-9]+)",
           std::string status_command = "/bin/ps -o pid,state -p",
-          std::string status_running = "^S$",
-          std::string status_waiting = "^[^SZ]$",
+          std::string status_running = "^ *[0-9][0-9]* ",
+          std::string status_waiting = " [Tt]",
           std::string kill_command = "pkill -P")
       : name(std::move(name)),
         host(std::move(host)),

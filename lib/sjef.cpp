@@ -264,8 +264,12 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
     std::cerr << "synchronize backend_inactive=" << property_get("_private_sjef_project_backend_inactive")
               << " backend_inactive_synced="
               << property_get("_private_sjef_project_backend_inactive_synced") << std::endl;
-  // TODO check if any files have changed locally somehow. If they haven't, and backend_inactive_synced is set, then we could return immediately
-  if (m_property_file_modification_time == fs::last_write_time(propertyFile())
+//  std::cerr << "input exists ? " <<fs::exists(filename("inp")) << std::endl;
+//  std::cerr << "compare write times "<<fs::last_write_time(filename("inp")) << " : " << m_property_file_modification_time << std::endl;
+  bool locally_modified = m_property_file_modification_time != fs::last_write_time(propertyFile());
+  for (const auto& suffix : {"inp","xyz"})
+    locally_modified = locally_modified or (fs::exists(filename(suffix)) and fs::last_write_time(filename(suffix)) > m_property_file_modification_time);
+  if (not locally_modified
       and property_get("_private_sjef_project_backend_inactive_synced") == "1")
     return true;
 //  std::cerr << "really syncing"<<std::endl;
@@ -548,6 +552,7 @@ bool Project::run(std::string name, int verbosity, bool force, bool wait) {
     std::cerr << "Project::run() run_needed()=" << run_needed(verbosity) << std::endl;
 //  if (not force and not run_needed()) return false;
   change_backend(backend.name);
+  m_status = unevaluated;
   std::string line;
   bp::child c;
   std::string optionstring;
@@ -860,11 +865,11 @@ status Project::status(int verbosity, bool cached) const {
           if (verbosity > 2) std::cerr << "line" << line << std::endl;
           if (verbosity > 2) std::cerr << "status_running " << be.status_running << std::endl;
           if (verbosity > 2) std::cerr << "status_waiting " << be.status_waiting << std::endl;
-          if (std::regex_search(line, match, std::regex{be.status_running})) {
-            result = running;
-          }
           if (std::regex_search(line, match, std::regex{be.status_waiting})) {
             result = waiting;
+          }
+          if (std::regex_search(line, match, std::regex{be.status_running})) {
+            result = running;
           }
         }
       }

@@ -5,6 +5,7 @@
 #include <pugixml.hpp>
 #include <vector>
 #include <string>
+#include <string.h>
 namespace sjef {
 
 class Backend {

@@ -36,21 +36,30 @@ struct sjef::pugi_xml_document : public pugi::xml_document {};
 const std::string sjef::Project::s_propertyFile = "Info.plist";
 
 ///> @private
-// not thread safe, so lock all uses with this mutex
-std::mutex project_file_mutex;
-class sjef::projectLock {
+class sjef::FileLock {
+  boost::interprocess::file_lock m_lock;
+ public:
+  FileLock(const std::string& path)
+      : m_lock(path.c_str()) {
+  }
+  void lock() { m_lock.lock();}
+  void lock_sharable() { m_lock.lock_sharable();}
+};
+
+///> @private
+class sjef::ProjectLock {
   bool locker; // whether this object is the one that creates the lock
   const sjef::Project& m_project;
 //  std::mutex mut;
  public:
-  projectLock(const sjef::Project& project, bool exclusive = true)
+  ProjectLock(const sjef::Project& project, bool exclusive = true)
       : locker(false), m_project(project) {
 //    const std::lock_guard<std::mutex> lock(mut);
     if (not m_project.m_lock) {
       locker = true;
       if (not fs::exists(m_project.propertyFile()))
         fs::ofstream(m_project.propertyFile()); // if the file doesn't exist, touch it so that can be used for locking
-      m_project.m_lock.reset(new boost::interprocess::file_lock(m_project.propertyFile().c_str()));
+      m_project.m_lock.reset(new FileLock(m_project.propertyFile()));
     }
     if (exclusive)
       m_project.m_lock->lock();
@@ -58,7 +67,7 @@ class sjef::projectLock {
       m_project.m_lock->lock_sharable();
   }
 
-  ~projectLock() {
+  ~ProjectLock() {
 //    const std::lock_guard<std::mutex> lock(mut);
     if (locker) m_project.m_lock.release();
   }
@@ -576,8 +585,7 @@ std::map<std::string, std::string> Project::backend_parameters(const std::string
 
 bool Project::run(std::string name, int verbosity, bool force, bool wait) {
   throw_if_backend_invalid(name);
-  const std::lock_guard<std::mutex> lock(project_file_mutex);
-  projectLock fileLock(*this, true);
+  ProjectLock fileLock(*this, true);
   auto& backend = m_backends.at(name);
   if (status(verbosity) != unknown && status(0) != completed) return false;
   if (verbosity > 0)
@@ -1102,8 +1110,7 @@ constexpr static bool use_writer = false;
 
 std::mutex load_property_file_mutex;
 void Project::load_property_file() const {
-  const std::lock_guard<std::mutex> lock(project_file_mutex);
-  projectLock locker(*this, false);
+  ProjectLock locker(*this, false);
   if (!m_properties->load_file(propertyFile().c_str()))
     throw std::runtime_error("error in loading " + propertyFile());
   m_property_file_modification_time = fs::last_write_time(propertyFile());
@@ -1113,8 +1120,7 @@ static std::string writing_object_file = ".Info.plist.writing_object";
 
 bool Project::properties_last_written_by_me(bool removeFile) const {
   auto path = fs::path{m_filename} / fs::path{writing_object_file};
-  const std::lock_guard<std::mutex> lock(project_file_mutex);
-  projectLock fileLock(*this, false);
+  ProjectLock fileLock(*this, false);
   std::ifstream i{path.string(), std::ios_base::in};
   if (not i.is_open()) return false;
   std::hash<const Project*> hasher;
@@ -1128,8 +1134,7 @@ bool Project::properties_last_written_by_me(bool removeFile) const {
 }
 void Project::check_property_file() const {
   auto lastwrite = fs::last_write_time(propertyFile());
-  const std::lock_guard<std::mutex> lock(project_file_mutex);
-  projectLock fileLock(*this, false);
+  ProjectLock fileLock(*this, false);
   if (m_property_file_modification_time == lastwrite) { // tie-breaker
     if (not properties_last_written_by_me(false))
       --m_property_file_modification_time; // to mark this object's cached properties as out of date
@@ -1150,8 +1155,7 @@ void Project::save_property_file() const {
   struct plist_writer writer;
   writer.file = propertyFile();
   {
-    const std::lock_guard<std::mutex> lock(project_file_mutex);
-    projectLock fileLock(*this, true);
+    ProjectLock fileLock(*this, true);
     if (use_writer)
       m_properties->save(writer, "\t", pugi::format_no_declaration);
     else
@@ -1161,8 +1165,7 @@ void Project::save_property_file() const {
 //  std::cout << "end save_property_file" << std::endl;
   m_property_file_modification_time = fs::last_write_time(propertyFile());
   {
-    const std::lock_guard<std::mutex> lock(project_file_mutex);
-    projectLock fileLock(*this, true);
+    ProjectLock fileLock(*this, true);
     std::ofstream o{((fs::path{m_filename} / fs::path{writing_object_file}).string())};
     std::hash<const Project*> hasher;
     o << hasher(this);

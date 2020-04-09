@@ -7,13 +7,13 @@
 #include <memory>
 #include <boost/filesystem/path.hpp>
 #include <boost/process/child.hpp>
-#include <boost/interprocess/sync/file_lock.hpp>
 #include <thread>
 #include <mutex>
 
 namespace sjef {
 class Backend; ///< @private
-class projectLock; ///< @private
+class ProjectLock; ///< @private
+class FileLock; ///< @private
 class pugi_xml_document; ///< @private
 static constexpr int recentMax = 128;
 enum status : int {
@@ -63,8 +63,8 @@ class Project {
     std::mutex m_property_set_mutex;
   };
   mutable backend_watcher_flag_container m_unmovables;
-  mutable std::unique_ptr<boost::interprocess::file_lock> m_lock;
-  friend projectLock;
+  mutable std::unique_ptr<FileLock> m_lock;
+  friend ProjectLock;
   void report_shutdown(const std::string& message) const;
   std::string remote_server_run(const std::string& command, int verbosity = 0) const;
  public:

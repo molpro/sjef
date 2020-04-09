@@ -102,9 +102,9 @@ Project::Project(const std::string& filename,
     m_suffixes(suffixes),
     m_backend_doc(std::make_unique<pugi_xml_document>()),
     m_status_lifetime(0),
-    m_status_last(std::chrono::steady_clock::now()),
-    m_status(unevaluated) {
+    m_status_last(std::chrono::steady_clock::now()) {
 //  std::cerr << "Project constructor filename="<<filename << "address "<< this<<std::endl;
+  cached_status(unevaluated);
   auto recent_projects_directory = expand_path(std::string{"~/.sjef/"} + m_project_suffix);
   fs::create_directories(recent_projects_directory);
   m_recent_projects_file = expand_path(recent_projects_directory + "/projects");
@@ -551,7 +551,7 @@ bool Project::run(std::string name, int verbosity, bool force, bool wait) {
     std::cerr << "Project::run() run_needed()=" << run_needed(verbosity) << std::endl;
 //  if (not force and not run_needed()) return false;
   change_backend(backend.name);
-  m_status = unevaluated;
+  cached_status(unevaluated);
   backend_watcher_wait_milliseconds = 0;
   std::string line;
   bp::child c;
@@ -787,13 +787,13 @@ std::string Project::file_contents(const std::string& suffix, const std::string&
 }
 
 status Project::status(int verbosity, bool cached) const {
-//  if (cached and m_status != unevaluated)
-//    std::cerr << "using cached status " << m_status << ", so returning immediately" << std::endl;
+//  if (cached and cached_status() != unevaluated)
+//    std::cerr << "using cached status " << cached_status() << ", so returning immediately" << std::endl;
 //  else if (cached)
-//    std::cerr << "want to use cached status but cannot because not yet evaluated " << m_status << std::endl;
+//    std::cerr << "want to use cached status but cannot because not yet evaluated " << cached_status() << std::endl;
 //  else
-//    std::cerr << "do not want to use cached status " << m_status << std::endl;
-  if (cached and m_status != unevaluated) return m_status;
+//    std::cerr << "do not want to use cached status " << cached_status() << std::endl;
+  if (cached and cached_status() != unevaluated) return cached_status();
   if (property_get("backend").empty()) return unknown;
   auto start_time = std::chrono::steady_clock::now();
   auto bes = property_get("backend");
@@ -902,9 +902,17 @@ status Project::status(int verbosity, bool cached) const {
       std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time);
   if (time_taken < m_status_lifetime) m_status_lifetime = time_taken;
   m_status_last = std::chrono::steady_clock::now();
-  m_status = result;
-//  std::cerr << "m_status set to " << m_status << std::endl;
+  cached_status(result);
+//  std::cerr << "cached_status() set to " << cached_status() << std::endl;
   return result;
+}
+
+sjef::status Project::cached_status() const {
+  return m_status;
+}
+
+void Project::cached_status(sjef::status status) const {
+  m_status = status;
 }
 
 std::string sjef::Project::status_message(int verbosity) const {
@@ -1429,18 +1437,18 @@ void sjef::Project::backend_watcher(sjef::Project& project,
         }
         catch (const std::exception& ex) {
           std::cerr << "sjef::Project::backend_watcher() synchronize() has thrown " << ex.what() << std::endl;
-          project.m_status = unknown;
+          project.cached_status(unknown);
         }
 //      std::cerr << "... watcher for project "<<&project<<" back from synchronize"<<std::endl;
         try {
-          project.m_status = project.status(0, false);
+          project.cached_status(project.status(0, false));
         }
         catch (const std::exception& ex) {
           std::cerr << "sjef::Project::backend_watcher() status() has thrown " << ex.what() << std::endl;
-          project.m_status = unknown;
+          project.cached_status(unknown);
         }
 //      std::cerr << "... watcher for project "<<&project<<" back from status"<<std::endl;
-//      std::cerr << "sjef::Project::backend_watcher() status " << project.m_status << std::endl;
+//      std::cerr << "sjef::Project::backend_watcher() status " << project.cached_status() << std::endl;
       }
     }
 //    std::cerr << "sjef::Project::backend_watcher() stop" << std::endl;

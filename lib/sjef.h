@@ -272,6 +272,8 @@ class Project {
    */
   void change_backend(std::string backend = std::string{""}, bool force = false);
  protected:
+  sjef::status cached_status() const;
+  void cached_status(sjef::status status) const;
   void throw_if_backend_invalid(std::string backend = "") const;
   std::string get_project_suffix(const std::string& filename, const std::string& default_suffix) const;
   void recent_edit(const std::string& add, const std::string& remove = "");

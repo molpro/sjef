@@ -908,12 +908,13 @@ status Project::status(int verbosity, bool cached) const {
 }
 
 sjef::status Project::cached_status() const {
-  return m_status = static_cast<sjef::status>(std::stoi(property_get("_status")));
+  return static_cast<sjef::status>(std::stoi(property_get("_status")));
 }
 
 void Project::cached_status(sjef::status status) const {
-  if (status != m_status) const_cast<Project*>(this)->property_set("_status", std::to_string(static_cast<int>(status)));
-  m_status = status;
+  auto current_status = property_get("_status");
+  if (current_status.empty() or status != std::stoi(current_status))
+    const_cast<Project*>(this)->property_set("_status", std::to_string( static_cast<int>(status)));
 }
 
 std::string sjef::Project::status_message(int verbosity) const {

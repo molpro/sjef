@@ -51,7 +51,6 @@ class Project {
   mutable std::string m_control_path_option;
   mutable std::chrono::milliseconds m_status_lifetime;
   mutable std::chrono::time_point<std::chrono::steady_clock> m_status_last;
-  mutable sjef::status m_status;
   mutable std::thread m_backend_watcher;
   // put the flag into a container to deal conveniently with std:atomic_flag's lack of move constructor
   struct backend_watcher_flag_container {

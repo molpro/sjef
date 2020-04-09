@@ -104,7 +104,6 @@ Project::Project(const std::string& filename,
     m_status_lifetime(0),
     m_status_last(std::chrono::steady_clock::now()) {
 //  std::cerr << "Project constructor filename="<<filename << "address "<< this<<std::endl;
-  cached_status(unevaluated);
   auto recent_projects_directory = expand_path(std::string{"~/.sjef/"} + m_project_suffix);
   fs::create_directories(recent_projects_directory);
   m_recent_projects_file = expand_path(recent_projects_directory + "/projects");
@@ -130,6 +129,7 @@ Project::Project(const std::string& filename,
   }
   load_property_file();
   property_set("_private_sjef_project_backend_inactive_synced", "0");
+  cached_status(unevaluated);
 
   auto nimport = property_get("IMPORTED").empty() ? 0 : std::stoi(property_get("IMPORTED"));
 //    std::cerr << "nimport "<<nimport<<std::endl;
@@ -908,10 +908,11 @@ status Project::status(int verbosity, bool cached) const {
 }
 
 sjef::status Project::cached_status() const {
-  return m_status;
+  return m_status = static_cast<sjef::status>(std::stoi(property_get("_status")));
 }
 
 void Project::cached_status(sjef::status status) const {
+  if (status != m_status) const_cast<Project*>(this)->property_set("_status", std::to_string(static_cast<int>(status)));
   m_status = status;
 }
 

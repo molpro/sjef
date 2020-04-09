@@ -908,7 +908,8 @@ status Project::status(int verbosity, bool cached) const {
 }
 
 sjef::status Project::cached_status() const {
-  return static_cast<sjef::status>(std::stoi(property_get("_status")));
+  auto current_status = property_get("_status");
+  return current_status.empty() ? unevaluated : static_cast<sjef::status>(std::stoi(current_status));
 }
 
 void Project::cached_status(sjef::status status) const {
@@ -1110,15 +1111,11 @@ void Project::save_property_file() const {
 //  system((std::string{"cat "} + propertyFile()).c_str());
   struct plist_writer writer;
   writer.file = propertyFile();
-  try {
+  {
+    if (not fs::exists(writer.file))
+      fs::ofstream(writer.file); // if the file doesn't exist, touch it so that can be used for locking
     boost::interprocess::file_lock fileLock{writer.file.c_str()};
     fileLock.lock();
-    if (use_writer)
-      m_properties->save(writer, "\t", pugi::format_no_declaration);
-    else
-      m_properties->save_file(propertyFile().c_str());
-  }
-  catch (boost::interprocess::interprocess_exception& x) {
     if (use_writer)
       m_properties->save(writer, "\t", pugi::format_no_declaration);
     else

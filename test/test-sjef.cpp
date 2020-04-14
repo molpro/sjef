@@ -15,6 +15,7 @@ namespace fs = boost::filesystem;
 
 class savestate {
   std::string rf;
+  std::vector<std::string> testfiles;
  public:
   savestate() {
     for (const auto& suffix : std::vector<std::string>{"sjef", "molpro", "someprogram"}) {
@@ -27,6 +28,10 @@ class savestate {
     }
   }
   ~savestate() {
+    for (const auto& file : testfiles)
+      std::cerr << "~savestate testfile " << file << std::endl;
+    for (const auto& file : testfiles)
+      sjef::Project::erase(file);
     for (const auto& suffix : std::vector<std::string>{"sjef", "molpro"}) {
       rf = sjef::expand_path(std::string{"~/."} + suffix + "/projects");
       if (!rf.empty() and fs::exists(rf + ".save")) {
@@ -34,6 +39,12 @@ class savestate {
         fs::rename(rf + ".save", rf);
       }
     }
+    std::cerr << "~savestate returns " << std::endl;
+  }
+  std::string testfile(const std::string& file) {
+    testfiles.push_back(sjef::expand_path(file));
+    sjef::Project::erase(testfiles.back());
+    return testfiles.back();
   }
 
 };
@@ -85,29 +96,30 @@ TEST(project, expand_path) {
 }
 
 TEST(project, construction) {
+  savestate state;
   std::string name("sjef-project-test");
   for (const auto& dirs : std::vector<std::string>{"$TMPDIR", "$HOME", "${HOME}", "~"}) {
-    std::string filename(dirs + "/" + name + ".sjef");
-    sjef::Project::erase(filename); // remove any previous contents
-    sjef::Project x(filename, nullptr, true);
+    auto filename = state.testfile(dirs + "/" + name + ".sjef");
+    sjef::Project x(filename);
     ASSERT_EQ(x.name(), name);
   }
 }
 
 TEST(project, move) {
-  savestate x;
+  savestate state;
   std::string name("sjef-project-test");
-  std::string filename("$TMPDIR/" + name + ".sjef");
-  sjef::Project::erase(filename); // remove any previous contents
-  sjef::Project x2(filename, nullptr, true);
-  ASSERT_EQ (x2.name(), name);
+  auto filename = state.testfile("$TMPDIR/" + name + ".sjef");
   auto name2 = name + "2";
-  std::string filename2("$TMPDIR/" + name2 + ".sjef");
-  sjef::Project::erase(filename2); // remove any previous contents
+  auto filename2 = state.testfile("$TMPDIR/" + name2 + ".sjef");
+  sjef::Project x2(filename);
+  ASSERT_EQ (x2.name(), name);
+  ASSERT_EQ(x2.filename(), filename);
   x2.move(filename2);
   ASSERT_EQ(x2.name(), name2);
+  ASSERT_EQ(x2.filename(), filename2);
   ASSERT_FALSE(fs::exists(fs::path(filename)));
   ASSERT_TRUE(fs::exists(fs::path(x2.filename())));
+//  std::cerr << "filename="<<filename<<std::endl;
   x2.copy(filename);
   ASSERT_TRUE(fs::exists(fs::path(x2.filename())));
   ASSERT_TRUE(fs::exists(sjef::expand_path(filename2)));
@@ -118,34 +130,37 @@ TEST(project, move) {
 }
 
 TEST(project, moveMolpro) {
-  savestate x;
-  std::string filename_old("moveMolproOld.molpro");
-  std::string filename_new("moveMolproNew.molpro");
+  savestate state;
+  auto filename_old = state.testfile("moveMolproOld.molpro");
+  auto filename_new = state.testfile("moveMolproNew.molpro");
   sjef::Project p(filename_old, nullptr, true);
   std::ofstream(p.filename("inp")) << "geometry=" + p.name() + ".xyz" + "\n";
   std::ofstream(p.filename("xyz")) << "1\n\nHe 0 0 0\n";
   p.property_set("inpFile", p.name() + ".inp");
-  p.move(filename_new, true);
-  EXPECT_FALSE(fs::exists(sjef::expand_path(filename_old)));
-  EXPECT_TRUE(fs::exists(sjef::expand_path(filename_new)));
-  std::string inp;
-  std::ifstream(p.filename("inp")) >> inp;
-  EXPECT_EQ(inp, "geometry=" + p.name() + ".xyz");
   EXPECT_EQ(p.property_get("inpFile"), p.name() + ".inp");
+  p.move(filename_new, true);
+//  EXPECT_FALSE(fs::exists(sjef::expand_path(filename_old)));
+//  EXPECT_TRUE(fs::exists(sjef::expand_path(filename_new)));
+//  std::string inp;
+//  std::ifstream(p.filename("inp")) >> inp;
+//  EXPECT_EQ(inp, "geometry=" + p.name() + ".xyz");
+//  EXPECT_EQ(p.property_get("inpFile"), p.name() + ".inp");
+//  exit(0);
 }
 
 TEST(project, copyMolpro) {
-  savestate x;
-  std::string filename_old("copyMolproOld.molpro");
-  std::string filename_new("copyMolproNew.molpro");
+  savestate state;
+  auto filename_old = state.testfile("copyMolproOld.molpro");
+  auto filename_new = state.testfile("copyMolproNew.molpro");
   {
-    sjef::Project p(filename_old, nullptr, true);
+    sjef::Project p(filename_old);
     std::ofstream(p.filename("inp")) << "geometry=" + p.name() + ".xyz" + "\n";
     std::ofstream(p.filename("xyz")) << "1\n\nHe 0 0 0\n";
     p.copy(filename_new, true);
   }
-  sjef::Project p(filename_new, nullptr, true);
+  sjef::Project::erase(filename_old);
   EXPECT_FALSE(fs::exists(sjef::expand_path(filename_old)));
+  sjef::Project p(filename_new);
   EXPECT_TRUE(fs::exists(sjef::expand_path(filename_new)));
   std::string inp;
   std::ifstream(p.filename("inp")) >> inp;
@@ -153,21 +168,22 @@ TEST(project, copyMolpro) {
 }
 
 TEST(project, erase) {
-  std::string filename("$TMPDIR/sjef-project-test.sjef");
-  sjef::Project::erase(filename); // remove any previous contents
-  sjef::Project x(filename);
-  filename = x.filename();
-  ASSERT_TRUE(fs::exists(fs::path(filename)));
-  ASSERT_TRUE(fs::exists(fs::path(filename + "/Info.plist")));
-  ASSERT_TRUE(fs::is_directory(fs::path(filename)));
-  x.erase();
-  ASSERT_EQ(x.filename(), "");
+  savestate state;
+  std::string filename = state.testfile("$TMPDIR/sjef-project-test.sjef");
+  {
+    sjef::Project x(filename);
+    filename = x.filename();
+    ASSERT_TRUE(fs::exists(fs::path(filename)));
+    ASSERT_TRUE(fs::exists(fs::path(filename + "/Info.plist")));
+    ASSERT_TRUE(fs::is_directory(fs::path(filename)));
+  }
+  sjef::Project::erase(filename);
   ASSERT_FALSE(fs::exists(fs::path(filename)));
 }
 
 TEST(project, import) {
-  std::string filename("$TMPDIR/sjef-project-test.sjef");
-  sjef::Project::erase(filename); // remove any previous contents
+  savestate state;
+  std::string filename = state.testfile("$TMPDIR/sjef-project-test.sjef");
   sjef::Project x(filename);
   filename = x.filename();
   auto importfile = sjef::expand_path("$TMPDIR/sjef-project-test.import");
@@ -178,8 +194,8 @@ TEST(project, import) {
 }
 
 TEST(project, clean) {
-  std::string filename("$TMPDIR/sjef-project-test.sjef");
-  sjef::Project::erase(filename); // remove any previous contents
+  savestate state;
+  std::string filename = state.testfile("$TMPDIR/sjef-project-test.sjef");
   sjef::Project x(filename);
   filename = x.filename();
   ASSERT_FALSE(fs::exists(fs::path(filename) / fs::path(filename + ".out")));
@@ -195,8 +211,10 @@ TEST(project, clean) {
 }
 
 TEST(project, properties) {
+  savestate state;
   sjef::Project::erase("$TMPDIR/try.sjef"); // remove any previous contents
-  sjef::Project x("$TMPDIR/try.sjef", nullptr, true);
+  auto filename = state.testfile("$TMPDIR/try.sjef");
+  sjef::Project x(filename);
   const auto keys = x.property_names();
   std::string key;
   int ninitial = keys.size();
@@ -232,54 +250,73 @@ TEST(project, properties) {
 }
 
 TEST(project, recent_files) {
-  auto rf = sjef::expand_path("~/.sjef/projects");
-  auto oldfile = fs::exists(rf);
-  if (oldfile)
-    fs::rename(rf, rf + ".save");
-  std::list<sjef::Project> p;
-  for (size_t i = 0; i < 10; i++) {
-    sjef::Project::erase("$TMPDIR/p" + std::to_string(i) + ".someprogram"); // remove any previous contents
-    p.emplace_back("$TMPDIR/p" + std::to_string(i) + ".someprogram");
+  {
+
+    savestate state;
+    std::string suffix{"someprogram"};
+    auto rf = sjef::expand_path("~/.sjef/" + suffix + "/projects");
+    auto oldfile = fs::exists(rf);
+    if (oldfile)
+      fs::rename(rf, rf + ".save");
+    std::string probername("$TMPDIR/prober." + suffix);
+    state.testfile(probername);
+    sjef::Project prober(probername);
+    std::list<std::string> p;
+    for (size_t i = 0; i < 3; i++) {
+      {
+        sjef::Project proj("$TMPDIR/p" + std::to_string(i) + "." + suffix);
+        p.emplace_back(proj.filename());
+      }
+      state.testfile(p.back());
+      {
+        sjef::Project proj(p.back());
+      }
+    }
+//  system((std::string{"cat "}+rf).c_str());
+    for (const auto& pp : p)
+      std::cerr << "p entry " << pp << std::endl;
+    size_t i = p.size();
+    for (const auto& pp : p)
+      std::cerr << "p entry, recent table " << i << " " << sjef::Project(pp).recent(i--) << std::endl;
+    i = p.size();
+    for (const auto& pp : p)
+      ASSERT_EQ(prober.recent(i--), pp);
+    i = p.size();
+    for (const auto& pp : p)
+      ASSERT_EQ(prober.recent_find(pp), i--);
+    sjef::Project::erase(p.back());
+    p.pop_back();
+    i = p.size();
+    for (const auto& pp : p)
+      ASSERT_EQ(prober.recent(i--), pp);
+    i = p.size();
+    for (const auto& pp : p)
+      ASSERT_EQ(prober.recent(i--), pp);
+    for (auto& pp : p)
+      sjef::Project::erase(pp);
+    for (const auto& pp : p)
+      ASSERT_EQ(prober.recent_find(pp), 0);
+    if (oldfile)
+      fs::rename(rf + ".save", rf);
   }
-  size_t i = p.size();
-  for (const auto& pp : p)
-    ASSERT_EQ(pp.recent(i--), pp.filename());
-  i = p.size();
-  for (const auto& pp : p)
-    ASSERT_EQ(pp.recent_find(pp.filename()), i--);
-  p.back().erase();
-  p.pop_back();
-//  system(("cat "+rf).c_str());
-  i = p.size();
-  for (const auto& pp : p)
-    ASSERT_EQ(pp.recent(i--), pp.filename());
-  i = p.size();
-  for (const auto& pp : p)
-    ASSERT_EQ(pp.recent(i--), pp.filename());
-  for (auto& pp : p)
-    pp.erase();
-  for (const auto& pp : p)
-    ASSERT_EQ(pp.recent_find(pp.filename()), 0);
-  if (oldfile)
-    fs::rename(rf + ".save", rf);
 }
 
 TEST(project, project_hash) {
-  sjef::Project::erase("$TMPDIR/try.sjef"); // remove any previous contents
-  sjef::Project x("$TMPDIR/try.sjef", nullptr, true);
+  savestate state;
+  sjef::Project x(state.testfile("$TMPDIR/try.sjef"));
   auto xph = x.project_hash();
-  sjef::Project::erase("$TMPDIR/try2.sjef"); // remove any previous contents
+  state.testfile("$TMPDIR/try2.sjef"); // remove any previous contents
   ASSERT_TRUE(x.copy("$TMPDIR/try2.sjef"));
-  sjef::Project x2("$TMPDIR/try2.sjef", nullptr, true, false);
+  sjef::Project x2("$TMPDIR/try2.sjef");
   ASSERT_NE(xph, x2.project_hash());
-  sjef::Project::erase("$TMPDIR/try3.sjef"); // remove any previous contents
+  state.testfile("$TMPDIR/try3.sjef"); // remove any previous contents
   x.move("$TMPDIR/try3.sjef");
   ASSERT_EQ(xph, x.project_hash());
 }
 
 TEST(project, input_hash_molpro) {
-  sjef::Project::erase("$TMPDIR/try.molpro"); // remove any previous contents
-  sjef::Project x("$TMPDIR/try.molpro", nullptr, true);
+  savestate state;
+  sjef::Project x(state.testfile("$TMPDIR/try.molpro"));
   {
     std::ofstream ss(x.filename("inp"));
     ss << "one\ngeometry=try.xyz\ntwo" << std::endl;
@@ -289,11 +326,11 @@ TEST(project, input_hash_molpro) {
     ss << "1\nThe xyz file\nHe 0 0 0" << std::endl;
   }
   auto xph = x.input_hash();
-  sjef::Project::erase("$TMPDIR/try2.molpro"); // remove any previous contents
+  state.testfile("$TMPDIR/try2.molpro");
   ASSERT_TRUE(x.copy("$TMPDIR/try2.molpro"));
-  sjef::Project x2("$TMPDIR/try2.molpro", nullptr, true, false);
+  sjef::Project x2("$TMPDIR/try2.molpro");
   ASSERT_EQ(xph, x2.input_hash());
-  sjef::Project::erase("$TMPDIR/try3.molpro"); // remove any previous contents
+  state.testfile("$TMPDIR/try3.molpro");
   x.move("$TMPDIR/try3.molpro");
   ASSERT_EQ(xph, x.input_hash());
 }
@@ -318,30 +355,28 @@ TEST(project, xmlRepair) {
 }
 
 TEST(project, xmloutput) {
+  savestate state;
   sjef::Project He("He.molpro");
   EXPECT_EQ(He.file_contents("xml"), He.xml());
   {
-    sjef::Project newProject("test___.someprogram", nullptr, true);
+    sjef::Project newProject(state.testfile("test___.someprogram"));
     EXPECT_EQ(newProject.file_contents("xml"), "");
     EXPECT_EQ(newProject.xml(), "<?xml version=\"1.0\"?><root/>");
   }
 }
 
 TEST(project, input_from_output) {
-  savestate x;
+  savestate state;
   sjef::Project He("He.molpro");
   std::string input = He.file_contents("inp");
   input = std::regex_replace(input, std::regex{" *\n\n*"}, "\n");
   EXPECT_EQ(input, He.input_from_output());
-  {
-    He.copy("Hecopy");
-    sjef::Project Hecopy("Hecopy.molpro");
-    EXPECT_EQ(He.file_contents("inp"), Hecopy.file_contents("inp"));
-    EXPECT_EQ(input, He.input_from_output());
-    EXPECT_EQ(Hecopy.input_from_output(), "");
-    Hecopy.erase();
-  }
-
+  auto copy = state.testfile("Hecopy.molpro");
+  He.copy(copy);
+  sjef::Project Hecopy(copy);
+  EXPECT_EQ(He.file_contents("inp"), Hecopy.file_contents("inp"));
+  EXPECT_EQ(input, He.input_from_output());
+  EXPECT_EQ(Hecopy.input_from_output(), "");
 }
 
 TEST(project, run_needed) {
@@ -361,7 +396,8 @@ TEST(project, run_needed) {
 //}
 
 TEST(project, spawn_many_dummy) {
-  sjef::Project p("spawn_many.someprogram", nullptr, true);
+  savestate state;
+  sjef::Project p(state.testfile("spawn_many.someprogram"));
   { std::ofstream(p.filename("inp")) << ""; }
   const auto& backend = sjef::Backend::dummy_name;
   for (auto i = 0; i < 50; ++i) {
@@ -373,7 +409,8 @@ TEST(project, spawn_many_dummy) {
 }
 
 TEST(project, spawn_many_molpro) {
-  sjef::Project p("spawn_many.molpro", nullptr, true);
+  savestate state;
+  sjef::Project p(state.testfile("spawn_many.molpro"), nullptr, true);
   { std::ofstream(p.filename("inp")) << ""; }
   const auto& backend = sjef::Backend::default_name;
   if (not boost::process::search_path("molpro").empty()) // test the default backend only if it exists
@@ -386,6 +423,7 @@ TEST(project, spawn_many_molpro) {
 }
 
 TEST(backend, backend_parameter_expand) {
+  savestate state;
   sjef::Project He("He.someprogram");
   std::string backend = "random_backend_name";
   for (const auto& prologue : std::vector<std::string>{"A prologue ", ""}) {
@@ -406,7 +444,7 @@ TEST(backend, backend_parameter_expand) {
   { // another set of tests
     savestate x;
     auto& backend = sjef::Backend::dummy_name;
-    sjef::Project p("backend_parameter_expand", nullptr, true, true, "molpro");
+    sjef::Project p(state.testfile("backend_parameter_expand.molpro"));
     p.property_set("backend", backend);
     p.backend_parameter_set(backend, "thing", "its value");
     std::map<std::string, std::string> tests;
@@ -441,8 +479,10 @@ TEST(backend, backend_parameter_expand) {
 }
 
 TEST(sjef, atomic) {
-  sjef::Project object1("He.someprogram");
-  sjef::Project object2("He.someprogram");
+  savestate state;
+  auto filename = state.testfile("He.someprogram");
+  sjef::Project object1(filename);
+  sjef::Project object2(filename);
   std::string testval = "testval";
   object1.property_set("testprop", testval);
   auto testval2 = object2.property_get("testprop");
@@ -452,10 +492,10 @@ TEST(sjef, atomic) {
 }
 
 TEST(project, recent) {
-  savestate x;
+  savestate state;
   std::string fn;
   for (auto i = 0; i < 2; ++i) {
-    sjef::Project p("completely_new" + std::to_string(i) + ".someprogram", nullptr, true);
+    sjef::Project p(state.testfile("completely_new" + std::to_string(i) + ".someprogram"));
     fn = p.filename();
     EXPECT_EQ(p.recent_find(fn), 1);
     EXPECT_EQ(sjef::Project("another.someprogram", nullptr, true).recent_find(fn), 2);
@@ -465,8 +505,8 @@ TEST(project, recent) {
 }
 
 TEST(project, dummy_backend) {
-  savestate x;
-  sjef::Project p("completely_new", nullptr, true, true, "sjef");
+  savestate state;
+  sjef::Project p(state.testfile("completely_new.sjef"));
   p.run(sjef::Backend::dummy_name, 0, true, false);
   p.wait();
   EXPECT_EQ(p.file_contents("out"), "dummy");
@@ -474,8 +514,8 @@ TEST(project, dummy_backend) {
 }
 
 TEST(project, project_name_embedded_space) {
-  savestate x;
-  sjef::Project p("completely new", nullptr, true, true, "molpro");
+  savestate state;
+  sjef::Project p(state.testfile("completely new.molpro"));
   std::ofstream(p.filename("inp")) << "geometry={He};rhf\n";
   p.run(sjef::Backend::dummy_name, 0, true, false);
   p.wait();

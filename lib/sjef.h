@@ -63,8 +63,12 @@ class Project {
     std::mutex m_property_set_mutex;
   };
   mutable backend_watcher_flag_container m_unmovables;
-  mutable std::unique_ptr<FileLock> m_lock;
-  friend ProjectLock;
+//  mutable std::unique_ptr<FileLock> m_lock;
+//  friend ProjectLock;
+  std::unique_ptr<Project> m_backend_watcher_instance;
+  const Project* m_master_instance;
+  bool m_master_of_slave;
+  bool m_slave;
   void report_shutdown(const std::string& message) const;
   std::string remote_server_run(const std::string& command, int verbosity = 0) const;
  public:
@@ -104,13 +108,9 @@ class Project {
    */
   bool move(const std::string& destination_filename, bool force = false);
   /*!
-   * @brief Destroy the project
+   * @brief Erase a project from the file system, and remove it from the recent projects file
   */
-  void erase();
-  static void erase(const std::string& filename) {
-//    std::cerr << "sjef::project::erase "<<filename<<std::endl;
-    Project x(filename, nullptr, true, false);
-  }
+  static void erase(const std::string& filename, const std::string& default_suffix="");
   /*!
    * @brief Import one or more files into the project. In the case of a .xml output file, if the corresponding
    * input file does not exist, it will be generated.
@@ -279,13 +279,15 @@ class Project {
   void cached_status(sjef::status status) const;
   void throw_if_backend_invalid(std::string backend = "") const;
   std::string get_project_suffix(const std::string& filename, const std::string& default_suffix) const;
-  void recent_edit(const std::string& add, const std::string& remove = "");
+  static void recent_edit(const std::string& add, const std::string& remove = "");
   mutable time_t m_property_file_modification_time;
   void check_property_file() const;
   void save_property_file() const;
   void load_property_file() const;
   bool properties_last_written_by_me(bool removeFile = false) const;
+ public:
   std::string propertyFile() const;
+ protected:
   std::string cache(const Backend& backend) const;
   void force_file_names(const std::string& oldname);
   static void backend_watcher(sjef::Project& project,

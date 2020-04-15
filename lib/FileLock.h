@@ -14,12 +14,11 @@ namespace sjef {
 class Unique_FileLock;
 class FileLock {
  public:
-  bool m_exclusive;
-  std::shared_ptr<Unique_FileLock> m_unique;
   explicit FileLock(const std::string& path, bool exclusive = true);
   ~FileLock();
- private:
-  std::string lockfile(const std::string& path);
+ protected:
+  bool m_exclusive;
+  std::shared_ptr<Unique_FileLock> m_unique;
 };
 
 }

@@ -10,6 +10,11 @@ namespace fs = boost::filesystem;
 
 #include "FileLock.h"
 
+static std::string s_lockfile(const std::string& path) {
+  if (!fs::exists(path))
+    auto x = fs::ofstream(path);
+  return path;
+}
 struct sjef::Unique_FileLock { // process-level locking
   bool m_preexisting;
   std::string m_lockfile;
@@ -25,7 +30,7 @@ struct sjef::Unique_FileLock { // process-level locking
   Unique_FileLock(const std::string& path)
       :
       m_preexisting(boost::filesystem::exists(path)),
-      m_lockfile(lockfile(path)),
+      m_lockfile(s_lockfile(path)),
       m_lock(new boost::interprocess::file_lock(m_lockfile.c_str())) {
   }
   ~Unique_FileLock() {
@@ -35,12 +40,6 @@ struct sjef::Unique_FileLock { // process-level locking
     if (not m_preexisting) fs::remove(m_lockfile);
 //    system((std::string{"ls -l "} + m_lockfile).c_str());
 //    std::cout << "leaving ~Unique_FileLock()" << std::endl;
-  }
- private:
-  std::string lockfile(const std::string& path) {
-    if (!fs::exists(path))
-      auto x = fs::ofstream(path);
-    return path;
   }
 };
 
@@ -115,14 +114,9 @@ sjef::FileLock::~FileLock() {
 //  system((std::string{"ls -l "} + m_unique->m_lockfile).c_str());
 //  std::cout << "m_unique use count " << m_unique.use_count() << std::endl;
 //  std::cout << "s_Unique_FileLocks.size()" << s_Unique_FileLocks.size() << std::endl;
-  if (m_unique.use_count() == 2) // I am the last user of the Unique_FileLock so it can be trashed
+  if (m_unique.use_count() <= 2 and s_Unique_FileLocks.count(m_unique->m_lockfile) != 0 ) // I am the last user of the Unique_FileLock so it can be trashed
     s_Unique_FileLocks.erase(s_Unique_FileLocks.find(m_unique->m_lockfile));
 //  std::cout << "m_unique use count " << m_unique.use_count() << std::endl;
   m_unique.reset();
 //  std::cout << "leaving ~FileLock()" << std::endl;
-}
-std::string sjef::FileLock::lockfile(const std::string& path) {
-  if (!fs::exists(path))
-    auto x = fs::ofstream(path);
-  return path;
 }

@@ -42,13 +42,13 @@ class sjef::ProjectLock {
  public:
   ProjectLock(const sjef::Project& project, bool exclusive = true)
       : m_lock(new FileLock(project.propertyFile(), exclusive)) {
-    std::cout << "!!! Locking Project " << exclusive << std::endl;
+    std::cout << "!!! Locking Project, exclusive=" << exclusive << " on thread " <<std::this_thread::get_id()<< std::endl;
   }
 
   ~ProjectLock() {
-    std::cout << "!!! Unlocking Project start " << std::endl;
+    std::cout << "!!! Unlocking Project start " << " on thread " <<std::this_thread::get_id()<< std::endl;
     m_lock.reset(nullptr);
-    std::cout << "!!! Unlocking Project finish " << std::endl;
+    std::cout << "!!! Unlocking Project finish " << " on thread " <<std::this_thread::get_id()<< std::endl;
   }
 };
 

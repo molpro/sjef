@@ -38,20 +38,17 @@ const std::string sjef::Project::s_propertyFile = "Info.plist";
 ///> @private
 ///> @private
 class sjef::ProjectLock {
-//  const sjef::Project& m_project;
   std::unique_ptr<FileLock> m_lock;
-//  std::mutex mut;
  public:
   ProjectLock(const sjef::Project& project, bool exclusive = true)
-//      : m_project(project),
       : m_lock(new FileLock(project.propertyFile(), exclusive)) {
-    std::cout << "!!! Locking Project "<<std::endl;
+    std::cout << "!!! Locking Project " << exclusive << std::endl;
   }
 
   ~ProjectLock() {
-    std::cout << "!!! Unlocking Project start "<<std::endl;
+    std::cout << "!!! Unlocking Project start " << std::endl;
     m_lock.reset(nullptr);
-    std::cout << "!!! Unlocking Project finish "<<std::endl;
+    std::cout << "!!! Unlocking Project finish " << std::endl;
   }
 };
 
@@ -393,20 +390,20 @@ bool Project::move(const std::string& destination_filename, bool force) {
   auto namesave = name();
   auto filenamesave = m_filename;
   shutdown_backend_watcher();
-  std::cerr << "move about to copyDir "<<m_filename<<" : " << dest <<std::endl;
+  std::cerr << "move about to copyDir " << m_filename << " : " << dest << std::endl;
   bool success = false;
   if (copyDir(fs::path(m_filename), dest, true)) {
-    std::cerr << "move succeeded to copyDir "<<m_filename<<" : " << dest <<std::endl;
+    std::cerr << "move succeeded to copyDir " << m_filename << " : " << dest << std::endl;
     m_filename = dest.string();
     force_file_names(namesave);
     recent_edit(m_filename, filenamesave);
-    std::cerr << "move about to remove all "<<filenamesave<<std::endl;
+    std::cerr << "move about to remove all " << filenamesave << std::endl;
     success = fs::remove_all(filenamesave) > 0;
   }
-  if (not success) std::cerr << "move failed to copyDir "<<m_filename<<" : " << dest <<std::endl;
-  std::cerr << "move about to call change_backend "<<success << std::endl;
+  if (not success) std::cerr << "move failed to copyDir " << m_filename << " : " << dest << std::endl;
+  std::cerr << "move about to call change_backend " << success << std::endl;
   change_backend(property_get("backend"));
-  std::cerr << "move returns "<<success << std::endl;
+  std::cerr << "move returns " << success << std::endl;
   return success;
 }
 
@@ -1109,7 +1106,7 @@ struct plist_writer : pugi::xml_writer {
 
 constexpr static bool use_writer = false;
 
-std::mutex load_property_file_mutex;
+//std::mutex load_property_file_mutex;
 inline std::string slurp(const std::string& path) {
   std::ostringstream buf;
   std::ifstream input(path.c_str());
@@ -1157,9 +1154,9 @@ void Project::check_property_file() const {
   }
 }
 
-std::mutex save_property_file_mutex;
+//std::mutex save_property_file_mutex;
 void Project::save_property_file() const {
-  const std::lock_guard<std::mutex> lock(save_property_file_mutex);
+//  const std::lock_guard<std::mutex> lock(save_property_file_mutex);
 //  std::cout << "save_property_file" << std::endl;
 //  system((std::string{"cat "} + propertyFile()).c_str());
   struct plist_writer writer;
@@ -1433,7 +1430,7 @@ void sjef::Project::shutdown_backend_watcher() {
   m_unmovables.shutdown_flag.test_and_set();
   std::cerr << "shutdown_backend_watcher for project at " << this << " joinable=" << m_backend_watcher.joinable()
             << std::endl;
-std::cerr << "m_backend_watcher.get_id() " << m_backend_watcher.get_id() << std::endl;
+  std::cerr << "m_backend_watcher.get_id() " << m_backend_watcher.get_id() << std::endl;
   std::cerr << "std::thread::id() " << std::thread::id() << std::endl;
   if (m_backend_watcher.joinable()) {
     std::cerr << "shutdown_backend_watcher for project at " << this << " joining" << std::endl;
@@ -1453,7 +1450,7 @@ void sjef::Project::report_shutdown(const std::string& message) const {
 void sjef::Project::change_backend(std::string backend, bool force) {
   if (backend.empty()) backend = sjef::Backend::default_name;
   bool unchanged = property_get("backend") == backend;
-  std::cerr <<"ENTER change_backend() joinable="<<m_backend_watcher.joinable() << std::endl;
+  std::cerr << "ENTER change_backend() joinable=" << m_backend_watcher.joinable() << std::endl;
   if (not force and unchanged and m_backend_watcher.joinable()) return;
   std::cerr << "change_backend to " << backend << "for project " << name() << " at address " << this << std::endl;
   std::cerr << "current backend " << property_get("backend") << ", unchanged=" << unchanged << std::endl;
@@ -1485,8 +1482,9 @@ void sjef::Project::backend_watcher(sjef::Project& project_,
   constexpr auto radix = 2;
   backend_watcher_wait_milliseconds = std::max(min_wait_milliseconds, 1);
   try {
-    std::cerr << "sjef::Project::backend_watcher() START for project "<<project.name()<<" at address "<<&project<<", backend "<< backend
-    << ", " << project.property_get("backend")
+    std::cerr << "sjef::Project::backend_watcher() START for project " << project.name() << " at address " << &project
+              << ", backend " << backend
+              << ", " << project.property_get("backend")
               << std::endl;
 //    std::cerr << "ensure_remote_server call from server"<<std::endl;
     project.ensure_remote_server();

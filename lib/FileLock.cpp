@@ -18,6 +18,7 @@ struct sjef::Unique_FileLock { // process-level locking
   std::set<std::thread::id> m_shared_using_threads;
   std::mutex m_mutex;
   std::mutex m_mutex_sharable;
+  std::mutex m_mutex_acquire;
   std::condition_variable m_cv;
   std::condition_variable m_cv_sharable;
  public:
@@ -61,14 +62,26 @@ sjef::FileLock::FileLock(const std::string& path, bool exclusive)
   }
 //  m_unique->m_mutex_sharable.lock();
   if (exclusive) {
-//    std::cerr << "!! exclusively locking " << path << std::endl;
+    std::lock_guard<std::mutex> mulock_acquire(m_unique->m_mutex_acquire);
+//    std::cerr << "!! exclusively locking " << path
+//    <<", this_thread="<<std::this_thread::get_id()
+//    << std::endl;
     while (m_unique->m_shared_using_threads.count(std::this_thread::get_id())
-//        < m_unique->m_shared_using_threads.size()
-!=0
-      and m_unique->m_exclusive_owning_thread != std::this_thread::get_id()
-        ) { // wait until other threads sharing relinquish their access
+        < m_unique->m_shared_using_threads.size()
+//!=0
+//      and m_unique->m_exclusive_owning_thread != std::this_thread::get_id()
+        ) { // wait until other threads sharing relinquish their shared access
       std::unique_lock<std::mutex> mulock(m_unique->m_mutex_sharable);
       m_unique->m_cv_sharable.wait(mulock);
+      mulock.unlock();
+    }
+    while (
+        m_unique->m_exclusive_owning_thread != std::this_thread::get_id()
+        and
+ m_unique->m_exclusive_owning_thread != std::thread::id()
+        ) { // wait until other threads sharing relinquish their exclusive access
+      std::unique_lock<std::mutex> mulock(m_unique->m_mutex);
+      m_unique->m_cv.wait(mulock);
       mulock.unlock();
     }
     m_unique->m_lock->lock();
@@ -77,6 +90,7 @@ sjef::FileLock::FileLock(const std::string& path, bool exclusive)
     if (m_unique->m_exclusive_owning_thread != std::this_thread::get_id()) {
       m_unique->m_exclusive_owning_thread = std::this_thread::get_id();
     }
+//    std::cerr << ".... acquired exclusive access" << std::endl;
   } else {
 //    std::cerr << "!! sharable locking " << path << std::endl;
     m_unique->m_shared_using_threads.insert(std::this_thread::get_id());

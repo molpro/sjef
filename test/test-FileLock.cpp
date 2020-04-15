@@ -12,9 +12,9 @@ TEST(FileLock, simple) {
     fs::remove_all(lockfile);
   {
     sjef::FileLock l1(lockfile);
-    ASSERT_TRUE(fs::exists(lockfile));
+    EXPECT_TRUE(fs::exists(lockfile));
   }
-  ASSERT_FALSE(fs::exists(lockfile));
+  EXPECT_FALSE(fs::exists(lockfile));
   if (fs::exists(lockfile))
     fs::remove_all(lockfile);
 }
@@ -40,6 +40,8 @@ TEST(FileLock, thread) {
   for (const auto& message : messages)
     threads.emplace_back(writer, lockfile, message);
   l1.reset();
+  for (auto& thread : threads)
+    thread.join();
   ASSERT_TRUE(fs::exists(lockfile));
   for (auto i = 0; i < n; ++i) {
     auto l = sjef::FileLock(lockfile, false);
@@ -51,10 +53,8 @@ TEST(FileLock, thread) {
 //      else std::cout << "line: " << line <<std::endl;
     }
 //    std::cout << lines << " lines" << std::endl;
-    ASSERT_EQ(lines, threads.size());
+    EXPECT_EQ(lines, threads.size());
   }
-  for (auto& thread : threads)
-    thread.join();
   if (fs::exists(lockfile))
     fs::remove_all(lockfile);
 }

@@ -273,12 +273,12 @@ TEST(project, recent_files) {
       }
     }
 //  system((std::string{"cat "}+rf).c_str());
-    for (const auto& pp : p)
-      std::cerr << "p entry " << pp << std::endl;
+//    for (const auto& pp : p)
+//      std::cerr << "p entry " << pp << std::endl;
     size_t i = p.size();
-    for (const auto& pp : p)
-      std::cerr << "p entry, recent table " << i << " " << sjef::Project(pp).recent(i--) << std::endl;
-    i = p.size();
+//    for (const auto& pp : p)
+//      std::cerr << "p entry, recent table " << i << " " << sjef::Project(pp).recent(i--) << std::endl;
+//    i = p.size();
     for (const auto& pp : p)
       ASSERT_EQ(prober.recent(i--), pp);
     i = p.size();
@@ -401,7 +401,7 @@ TEST(project, spawn_many_dummy) {
   { std::ofstream(p.filename("inp")) << ""; }
   const auto& backend = sjef::Backend::dummy_name;
   for (auto i = 0; i < 5; ++i) {
-    std::cerr << "run number "<<i<<std::endl;
+    std::cerr << "run number " << i << std::endl;
     ASSERT_TRUE(p.run(backend, -1, true, true));
     EXPECT_NE(p.property_get("jobnumber"), "-1");
     EXPECT_EQ(p.status(), sjef::completed);
@@ -499,10 +499,16 @@ TEST(project, recent) {
     sjef::Project p(state.testfile("completely_new" + std::to_string(i) + ".someprogram"));
     fn = p.filename();
     EXPECT_EQ(p.recent_find(fn), 1);
-    EXPECT_EQ(sjef::Project("another.someprogram", nullptr, true).recent_find(fn), 2);
+    auto fn2 = state.testfile("transient.someprogram");
+    {
+      auto p2 = sjef::Project(fn2);
+      EXPECT_EQ(p2.recent_find(fn), 2);
+    }
+    sjef::Project::erase(fn2);
     EXPECT_EQ(p.recent(1), fn);
+    EXPECT_EQ(p.recent_find(fn), 1);
   }
-  EXPECT_EQ(sjef::Project(fn, nullptr, true, false).recent_find(fn.c_str()), 0);
+  EXPECT_EQ(sjef::Project(fn).recent_find(fn.c_str()), 1);
 }
 
 TEST(project, dummy_backend) {

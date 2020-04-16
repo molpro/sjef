@@ -502,8 +502,9 @@ TEST(project, recent) {
     EXPECT_EQ(p.recent_find(fn), 1);
     {
       auto p2 = sjef::Project(fn2);
-      EXPECT_EQ(p2.recent_find(fn), 2);
     }
+    EXPECT_EQ(p.recent(1), fn2);
+    EXPECT_EQ(p.recent_find(fn), 2);
     sjef::Project::erase(fn2);
     EXPECT_EQ(p.recent(1), fn);
     EXPECT_EQ(p.recent_find(fn), 1);

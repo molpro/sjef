@@ -1,7 +1,6 @@
 #include "sjef.h"
 #include <string>
 #include <iostream>
-#include <condition_variable>
 #include <boost/algorithm/string.hpp>
 #include <map>
 #include <array>

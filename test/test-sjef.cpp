@@ -495,11 +495,11 @@ TEST(sjef, atomic) {
 TEST(project, recent) {
   savestate state;
   std::string fn;
+  auto fn2 = state.testfile("transient.someprogram");
   for (auto i = 0; i < 2; ++i) {
     sjef::Project p(state.testfile("completely_new" + std::to_string(i) + ".someprogram"));
     fn = p.filename();
     EXPECT_EQ(p.recent_find(fn), 1);
-    auto fn2 = state.testfile("transient.someprogram");
     {
       auto p2 = sjef::Project(fn2);
       EXPECT_EQ(p2.recent_find(fn), 2);

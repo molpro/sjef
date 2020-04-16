@@ -388,27 +388,27 @@ bool Project::move(const std::string& destination_filename, bool force) {
   auto stat = status(-1);
   if (stat == running or stat == waiting) return false;
   auto dest = fs::absolute(expand_path(destination_filename, fs::path{m_filename}.extension().string().substr(1)));
-  std::cerr << "move to " << dest << std::endl;
+//  std::cerr << "move to " << dest << std::endl;
   if (force)
     fs::remove_all(dest);
   if (!property_get("backend").empty()) synchronize();
   auto namesave = name();
   auto filenamesave = m_filename;
   shutdown_backend_watcher();
-  std::cerr << "move about to copyDir " << m_filename << " : " << dest << std::endl;
+//  std::cerr << "move about to copyDir " << m_filename << " : " << dest << std::endl;
   bool success = false;
   if (copyDir(fs::path(m_filename), dest, true)) {
-    std::cerr << "move succeeded to copyDir " << m_filename << " : " << dest << std::endl;
+//    std::cerr << "move succeeded to copyDir " << m_filename << " : " << dest << std::endl;
     m_filename = dest.string();
     force_file_names(namesave);
     recent_edit(m_filename, filenamesave);
-    std::cerr << "move about to remove all " << filenamesave << std::endl;
+//    std::cerr << "move about to remove all " << filenamesave << std::endl;
     success = fs::remove_all(filenamesave) > 0;
   }
   if (not success) std::cerr << "move failed to copyDir " << m_filename << " : " << dest << std::endl;
-  std::cerr << "move about to call change_backend " << success << std::endl;
+//  std::cerr << "move about to call change_backend " << success << std::endl;
   change_backend(property_get("backend"));
-  std::cerr << "move returns " << success << std::endl;
+//  std::cerr << "move returns " << success << std::endl;
   return success;
 }
 

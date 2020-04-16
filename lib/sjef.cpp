@@ -1,6 +1,7 @@
 #include "sjef.h"
 #include <string>
 #include <iostream>
+#include <condition_variable>
 #include <boost/algorithm/string.hpp>
 #include <map>
 #include <array>
@@ -1526,9 +1527,6 @@ void sjef::Project::backend_watcher(sjef::Project& project_,
 //      std::cerr << "... watcher for project "<<&project<<" back from status"<<std::endl;
 //      std::cerr << "sjef::Project::backend_watcher() status " << project.cached_status() << std::endl;
     }
-  }
-  catch (const std::logic_error& e) {
-    throw e;
   }
   catch (...) {
   }

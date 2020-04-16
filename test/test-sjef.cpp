@@ -28,8 +28,8 @@ class savestate {
     }
   }
   ~savestate() {
-    for (const auto& file : testfiles)
-      std::cerr << "~savestate testfile " << file << std::endl;
+//    for (const auto& file : testfiles)
+//      std::cerr << "~savestate testfile " << file << std::endl;
     for (const auto& file : testfiles)
       sjef::Project::erase(file);
     for (const auto& suffix : std::vector<std::string>{"sjef", "molpro"}) {
@@ -39,7 +39,7 @@ class savestate {
         fs::rename(rf + ".save", rf);
       }
     }
-    std::cerr << "~savestate returns " << std::endl;
+//    std::cerr << "~savestate returns " << std::endl;
   }
   std::string testfile(const std::string& file) {
     testfiles.push_back(sjef::expand_path(file));
@@ -400,7 +400,8 @@ TEST(project, spawn_many_dummy) {
   sjef::Project p(state.testfile("spawn_many.someprogram"));
   { std::ofstream(p.filename("inp")) << ""; }
   const auto& backend = sjef::Backend::dummy_name;
-  for (auto i = 0; i < 50; ++i) {
+  for (auto i = 0; i < 5; ++i) {
+    std::cerr << "run number "<<i<<std::endl;
     ASSERT_TRUE(p.run(backend, -1, true, true));
     EXPECT_NE(p.property_get("jobnumber"), "-1");
     EXPECT_EQ(p.status(), sjef::completed);
@@ -414,7 +415,7 @@ TEST(project, spawn_many_molpro) {
   { std::ofstream(p.filename("inp")) << ""; }
   const auto& backend = sjef::Backend::default_name;
   if (not boost::process::search_path("molpro").empty()) // test the default backend only if it exists
-    for (auto i = 0; i < 5; ++i) {
+    for (auto i = 0; i < 25; ++i) {
       ASSERT_TRUE(p.run(backend, -1, true, true));
       EXPECT_NE(p.property_get("jobnumber"), "-1");
       EXPECT_EQ(p.status(), sjef::completed);

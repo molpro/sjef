@@ -42,14 +42,15 @@ class sjef::ProjectLock {
  public:
   ProjectLock(const sjef::Project& project, bool exclusive = true)
       : m_lock(new FileLock(project.propertyFile(), exclusive, false)) {
-//    std::cerr << "!!! Locking Project, exclusive=" << exclusive << " on thread " << std::this_thread::get_id() << std::endl;
+    std::cout << "!!! Locked Project, exclusive=" << exclusive << " on thread " << std::this_thread::get_id()
+              << std::endl;
   }
 
-//  ~ProjectLock() {
-//    std::cerr << "!!! Unlocking Project start " << " on thread " << std::this_thread::get_id() << std::endl;
-//    m_lock.reset(nullptr);
-//    std::cerr << "!!! Unlocking Project finish " << " on thread " << std::this_thread::get_id() << std::endl;
-//  }
+  ~ProjectLock() {
+    std::cout << "!!! Unlocking Project start " << " on thread " << std::this_thread::get_id() << std::endl;
+    m_lock.reset(nullptr);
+    std::cout << "!!! Unlocking Project finish " << " on thread " << std::this_thread::get_id() << std::endl;
+  }
 };
 
 inline fs::path executable(fs::path command) {
@@ -292,6 +293,8 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
 //  std::cerr << "compare write times "<<fs::last_write_time(filename("inp")) << " : " << m_property_file_modification_time << std::endl;
   bool locally_modified;
   {
+    std::cout << "About to make ProjectLock for m_property_file_modification_time" << " on thread "
+              << m_master_of_slave << std::endl;
     ProjectLock pl(*this, false);
     locally_modified = m_property_file_modification_time != fs::last_write_time(propertyFile());
     for (const auto& suffix : {"inp", "xyz"})
@@ -999,7 +1002,8 @@ void Project::property_delete(const std::string& property, bool save) {
 }
 
 void Project::property_set(const std::string& property, const std::string& value, bool save) {
-//  std::cerr << "property_set " << property << " = " << value << std::endl;
+  ProjectLock pl(*this, true);
+  std::cout << "property_set " << property << " = " << value << "on thread " << m_master_of_slave << std::endl;
   property_delete(property, false);
   {
     std::lock_guard<std::mutex> guard(m_unmovables.m_property_set_mutex);
@@ -1019,6 +1023,7 @@ std::string Project::property_get(const std::string& property) const {
   std::string result = m_properties->select_node(query.c_str()).node().child_value();
   check_property_file();
   result = m_properties->select_node(query.c_str()).node().child_value();
+  std::cout << "property_get " << property << "=" << result << " on thread " << m_master_of_slave << std::endl;
   return m_properties->select_node(query.c_str()).node().child_value();
 }
 
@@ -1121,9 +1126,11 @@ inline std::string slurp(const std::string& path) {
   return buf.str();
 }
 void Project::load_property_file() const {
+  std::cout << "About to make ProjectLock for load_property_file" << " on thread " << m_master_of_slave
+            << std::endl;
   ProjectLock locker(*this, false);
-//  std::cerr << "load_property_file() from " << this << std::endl;
-//  std::cerr << slurp(propertyFile());
+  std::cout << "load_property_file() from " << this << std::endl;
+  std::cout << slurp(propertyFile())<<std::endl;
   auto result = m_properties->load_file(propertyFile().c_str());
   if (!result)
     throw std::runtime_error(
@@ -1136,6 +1143,8 @@ static std::string writing_object_file = ".Info.plist.writing_object";
 bool Project::properties_last_written_by_me(bool removeFile) const {
   auto path = fs::path{m_filename} / fs::path{writing_object_file};
 //  ProjectLock fileLock(*this, false);
+  std::cout << "enter properties_last_written_by_me on thread " << m_master_of_slave << std::endl;
+  FileLock lock(path.string(), false);
   std::ifstream i{path.string(), std::ios_base::in};
   if (not i.is_open()) return false;
   std::hash<const Project*> hasher;
@@ -1144,10 +1153,14 @@ bool Project::properties_last_written_by_me(bool removeFile) const {
   i >> writer;
   if (removeFile and writer == me)
     fs::remove(path);
+  std::cout << "properties_last_written_by_me writer=" << writer << " me=" << me << " : " << (writer == me)
+            << std::endl;
   return writer == me;
 
 }
 void Project::check_property_file() const {
+  std::cout << "About to make ProjectLock for check_property_file" << " on thread " << m_master_of_slave
+            << std::endl;
   ProjectLock fileLock(*this, false);
   auto lastwrite = fs::last_write_time(propertyFile());
   if (m_property_file_modification_time == lastwrite) { // tie-breaker
@@ -1170,6 +1183,8 @@ void Project::save_property_file() const {
   struct plist_writer writer;
   writer.file = propertyFile();
   {
+    std::cout << "About to make ProjectLock for save_property_file" << " on thread " << m_master_of_slave
+              << std::endl;
     ProjectLock fileLock(*this, true);
 //    std::cerr << "propertyFile() " << propertyFile() << std::endl;
     if (not fs::exists(propertyFile())) {
@@ -1185,10 +1200,15 @@ void Project::save_property_file() const {
 //  system((std::string{"cat "} + propertyFile()).c_str());
 //  std::cout << "end save_property_file" << std::endl;
     m_property_file_modification_time = fs::last_write_time(propertyFile());
-    std::ofstream o{((fs::path{m_filename} / fs::path{writing_object_file}).string())};
+    auto path = (fs::path{m_filename} / fs::path{writing_object_file});
+    FileLock lock(path.string(), true);
+    std::ofstream o{path.string()};
     std::hash<const Project*> hasher;
     o << hasher(this);
+    std::cout << " writing hash " << hasher(this) << " on thread " << m_master_of_slave << std::endl;
   }
+  std::cout << "written propertyFile:\n";
+  std::cout << slurp(propertyFile())<<std::endl;
 }
 
 ///> @private
@@ -1469,7 +1489,7 @@ void sjef::Project::change_backend(std::string backend, bool force) {
   if (m_master_of_slave) {
     shutdown_backend_watcher();
     m_unmovables.shutdown_flag.clear();
-//    std::cerr << "About to start backend_watcher in a thread" << std::endl;
+//    std::cerr << "About to start backend_watcher in a thread" << " on thread " << std::this_thread::get_id() << std::endl;
     m_backend_watcher = std::thread(backend_watcher, std::ref(*this), backend, 100, 1000);
   }
 //  std::cerr << "change_backend returns " << backend << " and watcher joinable=" << m_backend_watcher.joinable() << std::endl;

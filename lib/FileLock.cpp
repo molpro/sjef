@@ -6,9 +6,42 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/interprocess/sync/file_lock.hpp>
 namespace fs = boost::filesystem;
-const int debug = 0;
+constexpr int debug = 0;
 
 #include "FileLock.h"
+
+std::ostream&
+print_one(std::ostream& os) {
+  return os;
+}
+
+template<class A0, class ...Args>
+std::ostream&
+print_one(std::ostream& os, const A0& a0, const Args& ...args) {
+  os << a0;
+  return print_one(os, args...);
+}
+
+template<class ...Args>
+std::ostream&
+print(std::ostream& os, const Args& ...args) {
+  return print_one(os, args...);
+}
+
+std::mutex&
+get_cout_mutex() {
+  static std::mutex m;
+  return m;
+}
+
+template<class ...Args>
+std::ostream&
+print(const Args& ...args) {
+  std::lock_guard<std::mutex> _(get_cout_mutex());
+  return print(std::cout, args..., "\n");
+}
+static std::map<std::thread::id, int> symbolic_threads;
+static int symbolic_thread = 0;
 
 static std::string s_lockfile(const std::string& path) {
   if (!fs::exists(path))
@@ -33,17 +66,17 @@ struct sjef::FileLock::Unique_FileLock { // process-level locking
   }
   ~Unique_FileLock() {
     if (debug > 1) {
-      std::cout << "entering ~Unique_FileLock()" << std::endl;
-      std::cerr << "completely unlocking " << m_lockfile << std::endl;
+      print("!u  entering ~Unique_FileLock() on thread ", symbolic_threads[std::this_thread::get_id()]);
+      print("!u  completely unlocking ", m_lockfile, " on thread ", symbolic_threads[std::this_thread::get_id()]);
     }
     m_file_lock.reset(nullptr);
     if (not m_preexisting) {
       if (debug > 0)
-        std::cout << "removing " << m_lockfile << std::endl;
+        print("!u  removing ", m_lockfile);
       fs::remove(m_lockfile);
     }
     if (debug > 1)
-      std::cout << "leaving ~Unique_FileLock()" << std::endl;
+      print("!u  leaving ~Unique_FileLock()", " on thread ", symbolic_threads[std::this_thread::get_id()]);
   }
 };
 
@@ -65,42 +98,71 @@ sjef::FileLock::FileLock(const std::string& path, bool exclusive, bool erase_if_
     m_unique->m_file_lock->lock();
   else
     m_unique->m_file_lock->lock_sharable();
+  if (debug > 0)
+    print("!!f FileLock ",
+          m_unique->m_lockfile,
+          " thread=",
+          symbolic_threads[std::this_thread::get_id()],
+          " has locked file, exclusive=",m_exclusive);
   m_unique->m_entry_count++;
   m_unique->m_thread_entry_count[std::this_thread::get_id()]++;
-  if (debug > 0)
-    std::cout << "!!! FileLock " << path << " : " << std::this_thread::get_id() << " entry count "
-              << m_unique->m_entry_count << " " << &(m_unique->m_mutex) << " exclusive = " << exclusive
-              << " erase_if_created = " << erase_if_created << std::endl;
+  if (debug > 0) {
+    if (symbolic_threads.count(std::this_thread::get_id()) == 0)
+      symbolic_threads[std::this_thread::get_id()] = symbolic_thread++;
+    print("!!! FileLock ",
+          path,
+          " thread=",
+          symbolic_threads[std::this_thread::get_id()],
+          " entry count ",
+          m_unique->m_entry_count,
+          " exclusive = ",
+          exclusive,
+          " erase_if_created = ",
+          erase_if_created);
+  }
 }
 
 sjef::FileLock::~FileLock() {
   m_unique->m_entry_count--;
   m_unique->m_thread_entry_count[std::this_thread::get_id()]--;
   if (debug > 0)
-    std::cout << "!!! ~FileLock " << m_unique->m_lockfile << " : " << std::this_thread::get_id()
-              << " entry count " << m_unique->m_entry_count
-              << " thread entry count " << m_unique->m_thread_entry_count[std::this_thread::get_id()]
-              << std::endl;
+    print("!!! ~FileLock ",
+          m_unique->m_lockfile,
+          " thread=",
+          symbolic_threads[std::this_thread::get_id()],
+          " entry count ",
+          m_unique->m_entry_count,
+          " thread entry count ",
+          m_unique->m_thread_entry_count[std::this_thread::get_id()]
+    );
   if (m_unique->m_entry_count == 0) {
     if (m_exclusive)
       m_unique->m_file_lock->unlock();
     else
       m_unique->m_file_lock->unlock_sharable();
     if (debug > 0)
-      std::cout << "!!  ~FileLock " << m_unique->m_lockfile << " : " << std::this_thread::get_id()
-                << " has unlocked file"
-                << std::endl;
+      print("!!f ~FileLock ",
+            m_unique->m_lockfile,
+            " thread=",
+            symbolic_threads[std::this_thread::get_id()],
+            " has unlocked file, exclusive=",m_exclusive);
   }
 
   {
     std::lock_guard<std::mutex> s_Unique_FileLocks_guard(s_Unique_FileLocks_mutex);
     if
-        (m_unique->m_entry_count == 0
+        (false and
+        m_unique->m_entry_count == 0
         ) // I am the last user of the Unique_FileLock so it can be trashed
+    {
       s_Unique_FileLocks.erase((m_unique->m_lockfile));
     if (debug > 0)
-      std::cout << "!!  erasing entry in Unique_Filelock table" << std::endl;
+      print("!!  erasing entry in Unique_Filelock table",
+            " thread=",
+            symbolic_threads[std::this_thread::get_id()],
+            " has unlocked file");
+    }
   }
   if (debug > 0)
-    std::cout << "!!! leaving ~FileLock()" << std::endl;
+    print("!!! leaving ~FileLock()", " thread=", symbolic_threads[std::this_thread::get_id()]);
 }

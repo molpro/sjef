@@ -63,7 +63,7 @@ class Project {
     std::mutex m_property_set_mutex;
   };
   mutable backend_watcher_flag_container m_unmovables;
-//  mutable std::unique_ptr<FileLock> m_lock;
+//  mutable std::unique_ptr<FileLock> m_file_lock;
 //  friend ProjectLock;
   std::unique_ptr<Project> m_backend_watcher_instance;
   const Project* m_master_instance;

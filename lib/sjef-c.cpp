@@ -182,8 +182,12 @@ void sjef_project_property_set(const char* project, const char* key, const char*
     if (projects.count(project) == 0) sjef_project_open(project);
     projects.at(project)->property_set(std::string{key}, std::string{value});
   }
-  catch (std::exception& e) { error(e); }
-  catch (...) {}
+  catch (std::exception& e) {
+  error(e);
+  }
+  catch (...) {
+
+  }
 }
 char* sjef_project_property_get(const char* project,
                                 const char* key) {

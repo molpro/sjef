@@ -45,11 +45,11 @@ class sjef::ProjectLock {
 //    std::cerr << "!!! Locking Project, exclusive=" << exclusive << " on thread " << std::this_thread::get_id() << std::endl;
   }
 
-  ~ProjectLock() {
+//  ~ProjectLock() {
 //    std::cerr << "!!! Unlocking Project start " << " on thread " << std::this_thread::get_id() << std::endl;
-    m_lock.reset(nullptr);
+//    m_lock.reset(nullptr);
 //    std::cerr << "!!! Unlocking Project finish " << " on thread " << std::this_thread::get_id() << std::endl;
-  }
+//  }
 };
 
 inline fs::path executable(fs::path command) {
@@ -120,7 +120,7 @@ Project::Project(const std::string& filename,
     m_backend_doc(std::make_unique<pugi_xml_document>()),
     m_status_lifetime(0),
     m_status_last(std::chrono::steady_clock::now()),
-//    m_lock(nullptr),
+//    m_file_lock(nullptr),
     m_master_instance(source),
     m_master_of_slave(source == nullptr),
     m_slave(source != nullptr) {
@@ -1016,7 +1016,9 @@ void Project::property_set(const std::string& property, const std::string& value
 
 std::string Project::property_get(const std::string& property) const {
   std::string query{"/plist/dict/key[text()='" + property + "']/following-sibling::string[1]"};
+  std::string result = m_properties->select_node(query.c_str()).node().child_value();
   check_property_file();
+  result = m_properties->select_node(query.c_str()).node().child_value();
   return m_properties->select_node(query.c_str()).node().child_value();
 }
 

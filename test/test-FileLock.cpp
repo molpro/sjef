@@ -19,7 +19,7 @@ TEST(FileLock, simple) {
     fs::remove_all(lockfile);
 }
 
-TEST(FileLock, thread) {
+TEST(FileLock, many_write_threads) {
   std::string lockfile{"testing-lockfile"};
 //  if (fs::exists(lockfile))
 //    fs::remove_all(lockfile);
@@ -80,11 +80,18 @@ TEST(FileLock, promote) {
 //  if (fs::exists(lockfile))
 //    fs::remove_all(lockfile);
   { auto toucher = fs::ofstream(lockfile); }
+  std::thread t;
   {
     auto l1 = std::make_unique<sjef::FileLock>(lockfile, false);
     auto l2 = std::make_unique<sjef::FileLock>(lockfile, true);
     auto l3 = std::make_unique<sjef::FileLock>(lockfile, false);
+    auto writer = [](const std::string& path, const std::string& message) {
+      auto lock = sjef::FileLock(path, true);
+      fs::ofstream(path, std::ios_base::app) << message << std::endl;
+    };
+    t = std::thread(writer,lockfile,"hello");
   }
+  t.join();
   if (fs::exists(lockfile))
     fs::remove_all(lockfile);
 }

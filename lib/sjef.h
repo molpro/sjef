@@ -12,6 +12,7 @@
 
 namespace sjef {
 class Backend; ///< @private
+class FileLock; ///< @private
 class pugi_xml_document; ///< @private
 static constexpr int recentMax = 128;
 enum status : int {
@@ -29,7 +30,6 @@ class Project {
 //  std::vector<std::reference_wrapper<const Backend> > m_backend;
 //  int m_jobnumber;
   std::vector<std::string> m_reserved_files; ///< Files which should never be copied back from backend
-  bool m_erase_on_destroy;
   std::string m_writing_thread_file;
   std::unique_ptr<pugi_xml_document> m_properties;
   std::map<std::string, std::string> m_suffixes; ///< File suffixes for the standard files
@@ -51,7 +51,6 @@ class Project {
   mutable std::string m_control_path_option;
   mutable std::chrono::milliseconds m_status_lifetime;
   mutable std::chrono::time_point<std::chrono::steady_clock> m_status_last;
-  mutable sjef::status m_status;
   mutable std::thread m_backend_watcher;
   // put the flag into a container to deal conveniently with std:atomic_flag's lack of move constructor
   struct backend_watcher_flag_container {
@@ -62,6 +61,9 @@ class Project {
     std::mutex m_property_set_mutex;
   };
   mutable backend_watcher_flag_container m_unmovables;
+  std::unique_ptr<Project> m_backend_watcher_instance;
+  const Project* m_master_instance;
+  bool m_master_of_slave;
   void report_shutdown(const std::string& message) const;
   std::string remote_server_run(const std::string& command, int verbosity = 0) const;
  public:
@@ -69,19 +71,17 @@ class Project {
   /*!
    * @brief Construct, or attach to, a Molpro project bundle
    * @param filename The file name of the bundle. If it does not have suffix .sjef, it will be forced to do so.
-   * @param source If not null, copy the bundle source. This is only for new projects, and an exception is thrown if *this has been attached to an existing project bundle.
-   * @param erase_on_destroy If true, and the project was created new, then the destructor will destroy the disk copy of the project.
    * @param construct if false, do not actually build the project on disk. Can be used to generate the filename of the project.
    * @param default_suffix The file extension to be used for the project directory name if filename does not have one
    * @param suffixes The file suffixes for special (input, output) files within the project
+   * @param masterProject For internal use only
    */
   explicit Project(const std::string& filename,
-                   const Project* source = nullptr,
-                   bool erase_on_destroy = false,
                    bool construct = true,
                    const std::string& default_suffix = "",
                    const std::map<std::string, std::string>& suffixes = {{"inp", "inp"}, {"out", "out"},
-                                                                         {"xml", "xml"}});
+                                                                         {"xml", "xml"}},
+                   const Project* masterProject = nullptr);
   Project(const Project& source) = delete;
   Project(const Project&& source) = delete;
   virtual ~Project();
@@ -101,13 +101,9 @@ class Project {
    */
   bool move(const std::string& destination_filename, bool force = false);
   /*!
-   * @brief Destroy the project
+   * @brief Erase a project from the file system, and remove it from the recent projects file
   */
-  void erase();
-  static void erase(const std::string& filename) {
-//    std::cerr << "sjef::project::erase "<<filename<<std::endl;
-    Project x(filename, nullptr, true, false);
-  }
+  static void erase(const std::string& filename, const std::string& default_suffix = "");
   /*!
    * @brief Import one or more files into the project. In the case of a .xml output file, if the corresponding
    * input file does not exist, it will be generated.
@@ -145,7 +141,6 @@ class Project {
   /*!
    * @brief Start a sjef job
    * @param name The name of the backend
-   * @param options Any options to be passed to the command run on the backend
    * @param verbosity If >0, show underlying processing
    * @param force Whether to force submission of the job even though run_needed() reports that it's unnecessary
    * @param wait Whether to wait for the job to complete instead of returning after launching it
@@ -272,15 +267,19 @@ class Project {
    */
   void change_backend(std::string backend = std::string{""}, bool force = false);
  protected:
+  sjef::status cached_status() const;
+  void cached_status(sjef::status status) const;
   void throw_if_backend_invalid(std::string backend = "") const;
   std::string get_project_suffix(const std::string& filename, const std::string& default_suffix) const;
-  void recent_edit(const std::string& add, const std::string& remove = "");
+  static void recent_edit(const std::string& add, const std::string& remove = "");
   mutable time_t m_property_file_modification_time;
   void check_property_file() const;
   void save_property_file() const;
   void load_property_file() const;
   bool properties_last_written_by_me(bool removeFile = false) const;
+ public:
   std::string propertyFile() const;
+ protected:
   std::string cache(const Backend& backend) const;
   void force_file_names(const std::string& oldname);
   static void backend_watcher(sjef::Project& project,

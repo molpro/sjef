@@ -1,7 +1,7 @@
 add_library(${LIB_NAME}
         sjef-backend.cpp
         sjef.cpp
-        sjef-customization.cpp sjef-c.cpp sjef-c.h)
+        sjef-customization.cpp sjef-c.cpp sjef-c.h FileLock.cpp FileLock.h)
 target_compile_features(${LIB_NAME} PUBLIC cxx_std_17)
 target_compile_options(${LIB_NAME} PUBLIC -fPIC)
 set_target_properties(${LIB_NAME} PROPERTIES PUBLIC_HEADER "sjef.h;sjef-c.h")

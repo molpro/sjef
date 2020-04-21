@@ -76,7 +76,7 @@ int sjef_project_move(const char* project, const char* destination_filename) {
 void sjef_project_erase(const char* project) {
   try {
     if (projects.count(project) != 0) sjef_project_close(project);
-    fs::remove_all(sjef::Project(project, nullptr, true, false).filename());
+    fs::remove_all(sjef::Project(project, false).filename());
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -182,8 +182,12 @@ void sjef_project_property_set(const char* project, const char* key, const char*
     if (projects.count(project) == 0) sjef_project_open(project);
     projects.at(project)->property_set(std::string{key}, std::string{value});
   }
-  catch (std::exception& e) { error(e); }
-  catch (...) {}
+  catch (std::exception& e) {
+    error(e);
+  }
+  catch (...) {
+
+  }
 }
 char* sjef_project_property_get(const char* project,
                                 const char* key) {
@@ -242,10 +246,9 @@ size_t sjef_project_input_hash(const char* project) {
 int sjef_project_recent_find(const char* filename) {
   try {
     return sjef::Project("",
-                         nullptr,
-                         true,
                          false,
-                         fs::path{filename}.extension().string().substr(1)).recent_find(std::string(filename));
+                         fs::path{filename}.extension().string().substr(1)
+    ).recent_find(std::string(filename));
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -275,10 +278,9 @@ char* sjef_project_backend_parameter_documentation(const char* project,
   return NULL;
 }
 
-
 char* sjef_project_backend_parameter_default(const char* project,
-                                         const char* backend,
-                                         const char* parameter) {
+                                             const char* backend,
+                                             const char* parameter) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
     return strdup(projects.at(project)->backend_parameter_default(backend, parameter).c_str());
@@ -339,8 +341,10 @@ char** sjef_project_backend_parameters(const char* project, const char* backend,
 
 char** sjef_project_backend_names(const char* project) {
   char** result = NULL;
+  bool unopened;
   try {
-    if (projects.count(project) == 0) sjef_project_open(project);
+    unopened = (projects.count(project) == 0);
+    if (unopened) sjef_project_open(project);
     auto names = projects.at(project)->backend_names();
     result = (char**) malloc(sizeof(char*) * (names.size() + 1));
     size_t i = 0;
@@ -350,13 +354,12 @@ char** sjef_project_backend_names(const char* project) {
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
+  if (unopened) sjef_project_close(project);
   return result;
 }
 
 char* sjef_project_recent(int number, const char* suffix) {
   return strdup(sjef::Project("$TMPDIR/.sjef.recent",
-                              nullptr,
-                              true,
                               false,
                               suffix).recent(number).c_str());
 }

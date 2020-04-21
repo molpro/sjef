@@ -14,6 +14,7 @@ namespace fs = boost::filesystem;
 ///> @private
 int main(int argc, char* argv[]) {
   std::string default_suffix{""};
+  std::string eraseCandidate;
   try {
 
     TCLAP::CmdLine cmd(
@@ -172,9 +173,9 @@ int main(int argc, char* argv[]) {
     status_message[sjef::status::running] = "Running";
     status_message[sjef::status::waiting] = "Waiting";
     status_message[sjef::status::completed] = "Completed";
-    Project proj(project, nullptr, false, true, suffixSwitch.getValue(),
+    Project proj(project, true, suffixSwitch.getValue(),
                  {{"inp", suffixInpSwitch.getValue()}, {"out", suffixOutSwitch.getValue()},
-                  {"xml", suffixXmlSwitch.getValue()}});
+                  {"xml", suffixXmlSwitch.getValue()}}, nullptr);
 
     auto allowedBackends = proj.backend_names();
     auto backend = backendSwitch.getValue();
@@ -223,7 +224,7 @@ int main(int argc, char* argv[]) {
       else if (command == "move")
         success = proj.move(extras.front(), forceArg.getValue());
       else if (command == "erase")
-        proj.erase();
+        eraseCandidate = proj.filename();
       else if (command == "wait") {
         proj.wait();
       } else if (command == "status") {
@@ -326,5 +327,7 @@ int main(int argc, char* argv[]) {
 
   } catch (TCLAP::ArgException& e)  // catch any exceptions
   { std::cerr << "error: " << e.error() << " for arg " << e.argId() << std::endl; }
+  if (not eraseCandidate.empty())
+    sjef::Project::erase(eraseCandidate);
   return 0;
 }

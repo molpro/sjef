@@ -92,7 +92,6 @@ inline std::string getattribute(pugi::xpath_node node, std::string name) {
 }
 const std::vector<std::string> Project::suffix_keys{"inp", "out", "xml"};
 Project::Project(const std::string& filename,
-                 bool erase_on_destroy,
                  bool construct,
                  const std::string& default_suffix,
                  const std::map<std::string, std::string>& suffixes,
@@ -100,7 +99,6 @@ Project::Project(const std::string& filename,
     m_project_suffix(get_project_suffix(filename, default_suffix)),
     m_filename(expand_path(filename, m_project_suffix)),
     m_reserved_files(std::vector<std::string>{sjef::Project::s_propertyFile}),
-    m_erase_on_destroy(erase_on_destroy),
     m_properties(std::make_unique<pugi_xml_document>()),
     m_suffixes(suffixes),
     m_backend_doc(std::make_unique<pugi_xml_document>()),
@@ -120,15 +118,13 @@ Project::Project(const std::string& filename,
   if (suffixes.count("inp") > 0) m_reserved_files.push_back(this->filename("inp"));
   if (!fs::exists(m_filename))
     fs::create_directories(m_filename);
-  else if (construct)
-    m_erase_on_destroy = false;
 //  std::cerr << fs::system_complete(m_filename) << std::endl;
   if (!fs::exists(m_filename))
     throw std::runtime_error("project does not exist and could not be created: " + m_filename);
   if (!fs::is_directory(m_filename))
     throw std::runtime_error("project should be a directory: " + m_filename);
 
-//  std::cerr << "constructor m_filename=" << m_filename << " destroy=" << erase_on_destroy << m_erase_on_destroy
+//  std::cerr << "constructor m_filename=" << m_filename
 //            << " construct=" << construct << "<< address=" << this << ", master=" << m_master_instance << std::endl;
   if (!construct) return;
   if (!fs::exists(propertyFile())) {
@@ -1476,7 +1472,6 @@ void sjef::Project::backend_watcher(sjef::Project& project_,
 //  std::cerr << "Project::backend_watcher starting for " << project_.m_filename << " on thread "
 //            << std::this_thread::get_id() << std::endl;
   project_.m_backend_watcher_instance.reset(new sjef::Project(project_.m_filename,
-                                                              false,
                                                               true,
                                                               "",
                                                               {{}},

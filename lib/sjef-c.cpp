@@ -76,7 +76,7 @@ int sjef_project_move(const char* project, const char* destination_filename) {
 void sjef_project_erase(const char* project) {
   try {
     if (projects.count(project) != 0) sjef_project_close(project);
-    fs::remove_all(sjef::Project(project, true, false).filename());
+    fs::remove_all(sjef::Project(project, false).filename());
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -246,7 +246,6 @@ size_t sjef_project_input_hash(const char* project) {
 int sjef_project_recent_find(const char* filename) {
   try {
     return sjef::Project("",
-                         true,
                          false,
                          fs::path{filename}.extension().string().substr(1)
     ).recent_find(std::string(filename));
@@ -361,7 +360,6 @@ char** sjef_project_backend_names(const char* project) {
 
 char* sjef_project_recent(int number, const char* suffix) {
   return strdup(sjef::Project("$TMPDIR/.sjef.recent",
-                              true,
                               false,
                               suffix).recent(number).c_str());
 }

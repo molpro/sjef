@@ -173,7 +173,7 @@ int main(int argc, char* argv[]) {
     status_message[sjef::status::running] = "Running";
     status_message[sjef::status::waiting] = "Waiting";
     status_message[sjef::status::completed] = "Completed";
-    Project proj(project, false, true, suffixSwitch.getValue(),
+    Project proj(project, true, suffixSwitch.getValue(),
                  {{"inp", suffixInpSwitch.getValue()}, {"out", suffixOutSwitch.getValue()},
                   {"xml", suffixXmlSwitch.getValue()}}, nullptr);
 

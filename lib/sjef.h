@@ -30,7 +30,6 @@ class Project {
 //  std::vector<std::reference_wrapper<const Backend> > m_backend;
 //  int m_jobnumber;
   std::vector<std::string> m_reserved_files; ///< Files which should never be copied back from backend
-  bool m_erase_on_destroy;
   std::string m_writing_thread_file;
   std::unique_ptr<pugi_xml_document> m_properties;
   std::map<std::string, std::string> m_suffixes; ///< File suffixes for the standard files
@@ -73,14 +72,12 @@ class Project {
   /*!
    * @brief Construct, or attach to, a Molpro project bundle
    * @param filename The file name of the bundle. If it does not have suffix .sjef, it will be forced to do so.
-   * @param erase_on_destroy If true, and the project was created new, then the destructor will destroy the disk copy of the project.
    * @param construct if false, do not actually build the project on disk. Can be used to generate the filename of the project.
    * @param default_suffix The file extension to be used for the project directory name if filename does not have one
    * @param suffixes The file suffixes for special (input, output) files within the project
    * @param masterProject For internal use only
    */
   explicit Project(const std::string& filename,
-                   bool erase_on_destroy = false,
                    bool construct = true,
                    const std::string& default_suffix = "",
                    const std::map<std::string, std::string>& suffixes = {{"inp", "inp"}, {"out", "out"},

@@ -99,7 +99,7 @@ TEST(backend, C_values) {//TODO actually implement some of this for C
   sjef_project_close(projname);
   if (false) {
 
-  sjef::Project p("Cpp_project.molpro", true);
+  sjef::Project p("Cpp_project.molpro");
   auto allBackendsCpp = p.backend_names();
   bool localFound = false;
   size_t i;

@@ -76,7 +76,7 @@ int sjef_project_move(const char* project, const char* destination_filename) {
 void sjef_project_erase(const char* project) {
   try {
     if (projects.count(project) != 0) sjef_project_close(project);
-    fs::remove_all(sjef::Project(project, nullptr, true, false).filename());
+    fs::remove_all(sjef::Project(project, true, false).filename());
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -183,7 +183,7 @@ void sjef_project_property_set(const char* project, const char* key, const char*
     projects.at(project)->property_set(std::string{key}, std::string{value});
   }
   catch (std::exception& e) {
-  error(e);
+    error(e);
   }
   catch (...) {
 
@@ -246,10 +246,10 @@ size_t sjef_project_input_hash(const char* project) {
 int sjef_project_recent_find(const char* filename) {
   try {
     return sjef::Project("",
-                         nullptr,
                          true,
                          false,
-                         fs::path{filename}.extension().string().substr(1)).recent_find(std::string(filename));
+                         fs::path{filename}.extension().string().substr(1)
+    ).recent_find(std::string(filename));
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -279,10 +279,9 @@ char* sjef_project_backend_parameter_documentation(const char* project,
   return NULL;
 }
 
-
 char* sjef_project_backend_parameter_default(const char* project,
-                                         const char* backend,
-                                         const char* parameter) {
+                                             const char* backend,
+                                             const char* parameter) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
     return strdup(projects.at(project)->backend_parameter_default(backend, parameter).c_str());
@@ -362,7 +361,6 @@ char** sjef_project_backend_names(const char* project) {
 
 char* sjef_project_recent(int number, const char* suffix) {
   return strdup(sjef::Project("$TMPDIR/.sjef.recent",
-                              nullptr,
                               true,
                               false,
                               suffix).recent(number).c_str());

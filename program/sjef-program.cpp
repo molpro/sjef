@@ -173,9 +173,9 @@ int main(int argc, char* argv[]) {
     status_message[sjef::status::running] = "Running";
     status_message[sjef::status::waiting] = "Waiting";
     status_message[sjef::status::completed] = "Completed";
-    Project proj(project, nullptr, false, true, suffixSwitch.getValue(),
+    Project proj(project, false, true, suffixSwitch.getValue(),
                  {{"inp", suffixInpSwitch.getValue()}, {"out", suffixOutSwitch.getValue()},
-                  {"xml", suffixXmlSwitch.getValue()}});
+                  {"xml", suffixXmlSwitch.getValue()}}, nullptr);
 
     auto allowedBackends = proj.backend_names();
     auto backend = backendSwitch.getValue();

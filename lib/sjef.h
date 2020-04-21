@@ -73,19 +73,19 @@ class Project {
   /*!
    * @brief Construct, or attach to, a Molpro project bundle
    * @param filename The file name of the bundle. If it does not have suffix .sjef, it will be forced to do so.
-   * @param source If not null, copy the bundle source. This is only for new projects, and an exception is thrown if *this has been attached to an existing project bundle.
    * @param erase_on_destroy If true, and the project was created new, then the destructor will destroy the disk copy of the project.
    * @param construct if false, do not actually build the project on disk. Can be used to generate the filename of the project.
    * @param default_suffix The file extension to be used for the project directory name if filename does not have one
    * @param suffixes The file suffixes for special (input, output) files within the project
+   * @param masterProject For internal use only
    */
   explicit Project(const std::string& filename,
-                   const Project* source = nullptr,
                    bool erase_on_destroy = false,
                    bool construct = true,
                    const std::string& default_suffix = "",
                    const std::map<std::string, std::string>& suffixes = {{"inp", "inp"}, {"out", "out"},
-                                                                         {"xml", "xml"}});
+                                                                         {"xml", "xml"}},
+                   const Project* masterProject = nullptr);
   Project(const Project& source) = delete;
   Project(const Project&& source) = delete;
   virtual ~Project();
@@ -107,7 +107,7 @@ class Project {
   /*!
    * @brief Erase a project from the file system, and remove it from the recent projects file
   */
-  static void erase(const std::string& filename, const std::string& default_suffix="");
+  static void erase(const std::string& filename, const std::string& default_suffix = "");
   /*!
    * @brief Import one or more files into the project. In the case of a .xml output file, if the corresponding
    * input file does not exist, it will be generated.
@@ -145,7 +145,6 @@ class Project {
   /*!
    * @brief Start a sjef job
    * @param name The name of the backend
-   * @param options Any options to be passed to the command run on the backend
    * @param verbosity If >0, show underlying processing
    * @param force Whether to force submission of the job even though run_needed() reports that it's unnecessary
    * @param wait Whether to wait for the job to complete instead of returning after launching it

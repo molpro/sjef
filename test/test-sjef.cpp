@@ -63,7 +63,7 @@ TEST(project, filename) {
   names["$TMPDIR/tmp.sjef/"] = tmpdir + slash + "tmp.sjef";
   names["$TMPDIR/tmp"] = tmpdir + slash + "tmp.sjef";
   for (const auto& n : names)
-    ASSERT_EQ(sjef::Project(n.first, nullptr, true, false, "sjef").filename(), n.second);
+    ASSERT_EQ(sjef::Project(n.first, true, false, "sjef").filename(), n.second);
 }
 
 TEST(project, expand_path) {
@@ -133,7 +133,7 @@ TEST(project, moveMolpro) {
   savestate state;
   auto filename_old = state.testfile("moveMolproOld.molpro");
   auto filename_new = state.testfile("moveMolproNew.molpro");
-  sjef::Project p(filename_old, nullptr, true);
+  sjef::Project p(filename_old,true);
   std::ofstream(p.filename("inp")) << "geometry=" + p.name() + ".xyz" + "\n";
   std::ofstream(p.filename("xyz")) << "1\n\nHe 0 0 0\n";
   p.property_set("inpFile", p.name() + ".inp");
@@ -417,7 +417,7 @@ TEST(project, spawn_many_dummy) {
 
 TEST(project, spawn_many_molpro) {
   savestate state;
-  sjef::Project p(state.testfile("spawn_many.molpro"), nullptr, true);
+  sjef::Project p(state.testfile("spawn_many.molpro"), true);
   { std::ofstream(p.filename("inp")) << ""; }
   const auto& backend = sjef::Backend::default_name;
   if (not boost::process::search_path("molpro").empty()) // test the default backend only if it exists

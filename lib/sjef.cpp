@@ -92,11 +92,11 @@ inline std::string getattribute(pugi::xpath_node node, std::string name) {
 }
 const std::vector<std::string> Project::suffix_keys{"inp", "out", "xml"};
 Project::Project(const std::string& filename,
-                 const Project* source,
                  bool erase_on_destroy,
                  bool construct,
                  const std::string& default_suffix,
-                 const std::map<std::string, std::string>& suffixes) :
+                 const std::map<std::string, std::string>& suffixes,
+                 const Project* masterProject) :
     m_project_suffix(get_project_suffix(filename, default_suffix)),
     m_filename(expand_path(filename, m_project_suffix)),
     m_reserved_files(std::vector<std::string>{sjef::Project::s_propertyFile}),
@@ -107,9 +107,9 @@ Project::Project(const std::string& filename,
     m_status_lifetime(0),
     m_status_last(std::chrono::steady_clock::now()),
 //    m_file_lock(nullptr),
-    m_master_instance(source),
-    m_master_of_slave(source == nullptr),
-    m_slave(source != nullptr) {
+    m_master_instance(masterProject),
+    m_master_of_slave(masterProject == nullptr),
+    m_slave(masterProject != nullptr) {
 //  std::cerr << "Project constructor filename="<<filename << "address "<< this<<std::endl;
   auto recent_projects_directory = expand_path(std::string{"~/.sjef/"} + m_project_suffix);
   fs::create_directories(recent_projects_directory);
@@ -278,7 +278,7 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
 //  std::cerr << "compare write times "<<fs::last_write_time(filename("inp")) << " : " << m_property_file_modification_time << std::endl;
   bool locally_modified;
   {
-    FileLock pl(propertyFile(),false, false);
+    FileLock pl(propertyFile(), false, false);
     locally_modified = m_property_file_modification_time != fs::last_write_time(propertyFile());
     for (const auto& suffix : {"inp", "xyz"})
       locally_modified = locally_modified
@@ -984,7 +984,7 @@ void Project::property_delete(const std::string& property, bool save) {
 }
 
 void Project::property_set(const std::string& property, const std::string& value, bool save) {
-  FileLock pl(propertyFile(),true, false);
+  FileLock pl(propertyFile(), true, false);
 //  std::cout << "property_set " << property << " = " << value << "on thread " << m_master_of_slave << std::endl;
   property_delete(property, false);
   {
@@ -1108,7 +1108,7 @@ inline std::string slurp(const std::string& path) {
   return buf.str();
 }
 void Project::load_property_file() const {
-  FileLock locker(propertyFile(),false, false);
+  FileLock locker(propertyFile(), false, false);
 //  std::cout << "load_property_file() from " << this << std::endl;
 //  std::cout << slurp(propertyFile())<<std::endl;
   auto result = m_properties->load_file(propertyFile().c_str());
@@ -1138,7 +1138,7 @@ bool Project::properties_last_written_by_me(bool removeFile) const {
 
 }
 void Project::check_property_file() const {
-  FileLock fileLock(propertyFile(),false, false);
+  FileLock fileLock(propertyFile(), false, false);
   auto lastwrite = fs::last_write_time(propertyFile());
   if (m_property_file_modification_time == lastwrite) { // tie-breaker
     if (not properties_last_written_by_me(false))
@@ -1157,7 +1157,7 @@ void Project::save_property_file() const {
   struct plist_writer writer;
   writer.file = propertyFile();
   {
-    FileLock fileLock(propertyFile(),true, false);
+    FileLock fileLock(propertyFile(), true, false);
     if (not fs::exists(propertyFile())) {
       fs::create_directories(m_filename);
       { fs::ofstream x(propertyFile()); }
@@ -1475,7 +1475,12 @@ void sjef::Project::backend_watcher(sjef::Project& project_,
                                     int max_wait_milliseconds) noexcept {
 //  std::cerr << "Project::backend_watcher starting for " << project_.m_filename << " on thread "
 //            << std::this_thread::get_id() << std::endl;
-  project_.m_backend_watcher_instance.reset(new sjef::Project(project_.m_filename, &project_));
+  project_.m_backend_watcher_instance.reset(new sjef::Project(project_.m_filename,
+                                                              false,
+                                                              true,
+                                                              "",
+                                                              {{}},
+                                                              &project_));
   auto& project = *project_.m_backend_watcher_instance.get();
   if (max_wait_milliseconds <= 0) max_wait_milliseconds = min_wait_milliseconds;
   constexpr auto radix = 2;

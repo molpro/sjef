@@ -12,7 +12,6 @@
 
 namespace sjef {
 class Backend; ///< @private
-class ProjectLock; ///< @private
 class FileLock; ///< @private
 class pugi_xml_document; ///< @private
 static constexpr int recentMax = 128;
@@ -63,8 +62,6 @@ class Project {
     std::mutex m_property_set_mutex;
   };
   mutable backend_watcher_flag_container m_unmovables;
-//  mutable std::unique_ptr<FileLock> m_file_lock;
-//  friend ProjectLock;
   std::unique_ptr<Project> m_backend_watcher_instance;
   const Project* m_master_instance;
   bool m_master_of_slave;

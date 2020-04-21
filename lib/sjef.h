@@ -23,7 +23,7 @@ enum status : int {
   unevaluated = 4
 };
 class Project {
- protected:
+ private:
   std::string m_project_suffix;
   std::string
       m_filename; ///< the name of the file bundle, expressed as an absolute pathname for the directory holding the bundle
@@ -36,7 +36,7 @@ class Project {
   std::string m_recent_projects_file;
  public:
   std::map<std::string, Backend> m_backends;
- protected:
+ private:
   std::unique_ptr<pugi_xml_document> m_backend_doc;
   mutable std::unique_ptr<boost::process::ipstream> m_status_stream;
   mutable struct {
@@ -66,8 +66,9 @@ class Project {
   bool m_master_of_slave;
   void report_shutdown(const std::string& message) const;
   std::string remote_server_run(const std::string& command, int verbosity = 0) const;
- public:
+///> @private
   static const std::string s_propertyFile;
+ public:
   /*!
    * @brief Construct, or attach to, a Molpro project bundle
    * @param filename The file name of the bundle. If it does not have suffix .sjef, it will be forced to do so.
@@ -266,7 +267,7 @@ class Project {
    * @param force If false, and the current backend is equal to backend, do nothing
    */
   void change_backend(std::string backend = std::string{""}, bool force = false);
- protected:
+ private:
   sjef::status cached_status() const;
   void cached_status(sjef::status status) const;
   void throw_if_backend_invalid(std::string backend = "") const;
@@ -279,7 +280,7 @@ class Project {
   bool properties_last_written_by_me(bool removeFile = false) const;
  public:
   std::string propertyFile() const;
- protected:
+ private:
   std::string cache(const Backend& backend) const;
   void force_file_names(const std::string& oldname);
   static void backend_watcher(sjef::Project& project,

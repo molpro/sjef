@@ -33,26 +33,10 @@ int backend_watcher_wait_milliseconds;
 ///> @private
 struct sjef::pugi_xml_document : public pugi::xml_document {};
 
+///> @private
 const std::string sjef::Project::s_propertyFile = "Info.plist";
 
 ///> @private
-///> @private
-class sjef::ProjectLock {
-  std::unique_ptr<FileLock> m_lock;
- public:
-  ProjectLock(const sjef::Project& project, bool exclusive = true)
-      : m_lock(new FileLock(project.propertyFile(), exclusive, false)) {
-//    std::cout << "!!! Locked Project, exclusive=" << exclusive << " on thread " << std::this_thread::get_id()
-//              << std::endl;
-  }
-
-  ~ProjectLock() {
-//    std::cout << "!!! Unlocking Project start " << " on thread " << std::this_thread::get_id() << std::endl;
-    m_lock.reset(nullptr);
-//    std::cout << "!!! Unlocking Project finish " << " on thread " << std::this_thread::get_id() << std::endl;
-  }
-};
-
 inline fs::path executable(fs::path command) {
   if (command.is_absolute())
     return command;
@@ -60,6 +44,7 @@ inline fs::path executable(fs::path command) {
     return bp::search_path(command);
 }
 
+///> @private
 bool copyDir(
     fs::path const& source,
     fs::path const& destination,
@@ -293,9 +278,7 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
 //  std::cerr << "compare write times "<<fs::last_write_time(filename("inp")) << " : " << m_property_file_modification_time << std::endl;
   bool locally_modified;
   {
-    std::cout << "About to make ProjectLock for m_property_file_modification_time" << " on thread "
-              << m_master_of_slave << std::endl;
-    ProjectLock pl(*this, false);
+    FileLock pl(propertyFile(),false, false);
     locally_modified = m_property_file_modification_time != fs::last_write_time(propertyFile());
     for (const auto& suffix : {"inp", "xyz"})
       locally_modified = locally_modified
@@ -587,7 +570,6 @@ std::map<std::string, std::string> Project::backend_parameters(const std::string
 
 bool Project::run(std::string name, int verbosity, bool force, bool wait) {
   throw_if_backend_invalid(name);
-//  ProjectLock fileLock(*this, true);
   auto& backend = m_backends.at(name);
   if (status(verbosity) != unknown && status(0) != completed) return false;
   if (verbosity > 0)
@@ -1002,7 +984,7 @@ void Project::property_delete(const std::string& property, bool save) {
 }
 
 void Project::property_set(const std::string& property, const std::string& value, bool save) {
-  ProjectLock pl(*this, true);
+  FileLock pl(propertyFile(),true, false);
 //  std::cout << "property_set " << property << " = " << value << "on thread " << m_master_of_slave << std::endl;
   property_delete(property, false);
   {
@@ -1126,9 +1108,7 @@ inline std::string slurp(const std::string& path) {
   return buf.str();
 }
 void Project::load_property_file() const {
-//  std::cout << "About to make ProjectLock for load_property_file" << " on thread " << m_master_of_slave
-//            << std::endl;
-  ProjectLock locker(*this, false);
+  FileLock locker(propertyFile(),false, false);
 //  std::cout << "load_property_file() from " << this << std::endl;
 //  std::cout << slurp(propertyFile())<<std::endl;
   auto result = m_properties->load_file(propertyFile().c_str());
@@ -1142,7 +1122,6 @@ static std::string writing_object_file = ".Info.plist.writing_object";
 
 bool Project::properties_last_written_by_me(bool removeFile) const {
   auto path = fs::path{m_filename} / fs::path{writing_object_file};
-//  ProjectLock fileLock(*this, false);
 //  std::cout << "enter properties_last_written_by_me on thread " << m_master_of_slave << std::endl;
   FileLock lock(path.string(), false);
   std::ifstream i{path.string(), std::ios_base::in};
@@ -1159,9 +1138,7 @@ bool Project::properties_last_written_by_me(bool removeFile) const {
 
 }
 void Project::check_property_file() const {
-//  std::cout << "About to make ProjectLock for check_property_file" << " on thread " << m_master_of_slave
-//            << std::endl;
-  ProjectLock fileLock(*this, false);
+  FileLock fileLock(propertyFile(),false, false);
   auto lastwrite = fs::last_write_time(propertyFile());
   if (m_property_file_modification_time == lastwrite) { // tie-breaker
     if (not properties_last_written_by_me(false))
@@ -1177,16 +1154,10 @@ void Project::check_property_file() const {
 
 //std::mutex save_property_file_mutex;
 void Project::save_property_file() const {
-//  const std::lock_guard<std::mutex> lock(save_property_file_mutex);
-//  std::cout << "save_property_file" << std::endl;
-//  system((std::string{"cat "} + propertyFile()).c_str());
   struct plist_writer writer;
   writer.file = propertyFile();
   {
-//    std::cout << "About to make ProjectLock for save_property_file" << " on thread " << m_master_of_slave
-//              << std::endl;
-    ProjectLock fileLock(*this, true);
-//    std::cerr << "propertyFile() " << propertyFile() << std::endl;
+    FileLock fileLock(propertyFile(),true, false);
     if (not fs::exists(propertyFile())) {
       fs::create_directories(m_filename);
       { fs::ofstream x(propertyFile()); }

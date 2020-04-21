@@ -47,6 +47,7 @@ TEST(project, c_binding) {
   char key[] = "testkey";
   char value[] = "testvalue";
   char value2[] = "testvalue2";
+  sjef_project_open(projectname);
   sjef_project_property_set(projectname, key, value);
   ASSERT_EQ(std::string{value}, std::string{sjef_project_property_get(projectname, key)});
   sjef_project_property_set(projectname, key, value2);
@@ -57,14 +58,18 @@ TEST(project, c_binding) {
   sjef_project_property_set(projectname, key, value);
   sjef_project_copy(projectname, projectname2, 0);
   ASSERT_EQ(std::string{value}, std::string{sjef_project_property_get(projectname, key)});
+  sjef_project_open(projectname2);
   ASSERT_EQ(std::string{value}, std::string{sjef_project_property_get(projectname2, key)});
+  sjef_project_close(projectname2);
   sjef_project_erase(projectname2);
   ASSERT_EQ(sjef_project_move(projectname, projectname2), 1);
+  sjef_project_open(projectname);
   ASSERT_EQ(std::string{}, std::string{sjef_project_property_get(projectname, key)});
+  sjef_project_close(projectname);
   ASSERT_EQ(std::string{value}, std::string{sjef_project_property_get(projectname2, key)});
+  sjef_project_close(projectname2);
   sjef_project_erase(projectname);
   sjef_project_erase(projectname2);
-  rmdir(dirname(sjef_expand_path(projectname, "")));
 }
 
 TEST(backend, C_keys) {
@@ -78,17 +83,23 @@ TEST(backend, C_keys) {
   EXPECT_EQ(i, 9);
   free(allKeys);
 }
+TEST(project, C_quick_destroy) {
+  char projname[] = "C_project.molpro";
+  sjef_project_open(projname);
+  sjef_project_close(projname);
+}
 
 TEST(backend, C_values) {//TODO actually implement some of this for C
   char projname[] = "C_project.molpro";
+  sjef_project_open(projname);
   auto allBackends = sjef_project_backend_names(projname);
-  std::cerr << "back from making allBackends"<<std::endl;
+//  std::cerr << "back from making allBackends"<<std::endl;
 //char** allBackends = NULL;
   EXPECT_THROW(sjef_backend_value(projname,"!*@£junk", "name"), std::runtime_error);
-//  while(sleep(5));
+  sjef_project_close(projname);
   if (false) {
 
-  sjef::Project p("Cpp_project.molpro", nullptr, true);
+  sjef::Project p("Cpp_project.molpro");
   auto allBackendsCpp = p.backend_names();
   bool localFound = false;
   size_t i;

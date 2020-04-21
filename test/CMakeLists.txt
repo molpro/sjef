@@ -13,7 +13,7 @@ endif ()
 file(COPY He.molpro DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
 
 include(GoogleTest)
-foreach (t test-sjef test-sjef-c)
+foreach (t test-sjef test-sjef-c test-FileLock)
     add_executable(${t} ${t}.cpp)
     target_link_libraries(${t} PUBLIC gmock_main ${LIB_NAME})
     if (NOT CMAKE_CROSSCOMPILING)

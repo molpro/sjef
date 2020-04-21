@@ -78,14 +78,20 @@ TEST(backend, C_keys) {
   EXPECT_EQ(i, 9);
   free(allKeys);
 }
+TEST(project, C_quick_destroy) {
+  char projname[] = "C_project.molpro";
+  sjef_project_open(projname);
+  sjef_project_close(projname);
+}
 
 TEST(backend, C_values) {//TODO actually implement some of this for C
   char projname[] = "C_project.molpro";
+  sjef_project_open(projname);
   auto allBackends = sjef_project_backend_names(projname);
-  std::cerr << "back from making allBackends"<<std::endl;
+//  std::cerr << "back from making allBackends"<<std::endl;
 //char** allBackends = NULL;
   EXPECT_THROW(sjef_backend_value(projname,"!*@£junk", "name"), std::runtime_error);
-//  while(sleep(5));
+  sjef_project_close(projname);
   if (false) {
 
   sjef::Project p("Cpp_project.molpro", nullptr, true);

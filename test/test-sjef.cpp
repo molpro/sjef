@@ -225,10 +225,10 @@ TEST(project, properties) {
     x.property_set(keyval.first, keyval.second);
 //  system((std::string{"cat "}+x.propertyFile()).c_str());
 //while(sleep(1));
-  std::cout<< "\n==================\n"<<std::endl;
+//  std::cout<< "\n==================\n"<<std::endl;
   for (const auto& keyval : data) {
-    std::cout << "key "<<keyval.first<<" expect value: "<<keyval.second<<" actual value: "
-    <<x.property_get(keyval.first)<<std::endl;
+//    std::cout << "key "<<keyval.first<<" expect value: "<<keyval.second<<" actual value: "
+//    <<x.property_get(keyval.first)<<std::endl;
     ASSERT_EQ(x.property_get(keyval.first), keyval.second);
   }
   if (false) {

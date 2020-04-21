@@ -343,8 +343,10 @@ char** sjef_project_backend_parameters(const char* project, const char* backend,
 
 char** sjef_project_backend_names(const char* project) {
   char** result = NULL;
+  bool unopened;
   try {
-    if (projects.count(project) == 0) sjef_project_open(project);
+    unopened = (projects.count(project) == 0);
+    if (unopened) sjef_project_open(project);
     auto names = projects.at(project)->backend_names();
     result = (char**) malloc(sizeof(char*) * (names.size() + 1));
     size_t i = 0;
@@ -354,6 +356,7 @@ char** sjef_project_backend_names(const char* project) {
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
+  if (unopened) sjef_project_close(project);
   return result;
 }
 

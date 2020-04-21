@@ -263,7 +263,9 @@ bool Project::synchronize(std::string name, int verbosity) const {
 std::mutex synchronize_mutex;
 bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) const {
   const std::lock_guard<std::mutex> lock(synchronize_mutex);
-  if (verbosity > 1) std::cerr << "synchronize with " << backend.name << " (" << backend.host << ")" << std::endl;
+  if (verbosity > 1)
+    std::cerr << "synchronize with " << backend.name << " (" << backend.host << ") master=" << m_master_of_slave
+              << std::endl;
   if (backend.host == "localhost") return true;
   if (verbosity > 1)
     std::cerr << "synchronize backend_inactive=" << property_get("_private_sjef_project_backend_inactive")
@@ -275,15 +277,20 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
   {
     FileLock pl(propertyFile(), false, false);
     locally_modified = m_property_file_modification_time != fs::last_write_time(propertyFile());
-    for (const auto& suffix : {"inp", "xyz"})
+//    std::cerr << "initial locally_modified=" << locally_modified << std::endl;
+    for (const auto& suffix : {"inp", "xyz"}) {
+      auto lm = fs::last_write_time(filename(suffix));
       locally_modified = locally_modified
           or (fs::exists(filename(suffix))
-              and fs::last_write_time(filename(suffix)) > m_property_file_modification_time);
+              and lm > m_input_file_modification_time[suffix]);
+      m_input_file_modification_time[suffix] = lm;
+    }
   }
+//  std::cerr << "locally_modified=" << locally_modified << std::endl;
   if (not locally_modified
       and property_get("_private_sjef_project_backend_inactive_synced") == "1")
     return true;
-//  std::cerr << "really syncing"<<std::endl;
+//  std::cerr << "really syncing" << std::endl;
   //TODO: implement more robust error checking
 //  system(("ssh " + backend.host + " mkdir -p " + cache(backend)).c_str());
   const_cast<Project*>(this)->change_backend(backend.name);
@@ -1353,11 +1360,6 @@ void sjef::Project::ensure_remote_server() const {
 //  std::cerr << "ensure_remote_server called on thread " << std::this_thread::get_id() << std::endl;
 //  std::cerr << "m_remote_server.process.running" << m_remote_server.process.running() <<std::endl;
 //  std::cerr << "m_remote_server.host "<<m_remote_server.host << std::endl;
-  if (m_remote_server.process.running()
-      and m_remote_server.host == this->backend_get(property_get("backend"), "host")
-      )
-    return;
-//  std::cerr << "ensure_remote_server fires"<<std::endl;
   fs::path control_path_directory = expand_path("$HOME/.sjef/.ssh/ctl");
   fs::create_directories(control_path_directory);
   m_control_path_option = "-o ControlPath=\"" + (control_path_directory / "%r@%h:%p").string() + "\"";
@@ -1395,6 +1397,11 @@ void sjef::Project::ensure_remote_server() const {
                             bp::std_err > bp::null);
   c.wait();
   m_control_path_option = (c.exit_code() == 0) ? m_control_path_option : "";
+  if (m_remote_server.process.running()
+      and m_remote_server.host == this->backend_get(property_get("backend"), "host")
+      )
+    return;
+//  std::cerr << "ensure_remote_server fires"<<std::endl;
 //  std::cerr << "Start remote_server " << std::endl;
 //  std::cerr << "m_control_path_option="<<m_control_path_option << std::endl;
   m_remote_server.process.terminate();

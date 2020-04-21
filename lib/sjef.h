@@ -64,7 +64,6 @@ class Project {
   std::unique_ptr<Project> m_backend_watcher_instance;
   const Project* m_master_instance;
   bool m_master_of_slave;
-  bool m_slave;
   void report_shutdown(const std::string& message) const;
   std::string remote_server_run(const std::string& command, int verbosity = 0) const;
  public:

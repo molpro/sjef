@@ -275,6 +275,7 @@ class Project {
   static void recent_edit(const std::string& add, const std::string& remove = "");
   mutable time_t m_property_file_modification_time;
   mutable std::map<std::string,time_t> m_input_file_modification_time;
+  const bool m_use_control_path;
   void check_property_file() const;
   void save_property_file() const;
   void load_property_file() const;

@@ -1201,7 +1201,7 @@ void Project::save_property_file() const {
 //  std::cout << "end save_property_file" << std::endl;
     m_property_file_modification_time = fs::last_write_time(propertyFile());
     auto path = (fs::path{m_filename} / fs::path{writing_object_file});
-    FileLock lock(path.string(), true);
+    FileLock lock(path.string(), true, false);
     std::ofstream o{path.string()};
     std::hash<const Project*> hasher;
     o << hasher(this);

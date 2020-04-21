@@ -63,6 +63,8 @@ struct sjef::FileLock::Unique_FileLock { // process-level locking
       m_lockfile(s_lockfile(path)),
       m_file_lock(new boost::interprocess::file_lock(m_lockfile.c_str())),
       m_entry_count(0) {
+    if (debug)
+      print("Unique_FileLock m_preexisting=", m_preexisting);
   }
   ~Unique_FileLock() {
     if (debug > 1) {
@@ -103,7 +105,7 @@ sjef::FileLock::FileLock(const std::string& path, bool exclusive, bool erase_if_
           m_unique->m_lockfile,
           " thread=",
           symbolic_threads[std::this_thread::get_id()],
-          " has locked file, exclusive=",m_exclusive);
+          " has locked file, exclusive=", m_exclusive);
   m_unique->m_entry_count++;
   m_unique->m_thread_entry_count[std::this_thread::get_id()]++;
   if (debug > 0) {
@@ -145,22 +147,20 @@ sjef::FileLock::~FileLock() {
             m_unique->m_lockfile,
             " thread=",
             symbolic_threads[std::this_thread::get_id()],
-            " has unlocked file, exclusive=",m_exclusive);
+            " has unlocked file, exclusive=", m_exclusive);
   }
 
   {
     std::lock_guard<std::mutex> s_Unique_FileLocks_guard(s_Unique_FileLocks_mutex);
-    if
-        (false and
-        m_unique->m_entry_count == 0
-        ) // I am the last user of the Unique_FileLock so it can be trashed
+//    print("s_Unique_FileLocks[m_unique->m_lockfile].use_count() ",s_Unique_FileLocks[m_unique->m_lockfile].use_count());
+    if (s_Unique_FileLocks[m_unique->m_lockfile].use_count() <= 2) // I am the last user of the Unique_FileLock so it can be trashed
     {
       s_Unique_FileLocks.erase((m_unique->m_lockfile));
-    if (debug > 0)
-      print("!!  erasing entry in Unique_Filelock table",
-            " thread=",
-            symbolic_threads[std::this_thread::get_id()],
-            " has unlocked file");
+      if (debug > 0)
+        print("!!  erasing entry in Unique_Filelock table",
+              " thread=",
+              symbolic_threads[std::this_thread::get_id()],
+              " has unlocked file");
     }
   }
   if (debug > 0)

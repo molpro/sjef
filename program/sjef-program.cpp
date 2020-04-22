@@ -168,11 +168,6 @@ int main(int argc, char* argv[]) {
     if (extras.size() > 1
         and (command != "import" and command != "export" and command != "run" and command != "property"))
       throw TCLAP::CmdLineParseException("Too many arguments on command line");
-    std::map<sjef::status, std::string> status_message;
-    status_message[sjef::status::unknown] = "Not found";
-    status_message[sjef::status::running] = "Running";
-    status_message[sjef::status::waiting] = "Waiting";
-    status_message[sjef::status::completed] = "Completed";
     Project proj(project, true, suffixSwitch.getValue(),
                  {{"inp", suffixInpSwitch.getValue()}, {"out", suffixOutSwitch.getValue()},
                   {"xml", suffixXmlSwitch.getValue()}}, nullptr);
@@ -245,7 +240,7 @@ int main(int argc, char* argv[]) {
           std::cout << "Job number: " << proj.property_get("jobnumber") << std::endl;
         else if (proj.run_needed() or forceArg.getValue())
           std::cerr << "Run failed to start, or job number could not be captured" << std::endl
-                    << "Status: " << status_message[proj.status(verboseSwitch.getValue())] << std::endl;
+                    << "Status: " << proj.status_message(verboseSwitch.getValue()) << std::endl;
         else
           std::cerr << "Run not needed, so not started" << std::endl;
       } else if (command == "sync") {
@@ -288,7 +283,7 @@ int main(int argc, char* argv[]) {
             std::cout << "Allowed commands: status, backend, sync, run, kill, wait, property, clean, edit, browse"
                       << std::endl;
           else if (command == "status")
-            std::cout << "Status: " << status_message[proj.status()] << std::endl;
+            std::cout << "Status: " << proj.status_message(verboseSwitch.getValue()) << std::endl;
           else if (command == "backend") {
             proj.change_backend(arguments);
             std::cout << "backend changed to " << proj.property_get("backend") << std::endl;

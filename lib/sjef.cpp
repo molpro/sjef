@@ -306,6 +306,10 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
   // absolutely send reserved files
   std::string rsync = "rsync";
   std::string rsyncopt = "--timeout=5";
+  rsyncopt += " --exclude=*.out*";
+  rsyncopt += " --exclude=*.xml*";
+  rsyncopt += " --exclude=*.log*";
+  rsyncopt += " --exclude=*.d";
   if (not this->m_control_path_option.empty())
     rsyncopt += " -e 'ssh " + m_control_path_option + "'";
   if (verbosity > 2)
@@ -853,7 +857,7 @@ status Project::status(int verbosity, bool cached) const {
 //  std::cerr << "did not return unknown for empty pid "<<pid << std::endl;
   const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", "0");
   if (property_get("_private_sjef_project_completed_job") == be.host + ":" + pid) {
-//      std::cerr << "status return complete because _private_sjef_project_completed_job is valid"<<std::endl;
+//      std::cerr << "status return completed/killed because _private_sjef_project_completed_job is valid"<<std::endl;
     const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", "1");
     return ((be.host + ":" + pid) == property_get("_private_sjef_project_killed_job") ? killed : completed);
   }

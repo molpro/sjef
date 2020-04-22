@@ -579,7 +579,7 @@ std::map<std::string, std::string> Project::backend_parameters(const std::string
 bool Project::run(std::string name, int verbosity, bool force, bool wait) {
   throw_if_backend_invalid(name);
   auto& backend = m_backends.at(name);
-  if (status(verbosity) != unknown && status(0) != completed) return false;
+  if (status(verbosity) != unknown && status(0) != completed && status(0) != killed) return false;
   if (verbosity > 0)
     std::cerr << "Project::run() run_needed()=" << run_needed(verbosity) << std::endl;
 //  if (not force and not run_needed()) return false;
@@ -698,6 +698,7 @@ void Project::kill() {
 //    ensure_remote_server();
     remote_server_run(be.kill_command + " " + pid);
   }
+  property_set("_private_sjef_project_killed_job", be.host + ":" + pid);
 }
 
 bool Project::run_needed(int verbosity) const {
@@ -842,7 +843,10 @@ status Project::status(int verbosity, bool cached) const {
     auto ih = std::to_string(input_hash());
     auto rih = property_get("run_input_hash");
 //    std::cerr << ih << " : " << rih<<std::endl;
-    if (!rih.empty()) return (rih == ih) ? completed : unknown;
+    if (!rih.empty())
+      return (rih == ih) ? ((be.host + ":" + pid) == property_get("_private_sjef_project_killed_job") ? killed
+                                                                                                      : completed)
+                         : unknown;
     return (std::regex_replace(file_contents("inp"), std::regex{" *\n\n*"}, "\n") != input_from_output(false))
            ? unknown : completed;
   }
@@ -851,9 +855,10 @@ status Project::status(int verbosity, bool cached) const {
   if (property_get("_private_sjef_project_completed_job") == be.host + ":" + pid) {
 //      std::cerr << "status return complete because _private_sjef_project_completed_job is valid"<<std::endl;
     const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", "1");
-    return completed;
+    return ((be.host + ":" + pid) == property_get("_private_sjef_project_killed_job") ? killed : completed);
   }
-  auto result = pid == "" ? unknown : completed;
+  auto result =
+      pid == "" ? unknown : ((be.host + ":" + pid) == property_get("_private_sjef_project_killed_job") ? killed : completed);
   if (be.host == "localhost") {
     auto spacepos = be.status_command.find_first_of(" ");
     bp::child c;
@@ -872,7 +877,7 @@ status Project::status(int verbosity, bool cached) const {
 #if defined(__linux__) || defined(__APPLE__)
           waitpid(std::stoi(pid), NULL, WNOHANG);
 #endif
-          result = completed;
+          result = ((be.host + ":" + pid) == property_get("_private_sjef_project_killed_job") ? killed : completed);
         }
         result = running;
       }
@@ -909,7 +914,7 @@ status Project::status(int verbosity, bool cached) const {
     }
   }
   if (verbosity > 2) std::cerr << "received status " << result << std::endl;
-  if (result == completed) {
+  if (result == completed || result == killed) {
 //    const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced", property_get("_private_sjef_project_backend_inactive"));
     const_cast<Project*>(this)->property_set("_private_sjef_project_completed_job", be.host + ":" + pid);
   }
@@ -918,13 +923,13 @@ status Project::status(int verbosity, bool cached) const {
     if (result == running)
       const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced", "0");
     const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive",
-                                             result == completed ? "1" : "0");
+                                             (result == completed || result == killed) ? "1" : "0");
     goto return_point;
   }
   if (verbosity > 2) std::cerr << "fallen through loop" << std::endl;
   synchronize(be, verbosity, true);
   const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive",
-                                           (result != completed or
+                                           ((result != completed && result != killed) or
                                                fs::exists(fs::path{filename()} / fs::path{name()
                                                                                               + "."
                                                                                               + m_suffixes.at("xml")}) // there may be a race, where the job status is completed, but the output file is not yet there. This is an imperfect test for that .. just whether the .xml exists at all. TODO: improve test for complete output file
@@ -958,6 +963,7 @@ std::string sjef::Project::status_message(int verbosity) const {
   message[sjef::status::waiting] = "Waiting";
   message[sjef::status::completed] = "Completed";
   message[sjef::status::unevaluated] = "Unevaluated";
+  message[sjef::status::killed] = "Killed";
   auto statu = this->status(verbosity);
   auto result = message[statu];
   if (statu != sjef::status::unknown && !property_get("jobnumber").empty())

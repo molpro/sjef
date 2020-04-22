@@ -20,7 +20,8 @@ enum status : int {
   running = 1,
   waiting = 2,
   completed = 3,
-  unevaluated = 4
+  unevaluated = 4,
+  killed = 5
 };
 class Project {
  private:
@@ -168,7 +169,7 @@ class Project {
    */
   std::string status_message(int verbosity = 0) const;
   /*!
-   * @brief Wait unconditionally for status() to return 'completed'
+   * @brief Wait unconditionally for status() to return neither 'waiting' nor 'running'
    * @param maximum_microseconds The poll interval is successively increased between calls to status() until reaching this value.
    */
   void wait(unsigned int maximum_microseconds = 10000) const;

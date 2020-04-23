@@ -306,9 +306,9 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
   // absolutely send reserved files
   std::string rsync = "rsync";
   std::string rsyncopt = "--timeout=5";
-  rsyncopt += " --exclude=*.out*";
-  rsyncopt += " --exclude=*.xml*";
-  rsyncopt += " --exclude=*.log*";
+  rsyncopt += " --exclude=*.out_*";
+  rsyncopt += " --exclude=*.xml_*";
+  rsyncopt += " --exclude=*.log_*";
   rsyncopt += " --exclude=*.d";
   if (not this->m_control_path_option.empty())
     rsyncopt += " -e 'ssh " + m_control_path_option + "'";

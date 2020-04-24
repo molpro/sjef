@@ -302,7 +302,6 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
   const_cast<Project*>(this)->change_backend(backend.name);
 //  if (m_master_of_slave) {
   ensure_remote_server();
-  remote_server_run(std::string{"mkdir -p "} + cache(backend));
   // absolutely send reserved files
   std::string rsync = "rsync";
   std::string rsyncopt = "--timeout=5";
@@ -699,8 +698,8 @@ void Project::kill() {
       bp::spawn(executable(be.kill_command), pid);
   } else {
 //    std::cerr << "remote kill " << be.host << ":" << be.kill_command << ":" << pid << std::endl;
-//    ensure_remote_server();
-    remote_server_run(be.kill_command + " " + pid);
+    ensure_remote_server();
+    remote_server_run(be.kill_command + " " + pid, 0, false);
   }
   property_set("_private_sjef_project_killed_job", be.host + ":" + pid);
 }
@@ -889,7 +888,7 @@ status Project::status(int verbosity, bool cached) const {
   } else {
     if (verbosity > 1)
       std::cerr << "remote status " << be.host << ":" << be.status_command << ":" << pid << std::endl;
-//    ensure_remote_server();
+    ensure_remote_server();
 //    remote_server_run(be.status_command + " " + pid);
     {
       const std::lock_guard<std::mutex> lock(remote_server_mutex);
@@ -1342,11 +1341,15 @@ std::vector<std::string> sjef::Project::backend_names() const {
   return result;
 }
 
-std::string sjef::Project::remote_server_run(const std::string& command, int verbosity) const {
+std::string sjef::Project::remote_server_run(const std::string& command, int verbosity, bool wait) const {
   const std::lock_guard<std::mutex> lock(remote_server_mutex);
   if (verbosity > 0)
     std::cerr << command << std::endl;
   const std::string terminator{"@@@!!EOF"};
+  if (not wait) {
+    m_remote_server.in << command << " >/dev/null 2>/dev/null &" << std::endl;
+    return "";
+  }
   m_remote_server.in << command << std::endl;
   m_remote_server.in << ">&2 echo '" << terminator << "' $?" << std::endl;
   m_remote_server.in << "echo '" << terminator << "'" << std::endl;
@@ -1443,9 +1446,11 @@ void sjef::Project::ensure_remote_server() const {
                                         bp::std_in < m_remote_server.in,
                                         bp::std_err > m_remote_server.err,
                                         bp::std_out > m_remote_server.out);
-//  std::cerr << "started remote_server "<<std::endl;
+//  std::cerr << "started remote_server " << std::endl;
 //  std::cerr << "ensure_remote_server() remote server process created : " << m_remote_server.process.id() << ", master="
 //            << m_master_of_slave << std::endl;
+//  std::cerr << "mkdir -p " << cache(this->m_backends.at(backend)) << std::endl;
+  m_remote_server.in << "mkdir -p " << cache(this->m_backends.at(backend)) << std::endl;
 }
 
 void sjef::Project::shutdown_backend_watcher() {
@@ -1492,6 +1497,7 @@ void sjef::Project::change_backend(std::string backend, bool force) {
 //    std::cerr << "About to start backend_watcher in a thread" << " on thread " << std::this_thread::get_id() << std::endl;
     m_backend_watcher = std::thread(backend_watcher, std::ref(*this), backend, 100, 1000);
   }
+  ensure_remote_server();
 //  std::cerr << "change_backend returns " << backend << " and watcher joinable=" << m_backend_watcher.joinable() << std::endl;
 //  std::cerr << "current backend " << property_get("backend") << ", unchanged=" << unchanged << std::endl;
 //  std::cerr << "change_backend " << backend << "for project " << name() << " finished " << property_get("backend") << std::endl;

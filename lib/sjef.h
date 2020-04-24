@@ -66,7 +66,7 @@ class Project {
   const Project* m_master_instance;
   bool m_master_of_slave;
   void report_shutdown(const std::string& message) const;
-  std::string remote_server_run(const std::string& command, int verbosity = 0) const;
+  std::string remote_server_run(const std::string& command, int verbosity = 0, bool wait = true) const;
 ///> @private
   static const std::string s_propertyFile;
  public:

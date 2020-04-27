@@ -134,6 +134,7 @@ Project::Project(const std::string& filename,
   load_property_file();
   property_set("_private_sjef_project_backend_inactive_synced", "0");
   cached_status(unevaluated);
+  custom_initialisation();
 
   auto nimport = property_get("IMPORTED").empty() ? 0 : std::stoi(property_get("IMPORTED"));
 //    std::cerr << "nimport "<<nimport<<std::endl;
@@ -305,6 +306,7 @@ bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) 
   // absolutely send reserved files
   std::string rsync = "rsync";
   std::string rsyncopt = "--timeout=5";
+  rsyncopt += " --exclude=backup";
   rsyncopt += " --exclude=*.out_*";
   rsyncopt += " --exclude=*.xml_*";
   rsyncopt += " --exclude=*.log_*";
@@ -598,6 +600,7 @@ bool Project::run(std::string name, int verbosity, bool force, bool wait) {
 //  std::cerr << "backend.run_command before expand "<<backend.run_command<<std::endl;
   auto run_command = backend_parameter_expand(backend.name, backend.run_command);
 //  std::cerr << "run_command after expand "<<run_command<<std::endl;
+  custom_run_preface();
   if (backend.host == "localhost") {
     property_set("_private_sjef_project_backend_inactive", "0");
     property_set("_private_sjef_project_backend_inactive_synced", "0");
@@ -861,7 +864,8 @@ status Project::status(int verbosity, bool cached) const {
     return ((be.host + ":" + pid) == property_get("_private_sjef_project_killed_job") ? killed : completed);
   }
   auto result =
-      pid == "" ? unknown : ((be.host + ":" + pid) == property_get("_private_sjef_project_killed_job") ? killed : completed);
+      pid == "" ? unknown : ((be.host + ":" + pid) == property_get("_private_sjef_project_killed_job") ? killed
+                                                                                                       : completed);
   if (be.host == "localhost") {
     auto spacepos = be.status_command.find_first_of(" ");
     bp::child c;

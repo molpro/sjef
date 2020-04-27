@@ -192,6 +192,14 @@ class Project {
   std::string input_from_output(bool sync = true) const;
   void rewrite_input_file(const std::string& input_file_name, const std::string& old_name);
   /*!
+   * @brief Perform any project initialisation specific to the project suffix
+   */
+  void custom_initialisation();
+  /*!
+   * @brief Before launching a job, perform any required actions specific to the project suffix
+   */
+  void custom_run_preface();
+  /*!
    * @brief Get the xml output, completing any open tags if necessary
    * @param sync Whether to force a synchronisation with backend before getting the file contents
    * @return

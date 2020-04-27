@@ -1490,6 +1490,7 @@ void sjef::Project::change_backend(std::string backend, bool force) {
     property_delete("jobnumber");
 //    std::cerr << "deleted property jobnumber; its value now is " << property_get("jobnumber") << std::endl;
     property_set("backend", backend);
+    remote_server_run(std::string{"mkdir -p "} + cache(this->m_backends.at(backend)));
   }
   if (m_master_of_slave) {
     shutdown_backend_watcher();

@@ -290,7 +290,7 @@ int main(int argc, char* argv[]) {
           } else if (command == "sync") {
             proj.synchronize(proj.property_get("backend"), verboseSwitch.getValue());
           } else if (command == "run") {
-            if (proj.run(backend, verboseSwitch.getValue(), true, false))
+            if (proj.run(proj.property_get("backend"), verboseSwitch.getValue(), true, false))
               std::cout << "Job number: " << proj.property_get("jobnumber") << std::endl;
             else
               std::cout << "Job submission failed" << std::endl;

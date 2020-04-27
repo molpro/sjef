@@ -17,7 +17,7 @@ struct sjef::FileLock::Unique_FileLock { // process-level locking
   bool m_preexisting;
   std::string m_lockfile;
   std::unique_ptr<boost::interprocess::file_lock> m_file_lock;
-  std::recursive_mutex m_mutex;
+  std::shared_timed_mutex m_mutex;
   int m_entry_count;
  public:
   Unique_FileLock(const std::string& path, bool erase_if_created = true)
@@ -47,7 +47,7 @@ sjef::FileLock::FileLock(const std::string& path, bool exclusive, bool erase_if_
       s_Unique_FileLocks[path] = std::make_shared<Unique_FileLock>(path, erase_if_created);
     m_unique = s_Unique_FileLocks[path];
   }
-  m_lock_guard.reset(new std::lock_guard<std::recursive_mutex>(m_unique->m_mutex));
+  m_lock_guard.reset(new std::lock_guard<std::shared_timed_mutex>(m_unique->m_mutex));
 
   if (m_exclusive)
     m_unique->m_file_lock->lock();

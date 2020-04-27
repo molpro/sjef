@@ -1,12 +1,13 @@
 #ifndef SJEF_LIB_FILELOCK_H_
 #define SJEF_LIB_FILELOCK_H_
 #include <memory>
+#include <shared_mutex>
 
 namespace sjef {
 
 /*!
  * @brief A thread-safe class for managing exclusive and non-exclusive access to a file
- * Implementation within a process is via std::recursive_mutex, and between processes via boost::interprocess:file_lock.
+ * Implementation within a process is via std::shared_timed_mutex, and between processes via boost::interprocess:file_lock.
  * On creation of a class instance, execution will wait until access to the file can be obtained,
  * and the access obtained will influence other subsequent access requests until the object is destroyed.
  */
@@ -25,7 +26,7 @@ class FileLock {
  private:
   bool m_exclusive;
   std::shared_ptr<Unique_FileLock> m_unique;
-  std::unique_ptr<std::lock_guard<std::recursive_mutex> > m_lock_guard;
+  std::unique_ptr<std::lock_guard<std::shared_timed_mutex> > m_lock_guard;
 };
 
 }

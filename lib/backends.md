@@ -36,7 +36,7 @@ Example:
     The following is the specialisation for Molpro.
   -->
   <backend name="local" host="localhost"
-           run_command="molpro {-n %n!MPI size} {-M %M!Total memory} {-m %m!Memory} {-G %G!GA memory}"
+           run_command="molpro {-n %n!MPI size} {-M %M!Total memory} {-m %m!Memory per process} {-G %G!GA memory}"
   />
   <!-- local backend with special options -->
   <backend name="special_local" host="localhost" run_command="molpro {-n %n:2!MPI size} {-m %m:100M!Memory} {-G %G!GA memory}"/>

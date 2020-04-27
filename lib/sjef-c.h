@@ -34,6 +34,7 @@ size_t sjef_project_project_hash(const char* project);
 size_t sjef_project_input_hash(const char* project);
 int sjef_project_recent_find(const char* filename);
 char* sjef_project_recent(int number, const char* suffix);
+int sjef_project_change_backend(const char* project, const char* backend);
 char* sjef_project_backend_parameter_get(const char* project, const char* backend, const char* parameter);
 void sjef_project_backend_parameter_set(const char* project,
                                         const char* backend,

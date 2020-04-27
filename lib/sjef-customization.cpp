@@ -98,7 +98,7 @@ sjef::Backend sjef::Project::default_backend() {
     return Backend("local",
                    "localhost",
                    "${PWD}",
-                   "molpro {-n %n!MPI size} {-m %m!Memory} {-G %G!GA memory}"
+                   "molpro {-n %n!MPI size} {-M %M!Total memory} {-m %m!Process memory} {-G %G!GA memory}"
     );
   } else
     return Backend("local");

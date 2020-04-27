@@ -144,8 +144,6 @@ Project::Project(const std::string& filename,
   }
   recent_edit(m_filename);
 
-  m_backends[sjef::Backend::default_name] =
-      sjef::Backend(sjef::Backend::default_name, "localhost", "{$PWD}", m_project_suffix);
   m_backends[sjef::Backend::dummy_name] = sjef::Backend(sjef::Backend::dummy_name,
                                                         "localhost",
                                                         "{$PWD}",
@@ -180,6 +178,43 @@ Project::Project(const std::string& filename,
       }
     }
 
+  }
+  if (m_backends.count(sjef::Backend::default_name) == 0) {
+    m_backends[sjef::Backend::default_name] = default_backend();
+    const auto config_file = expand_path("~/.sjef/" + m_project_suffix + "/backends.xml");
+    if (not fs::exists(config_file))
+      fs::ofstream(config_file) << "<?xml version=\"1.0\"?>\n<backends>\n</backends>" << std::endl;
+    {
+      FileLock l(config_file);
+      fs::copy_file(config_file, config_file + "-");
+      FileLock ll(config_file + "-");
+      auto in = fs::ifstream(config_file + "-");
+      auto out = fs::ofstream(config_file);
+      std::string line;
+      auto be_defaults = Backend();
+      while (std::getline(in, line)) {
+        out << line << std::endl;
+        if (line.find("<backends>") != std::string::npos) {
+          out << "  <backend name=\"" + sjef::Backend::default_name + "\" ";
+          if (be_defaults.host != m_backends[sjef::Backend::default_name].host)
+            out << "\n           host=\"" + m_backends[sjef::Backend::default_name].host + "\" ";
+          if (be_defaults.run_command != m_backends[sjef::Backend::default_name].run_command)
+            out << "\n           run_command=\"" + m_backends[sjef::Backend::default_name].run_command + "\" ";
+          if (be_defaults.run_jobnumber != m_backends[sjef::Backend::default_name].run_jobnumber)
+            out << "\n           run_jobnumber=\"" + m_backends[sjef::Backend::default_name].run_jobnumber + "\" ";
+          if (be_defaults.status_command != m_backends[sjef::Backend::default_name].status_command)
+            out << "\n           status_command=\"" + m_backends[sjef::Backend::default_name].status_command + "\" ";
+          if (be_defaults.status_waiting != m_backends[sjef::Backend::default_name].status_waiting)
+            out << "\n           status_waiting=\"" + m_backends[sjef::Backend::default_name].status_waiting + "\" ";
+          if (be_defaults.status_running != m_backends[sjef::Backend::default_name].status_running)
+            out << "\n           status_running=\"" + m_backends[sjef::Backend::default_name].status_running + "\" ";
+          if (be_defaults.kill_command != m_backends[sjef::Backend::default_name].kill_command)
+            out << "\n           kill_command=\"" + m_backends[sjef::Backend::default_name].kill_command + "\" ";
+          out << "\n  />" << std::endl;
+        }
+      }
+    }
+    fs::remove(config_file + "-");
   }
 //  for (const auto& be : m_backends) std::cerr << "m_backend "<<be.first<<std::endl;
 

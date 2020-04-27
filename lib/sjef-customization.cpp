@@ -78,8 +78,8 @@ void sjef::Project::custom_run_preface() {
         auto backup = fs::path{filename("", "backup")};
         fs::create_directories(backup);
         auto ss = property_get("last_output_backup");
-        int seq = ss.empty() ? 1 : std::stoi(ss)+1;
-        property_set("last_output_backup",std::to_string(seq));
+        int seq = ss.empty() ? 1 : std::stoi(ss) + 1;
+        property_set("last_output_backup", std::to_string(seq));
         auto backup_dir = backup / std::to_string(seq);
         fs::create_directories(backup_dir);
         for (const auto& suffix : std::vector<std::string>{"out", "xml", "log"})
@@ -91,4 +91,15 @@ void sjef::Project::custom_run_preface() {
       }
     }
   }
+}
+
+sjef::Backend sjef::Project::default_backend() {
+  if (m_project_suffix == "molpro") {
+    return Backend("local",
+                   "localhost",
+                   "${PWD}",
+                   "molpro {-n %n!MPI size} {-m %m!Memory} {-G %G!GA memory}"
+    );
+  } else
+    return Backend("local");
 }

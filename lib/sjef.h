@@ -280,6 +280,7 @@ class Project {
    */
   void change_backend(std::string backend = std::string{""}, bool force = false);
  private:
+  Backend default_backend();
   sjef::status cached_status() const;
   void cached_status(sjef::status status) const;
   void throw_if_backend_invalid(std::string backend = "") const;

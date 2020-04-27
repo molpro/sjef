@@ -30,9 +30,16 @@ Example:
 
 ```xml
 <backends>
-  <!-- there is a default backend always defined internally by the library, and it is equivalent to
-<backend name="local" run_command="molpro"/>
--->
+  <!-- there is a default template backend always added to the configuration file by the library
+    if it does not yet exist. Its contents are dependent on suffix, and without specialisation is 
+    <backend name="local" run_command="suffix"/>
+    The following is the specialisation for Molpro.
+  -->
+  <backend name="local" host="localhost"
+           run_command="molpro {-n %n!MPI size} {-m %m!Memory} {-G %G!GA memory}"
+  />
+  <!-- local backend with special options -->
+  <backend name="special_local" host="localhost" run_command="molpro {-n %n:2!MPI size} {-m %m:100M!Memory} {-G %G!GA memory}"/>
   <!-- informal immediate launching of Molpro on a neighbouring workstation -->
     <backend name="linux" host="user@host" cache="/tmp/sjef-backend" run_command="molpro"/>
     <backend name="linux2" host="linux2" cache="/tmp/peter/sjef-backend" run_command="myMolpro/bin/molpro"/>

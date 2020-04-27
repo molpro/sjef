@@ -858,8 +858,9 @@ status Project::status(int verbosity, bool cached) const {
   }
 //  std::cerr << "did not return unknown for empty pid "<<pid << std::endl;
   const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", "0");
-  if (property_get("_private_sjef_project_completed_job") == be.host + ":" + pid) {
-//      std::cerr << "status return completed/killed because _private_sjef_project_completed_job is valid"<<std::endl;
+  if (property_get("_private_sjef_project_completed_job") == be.host + ":" + pid
+      and cached_status() != unevaluated) {
+//    std::cerr << "status return completed/killed because _private_sjef_project_completed_job is valid" << std::endl;
     const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", "1");
     return ((be.host + ":" + pid) == property_get("_private_sjef_project_killed_job") ? killed : completed);
   }

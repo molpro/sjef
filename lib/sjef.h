@@ -160,7 +160,10 @@ class Project {
    * @return
    * - 0 not found
    * - 1 running
-   * - 2 queued
+   * - 2 waiting
+   * - 3 completed
+   * - 4 unevaluated
+   * - 5 killed
    */
   sjef::status status(int verbosity = 0, bool cached = true) const;
   /*!

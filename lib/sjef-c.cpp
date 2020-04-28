@@ -290,6 +290,19 @@ char* sjef_project_backend_parameter_default(const char* project,
   return NULL;
 }
 
+int sjef_project_change_backend(const char* project,
+                                               const char* backend) {
+  try {
+    if (projects.count(project) == 0) sjef_project_open(project);
+    projects.at(project)->change_backend(backend);
+    return 1;
+  }
+  catch (std::exception& e) { error(e); }
+  catch (...) {}
+  return 0;
+
+}
+
 char* sjef_project_backend_parameter_get(const char* project,
                                          const char* backend,
                                          const char* parameter) {

@@ -24,7 +24,7 @@ class FileLock {
   ///> @private
   class Unique_FileLock;
  private:
-  using mutex_t = std::shared_timed_mutex;
+  using mutex_t = std::shared_mutex;
   bool m_exclusive;
   std::shared_ptr<Unique_FileLock> m_unique;
   std::unique_ptr<std::lock_guard<mutex_t> > m_lock_guard;

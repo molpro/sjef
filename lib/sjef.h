@@ -65,6 +65,8 @@ class Project {
   std::unique_ptr<Project> m_backend_watcher_instance;
   const Project* m_master_instance;
   bool m_master_of_slave;
+  mutable std::mutex m_remote_server_mutex;
+  mutable std::mutex m_synchronize_mutex;
   void report_shutdown(const std::string& message) const;
   std::string remote_server_run(const std::string& command, int verbosity = 0, bool wait = true) const;
 ///> @private
@@ -234,7 +236,7 @@ class Project {
    * @brief Set one or more properties
    * @param properties Key-value pairs of properties to be set
    */
-  void property_set(const std::map<std::string,std::string>& properties);
+  void property_set(const std::map<std::string, std::string>& properties);
   /*!
    * @brief Get the value of a property
    * @param property
@@ -246,7 +248,7 @@ class Project {
    * @param properties
    * @return For each property found, a key-value pair
    */
-  std::map<std::string,std::string> property_get(const std::vector<std::string>& properties) const;
+  std::map<std::string, std::string> property_get(const std::vector<std::string>& properties) const;
   /*!
    * @brief Remove a variable
    * @param property
@@ -297,7 +299,7 @@ class Project {
   std::string get_project_suffix(const std::string& filename, const std::string& default_suffix) const;
   static void recent_edit(const std::string& add, const std::string& remove = "");
   mutable time_t m_property_file_modification_time;
-  mutable std::map<std::string,time_t> m_input_file_modification_time;
+  mutable std::map<std::string, time_t> m_input_file_modification_time;
   const bool m_use_control_path;
   void property_delete_locked(const std::string& property);
   void check_property_file_locked() const;

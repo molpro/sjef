@@ -27,7 +27,6 @@
 namespace bp = boost::process;
 namespace fs = boost::filesystem;
 
-std::mutex remote_server_mutex;
 int backend_watcher_wait_milliseconds;
 
 ///> @private
@@ -305,9 +304,8 @@ bool Project::synchronize(std::string name, int verbosity) const {
   return synchronize(m_backends.at(name), verbosity);
 }
 
-std::mutex synchronize_mutex;
 bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) const {
-  const std::lock_guard<std::mutex> lock(synchronize_mutex);
+  const std::lock_guard lock(m_synchronize_mutex);
   if (verbosity > 1)
     std::cerr << "synchronize with " << backend.name << " (" << backend.host << ") master=" << m_master_of_slave
               << std::endl;
@@ -936,7 +934,7 @@ status Project::status(int verbosity, bool cached) const {
     ensure_remote_server();
 //    remote_server_run(be.status_command + " " + pid);
     {
-      const std::lock_guard<std::mutex> lock(remote_server_mutex);
+      const std::lock_guard lock(m_remote_server_mutex);
       m_remote_server.in << be.status_command << " " << pid << std::endl;
       m_remote_server.in << "echo '@@@!!EOF'" << std::endl;
       if (verbosity > 2)
@@ -1069,7 +1067,7 @@ void Project::property_set(const std::map<std::string, std::string>& properties)
 //    std::cout << "property_set " << property << " = " << value << " on thread " << m_master_of_slave << std::endl;
 
     property_delete_locked(property);
-    std::lock_guard<std::mutex> guard(m_unmovables.m_property_set_mutex);
+    std::lock_guard guard(m_unmovables.m_property_set_mutex);
     if (!m_properties->child("plist")) m_properties->append_child("plist");
     if (!m_properties->child("plist").child("dict")) m_properties->child("plist").append_child("dict");
     auto keynode = m_properties->child("plist").child("dict").append_child("key");
@@ -1247,7 +1245,6 @@ void Project::check_property_file_locked() const {
   }
 }
 
-//std::mutex save_property_file_mutex;
 void Project::save_property_file() const {
   FileLock fileLock(propertyFile(), true, false);
   save_property_file_locked();
@@ -1422,7 +1419,7 @@ std::vector<std::string> sjef::Project::backend_names() const {
 }
 
 std::string sjef::Project::remote_server_run(const std::string& command, int verbosity, bool wait) const {
-  const std::lock_guard<std::mutex> lock(remote_server_mutex);
+  const std::lock_guard lock(m_remote_server_mutex);
   if (verbosity > 0)
     std::cerr << command << std::endl;
   const std::string terminator{"@@@!!EOF"};
@@ -1455,7 +1452,7 @@ std::string sjef::Project::remote_server_run(const std::string& command, int ver
   return m_remote_server.last_out;
 }
 void sjef::Project::ensure_remote_server() const {
-  const std::lock_guard<std::mutex> lock(remote_server_mutex);
+  const std::lock_guard lock(m_remote_server_mutex);
 //  std::cerr << "ensure_remote_server called on thread " << std::this_thread::get_id() << std::endl;
 //  std::cerr << "m_remote_server.process.running" << m_remote_server.process.running() <<std::endl;
 //  std::cerr << "m_remote_server.host "<<m_remote_server.host << std::endl;

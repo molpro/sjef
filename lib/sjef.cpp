@@ -107,6 +107,7 @@ Project::Project(const std::string& filename,
 //    m_file_lock(nullptr),
     m_master_instance(masterProject),
     m_master_of_slave(masterProject == nullptr),
+    m_property_file_modification_time(0),
     m_use_control_path(false) {
 //  std::cerr << "Project constructor filename="<<filename << "address "<< this<<std::endl;
   auto recent_projects_directory = expand_path(std::string{"~/.sjef/"} + m_project_suffix);

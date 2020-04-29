@@ -1024,7 +1024,10 @@ void Project::wait(unsigned int maximum_microseconds) const {
   unsigned int microseconds = 1;
 //  std::cout << "wait enters with status " << status() << std::endl;
   sjef::status stat;
-  while ((stat = status()) != completed or stat != killed) {
+  while (true) {
+    auto stat = status();
+    if (stat == completed or stat == killed) break;
+//    std::cout << "stat=" << stat << std::endl;
     std::this_thread::sleep_for(std::chrono::microseconds(microseconds));
     if (microseconds < maximum_microseconds) microseconds *= 2;
   }

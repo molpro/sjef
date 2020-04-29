@@ -414,7 +414,7 @@ TEST(project, spawn_many_dummy) {
 //    std::cerr << "run number " << i << std::endl;
     ASSERT_TRUE(p.run(backend, -1, true, true));
     EXPECT_NE(p.property_get("jobnumber"), "-1");
-    EXPECT_EQ(p.status(), sjef::completed);
+    EXPECT_EQ(p.status(false), sjef::completed);
   }
 
 }
@@ -428,7 +428,7 @@ TEST(project, spawn_many_molpro) {
     for (auto i = 0; i < 5; ++i) {
       ASSERT_TRUE(p.run(backend, -1, true, true));
       EXPECT_NE(p.property_get("jobnumber"), "-1");
-      EXPECT_EQ(p.status(), sjef::completed);
+      EXPECT_EQ(p.status(false), sjef::completed);
     }
 
 }

@@ -622,7 +622,9 @@ std::map<std::string, std::string> Project::backend_parameters(const std::string
 bool Project::run(std::string name, int verbosity, bool force, bool wait) {
   throw_if_backend_invalid(name);
   auto& backend = m_backends.at(name);
-  if (status(verbosity) != unknown && status(0) != completed && status(0) != killed) return false;
+  auto stat = status(verbosity);
+  if (stat != unknown && stat != completed && stat != killed)
+    return false;
   if (verbosity > 0)
     std::cerr << "Project::run() run_needed()=" << run_needed(verbosity) << std::endl;
 //  if (not force and not run_needed()) return false;
@@ -1020,10 +1022,13 @@ std::string sjef::Project::status_message(int verbosity) const {
 
 void Project::wait(unsigned int maximum_microseconds) const {
   unsigned int microseconds = 1;
-  while (status() == running or status() == waiting) {
+//  std::cout << "wait enters with status " << status() << std::endl;
+  sjef::status stat;
+  while ((stat = status()) != completed or stat != killed) {
     std::this_thread::sleep_for(std::chrono::microseconds(microseconds));
     if (microseconds < maximum_microseconds) microseconds *= 2;
   }
+//  std::cout << "wait returns with status " << status() << std::endl;
 }
 
 void Project::property_delete(const std::vector<std::string>& properties) {
@@ -1584,15 +1589,11 @@ void sjef::Project::backend_watcher(sjef::Project& project_,
                                     int max_wait_milliseconds) noexcept {
 //  std::cerr << "Project::backend_watcher starting for " << project_.m_filename << " on thread "
 //            << std::this_thread::get_id() << std::endl;
-//  project_.m_backend_watcher_instance.reset(new sjef::Project(project_.m_filename,
-  auto p = new sjef::Project(project_.m_filename,
-                             true,
-                             "",
-                             {{}},
-  &project_)
-//      )
-      ;
-  project_.m_backend_watcher_instance.reset(p);
+  project_.m_backend_watcher_instance.reset(new sjef::Project(project_.m_filename,
+                                                              true,
+                                                              "",
+                                                              {{}},
+                                                              &project_));
   auto& project = *project_.m_backend_watcher_instance.get();
   if (max_wait_milliseconds <= 0) max_wait_milliseconds = min_wait_milliseconds;
   constexpr auto radix = 2;

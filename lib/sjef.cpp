@@ -674,14 +674,13 @@ bool Project::run(std::string name, int verbosity, bool force, bool wait) {
                     bp::args(splitString(optionstring)),
                     fs::path{m_filename} / fs::path(this->name() + ".inp"));
     fs::current_path(current_path_save);
-    auto result = c.running();
-//    if (not result)
-//      std::cout << "returning false because of running() false";
+    if (not c.valid())
+      throw std::runtime_error("Spawning run process has failed");
     c.detach();
     property_set("jobnumber", std::to_string(c.id()));
     if (verbosity > 1) std::cerr << "jobnumber " << c.id() << ", running=" << c.running() << std::endl;
-    if (result and wait) this->wait();
-    return result;
+    if (wait) this->wait();
+    return true;
   } else { // remote host
     if (verbosity > 0) std::cerr << "run remote job on " << backend.name << std::endl;
     bp::ipstream c_err, c_out;

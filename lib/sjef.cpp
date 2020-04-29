@@ -621,8 +621,11 @@ bool Project::run(std::string name, int verbosity, bool force, bool wait) {
   throw_if_backend_invalid(name);
   auto& backend = m_backends.at(name);
   auto stat = status(verbosity);
-  if (stat != unknown && stat != completed && stat != killed)
+//  if (stat != unknown && stat != completed && stat != killed) {
+  if (stat == running && stat == waiting) {
+    std::cout << "returning from run because running " << std::endl;
     return false;
+  }
   if (verbosity > 0)
     std::cerr << "Project::run() run_needed()=" << run_needed(verbosity) << std::endl;
 //  if (not force and not run_needed()) return false;

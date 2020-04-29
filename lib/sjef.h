@@ -65,6 +65,8 @@ class Project {
   std::unique_ptr<Project> m_backend_watcher_instance;
   const Project* m_master_instance;
   bool m_master_of_slave;
+  mutable std::mutex m_remote_server_mutex;
+  mutable std::mutex m_synchronize_mutex;
   void report_shutdown(const std::string& message) const;
   std::string remote_server_run(const std::string& command, int verbosity = 0, bool wait = true) const;
 ///> @private
@@ -225,24 +227,34 @@ class Project {
    */
   void clean(bool oldOutput = true, bool output = false, bool unused = false);
   /*!
-   * @brief Set a variable
+   * @brief Set a property
    * @param property
    * @param value
-   * @param save whether to write the updated property set to disk. Do not set to false unless you are sure you are going to immediately do something else that does save the properties - there is potential for data race with other objects mapping the project.
    */
-  void property_set(const std::string& property, const std::string& value, bool save = true);
+  void property_set(const std::string& property, const std::string& value);
   /*!
-   * @brief Get the value of a variable
+   * @brief Set one or more properties
+   * @param properties Key-value pairs of properties to be set
+   */
+  void property_set(const std::map<std::string, std::string>& properties);
+  /*!
+   * @brief Get the value of a property
    * @param property
    * @return The value, or "" if key does not exist
    */
   std::string property_get(const std::string& property) const;
   /*!
+   * @brief Get the values of several properties
+   * @param properties
+   * @return For each property found, a key-value pair
+   */
+  std::map<std::string, std::string> property_get(const std::vector<std::string>& properties) const;
+  /*!
    * @brief Remove a variable
    * @param property
-   * @param save whether to write the updated property set to disk. Do not set to false unless you are sure you are going to immediately do something else that does save the properties - there is potential for data race with other objects mapping the project.
    */
-  void property_delete(const std::string& property, bool save = true);
+  void property_delete(const std::string& property);
+  void property_delete(const std::vector<std::string>& properties);
   /*!
    * @brief Get the names of all assigned properties
    * @return
@@ -287,11 +299,14 @@ class Project {
   std::string get_project_suffix(const std::string& filename, const std::string& default_suffix) const;
   static void recent_edit(const std::string& add, const std::string& remove = "");
   mutable time_t m_property_file_modification_time;
-  mutable std::map<std::string,time_t> m_input_file_modification_time;
+  mutable std::map<std::string, time_t> m_input_file_modification_time;
   const bool m_use_control_path;
+  void property_delete_locked(const std::string& property);
+  void check_property_file_locked() const;
   void check_property_file() const;
+  void save_property_file_locked() const;
   void save_property_file() const;
-  void load_property_file() const;
+  void load_property_file_locked() const;
   bool properties_last_written_by_me(bool removeFile = false) const;
  public:
   std::string propertyFile() const;

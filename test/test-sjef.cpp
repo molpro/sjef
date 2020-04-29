@@ -105,7 +105,7 @@ TEST(project, construction) {
   }
 }
 
-TEST(project, move) {
+TEST(project, move_generic) {
   savestate state;
   std::string name("sjef-project-test");
   auto filename = state.testfile("$TMPDIR/" + name + ".sjef");
@@ -121,12 +121,16 @@ TEST(project, move) {
   ASSERT_TRUE(fs::exists(fs::path(x2.filename())));
 //  std::cerr << "filename="<<filename<<std::endl;
   x2.copy(filename);
+  EXPECT_FALSE(fs::exists(sjef::expand_path(filename+"/.lock")));
+  EXPECT_FALSE(fs::exists(sjef::expand_path(filename2+"/.lock")));
   ASSERT_TRUE(fs::exists(fs::path(x2.filename())));
   ASSERT_TRUE(fs::exists(sjef::expand_path(filename2)));
   ASSERT_TRUE(fs::exists(sjef::expand_path(filename)));
   x2.move(filename, true);
   EXPECT_FALSE(fs::exists(sjef::expand_path(filename2)));
   EXPECT_TRUE(fs::exists(sjef::expand_path(filename)));
+  EXPECT_FALSE(fs::exists(sjef::expand_path(filename+"/.lock")));
+  EXPECT_FALSE(fs::exists(sjef::expand_path(filename2+"/.lock")));
 }
 
 TEST(project, moveMolpro) {
@@ -410,7 +414,7 @@ TEST(project, spawn_many_dummy) {
 //    std::cerr << "run number " << i << std::endl;
     ASSERT_TRUE(p.run(backend, -1, true, true));
     EXPECT_NE(p.property_get("jobnumber"), "-1");
-    EXPECT_EQ(p.status(), sjef::completed);
+    EXPECT_EQ(p.status(false), sjef::completed);
   }
 
 }
@@ -424,7 +428,7 @@ TEST(project, spawn_many_molpro) {
     for (auto i = 0; i < 5; ++i) {
       ASSERT_TRUE(p.run(backend, -1, true, true));
       EXPECT_NE(p.property_get("jobnumber"), "-1");
-      EXPECT_EQ(p.status(), sjef::completed);
+      EXPECT_EQ(p.status(false), sjef::completed);
     }
 
 }

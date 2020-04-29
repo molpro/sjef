@@ -675,8 +675,8 @@ bool Project::run(std::string name, int verbosity, bool force, bool wait) {
                     fs::path{m_filename} / fs::path(this->name() + ".inp"));
     fs::current_path(current_path_save);
     auto result = c.running();
-    if (not result)
-      std::cout << "returning false because of running() false";
+//    if (not result)
+//      std::cout << "returning false because of running() false";
     c.detach();
     property_set("jobnumber", std::to_string(c.id()));
     if (verbosity > 1) std::cerr << "jobnumber " << c.id() << ", running=" << c.running() << std::endl;

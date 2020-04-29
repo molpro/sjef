@@ -621,8 +621,9 @@ bool Project::run(std::string name, int verbosity, bool force, bool wait) {
   throw_if_backend_invalid(name);
   auto& backend = m_backends.at(name);
   auto stat = status(verbosity);
-  if (stat == running || stat == waiting)
+  if (stat == running || stat == waiting) {
     return false;
+  }
   if (verbosity > 0)
     std::cerr << "Project::run() run_needed()=" << run_needed(verbosity) << std::endl;
 //  if (not force and not run_needed()) return false;
@@ -674,6 +675,8 @@ bool Project::run(std::string name, int verbosity, bool force, bool wait) {
                     fs::path{m_filename} / fs::path(this->name() + ".inp"));
     fs::current_path(current_path_save);
     auto result = c.running();
+    if (not result)
+      std::cout << "returning false because of running() false";
     c.detach();
     property_set("jobnumber", std::to_string(c.id()));
     if (verbosity > 1) std::cerr << "jobnumber " << c.id() << ", running=" << c.running() << std::endl;

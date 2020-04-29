@@ -189,11 +189,46 @@ void sjef_project_property_set(const char* project, const char* key, const char*
 
   }
 }
+void sjef_project_properties_set(const char* project, const char** key, const char** value) {
+  try {
+    if (projects.count(project) == 0) sjef_project_open(project);
+    std::map<std::string, std::string> keyval;
+    for (int i = 0; key[i] != NULL; ++i) {
+      keyval[key[i]] = value[i];
+    }
+    projects.at(project)->property_set(keyval);
+  }
+  catch (std::exception& e) {
+    error(e);
+  }
+  catch (...) {
+
+  }
+}
 char* sjef_project_property_get(const char* project,
                                 const char* key) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
     return strdup(projects.at(project)->property_get(std::string{key}).c_str());
+  }
+  catch (std::exception& e) { error(e); }
+  catch (...) {}
+  return NULL;
+}
+char** sjef_project_properties_get(const char* project,
+                                   const char** key) {
+  try {
+    if (projects.count(project) == 0) sjef_project_open(project);
+    std::vector<std::string> keys;
+    for (int i = 0; key[i] != nullptr; ++i)
+      keys.push_back(key[i]);
+    auto keyval = projects.at(project)->property_get(keys);
+    char** result = (char**) malloc(keys.size() + 1);
+    for (int i = 0; key[i] != nullptr; ++i) {
+      result[i] = strdup((keyval.count(keys[i]) ? keyval.at(keys[i]) : "").c_str());
+    }
+    result[keys.size()] = nullptr;
+    return result;
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -291,7 +326,7 @@ char* sjef_project_backend_parameter_default(const char* project,
 }
 
 int sjef_project_change_backend(const char* project,
-                                               const char* backend) {
+                                const char* backend) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
     projects.at(project)->change_backend(backend);

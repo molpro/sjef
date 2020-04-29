@@ -27,7 +27,6 @@
 namespace bp = boost::process;
 namespace fs = boost::filesystem;
 
-std::mutex remote_server_mutex;
 int backend_watcher_wait_milliseconds;
 
 ///> @private
@@ -53,11 +52,13 @@ bool copyDir(
   // Check whether the function call is valid
   if (!fs::exists(source) || !fs::is_directory(source))
     throw std::runtime_error("Source directory " + source.string() + " does not exist or is not a directory.");
+  sjef::FileLock source_lock((source / ".lock").native(), false, true);
   if (fs::exists(destination))
     throw std::runtime_error("Destination directory " + destination.string() + " already exists.");
   // Create the destination directory
   if (!fs::create_directory(destination))
     throw std::runtime_error("Unable to create destination directory " + destination.string());
+  sjef::FileLock destination_lock((destination / ".lock").native(), true, true);
   // Iterate through the source directory
   for (
       fs::directory_iterator file(source);
@@ -77,10 +78,11 @@ bool copyDir(
       }
     } else {
       // Found file: Copy
-      fs::copy_file(
-          current,
-          destination / current.filename()
-      );
+      if (current.filename() != ".lock")
+        fs::copy_file(
+            current,
+            destination / current.filename()
+        );
     }
   }
   return true;
@@ -132,7 +134,6 @@ Project::Project(const std::string& filename,
     save_property_file();
     property_set("_private_sjef_project_backend_inactive", "1");
   }
-  load_property_file();
   property_set("_private_sjef_project_backend_inactive_synced", "0");
   cached_status(unevaluated);
   custom_initialisation();
@@ -303,9 +304,8 @@ bool Project::synchronize(std::string name, int verbosity) const {
   return synchronize(m_backends.at(name), verbosity);
 }
 
-std::mutex synchronize_mutex;
 bool Project::synchronize(const Backend& backend, int verbosity, bool nostatus) const {
-  const std::lock_guard<std::mutex> lock(synchronize_mutex);
+  const std::lock_guard lock(m_synchronize_mutex);
   if (verbosity > 1)
     std::cerr << "synchronize with " << backend.name << " (" << backend.host << ") master=" << m_master_of_slave
               << std::endl;
@@ -620,7 +620,10 @@ std::map<std::string, std::string> Project::backend_parameters(const std::string
 bool Project::run(std::string name, int verbosity, bool force, bool wait) {
   throw_if_backend_invalid(name);
   auto& backend = m_backends.at(name);
-  if (status(verbosity) != unknown && status(0) != completed && status(0) != killed) return false;
+  auto stat = status(verbosity);
+  if (stat == running || stat == waiting) {
+    return false;
+  }
   if (verbosity > 0)
     std::cerr << "Project::run() run_needed()=" << run_needed(verbosity) << std::endl;
 //  if (not force and not run_needed()) return false;
@@ -671,12 +674,13 @@ bool Project::run(std::string name, int verbosity, bool force, bool wait) {
                     bp::args(splitString(optionstring)),
                     fs::path{m_filename} / fs::path(this->name() + ".inp"));
     fs::current_path(current_path_save);
-    auto result = c.running();
+    if (not c.valid())
+      throw std::runtime_error("Spawning run process has failed");
     c.detach();
     property_set("jobnumber", std::to_string(c.id()));
     if (verbosity > 1) std::cerr << "jobnumber " << c.id() << ", running=" << c.running() << std::endl;
-    if (result and wait) this->wait();
-    return result;
+    if (wait) this->wait();
+    return true;
   } else { // remote host
     if (verbosity > 0) std::cerr << "run remote job on " << backend.name << std::endl;
     bp::ipstream c_err, c_out;
@@ -932,7 +936,7 @@ status Project::status(int verbosity, bool cached) const {
     ensure_remote_server();
 //    remote_server_run(be.status_command + " " + pid);
     {
-      const std::lock_guard<std::mutex> lock(remote_server_mutex);
+      const std::lock_guard lock(m_remote_server_mutex);
       m_remote_server.in << be.status_command << " " << pid << std::endl;
       m_remote_server.in << "echo '@@@!!EOF'" << std::endl;
       if (verbosity > 2)
@@ -1018,14 +1022,31 @@ std::string sjef::Project::status_message(int verbosity) const {
 
 void Project::wait(unsigned int maximum_microseconds) const {
   unsigned int microseconds = 1;
-  while (status() == running or status() == waiting) {
+//  std::cout << "wait enters with status " << status() << std::endl;
+  sjef::status stat;
+  while (true) {
+    auto stat = status();
+    if (stat == completed or stat == killed) break;
+//    std::cout << "stat=" << stat << std::endl;
     std::this_thread::sleep_for(std::chrono::microseconds(microseconds));
     if (microseconds < maximum_microseconds) microseconds *= 2;
   }
+//  std::cout << "wait returns with status " << status() << std::endl;
 }
 
-void Project::property_delete(const std::string& property, bool save) {
-  check_property_file();
+void Project::property_delete(const std::vector<std::string>& properties) {
+  FileLock pl(propertyFile(), true, false);
+  check_property_file_locked();
+  for (const auto& property : properties)
+    property_delete_locked(property);
+  save_property_file_locked();
+}
+
+void Project::property_delete(const std::string& property) { //TODO make atomic
+  property_delete(std::vector<std::string>{property});
+}
+
+void Project::property_delete_locked(const std::string& property) {
 //  std::cerr << "property_delete " << property << " save=" << save << std::endl;
   if (!m_properties->child("plist")) m_properties->append_child("plist");
   if (!m_properties->child("plist").child("dict")) m_properties->child("plist").append_child("dict");
@@ -1037,37 +1058,52 @@ void Project::property_delete(const std::string& property, bool save) {
     dict.remove_child(keynode.node());
     dict.remove_child(valnode.node());
   }
-  if (save)
-    save_property_file();
 }
 
-void Project::property_set(const std::string& property, const std::string& value, bool save) {
+void Project::property_set(const std::map<std::string, std::string>& properties) {
   FileLock pl(propertyFile(), true, false);
-//  std::cout << "property_set " << property << " = " << value << "on thread " << m_master_of_slave << std::endl;
-  property_delete(property, false);
-  {
-    std::lock_guard<std::mutex> guard(m_unmovables.m_property_set_mutex);
+  check_property_file_locked();
+  for (const auto& keyval : properties) {
+    const auto& property = keyval.first;
+    const auto& value = keyval.second;
+//    std::cout << "property_set " << property << " = " << value << " on thread " << m_master_of_slave << std::endl;
+
+    property_delete_locked(property);
+    std::lock_guard guard(m_unmovables.m_property_set_mutex);
     if (!m_properties->child("plist")) m_properties->append_child("plist");
     if (!m_properties->child("plist").child("dict")) m_properties->child("plist").append_child("dict");
     auto keynode = m_properties->child("plist").child("dict").append_child("key");
     keynode.text() = property.c_str();
     auto stringnode = m_properties->child("plist").child("dict").append_child("string");
     stringnode.text() = value.c_str();
-    if (save)
-      save_property_file();
   }
+  save_property_file_locked();
+}
+
+void Project::property_set(const std::string& property, const std::string& value) {
+  property_set({{property, value}});
 }
 
 std::string Project::property_get(const std::string& property) const {
-  std::string query{"/plist/dict/key[text()='" + property + "']/following-sibling::string[1]"};
-  std::string result = m_properties->select_node(query.c_str()).node().child_value();
+  return property_get(std::vector<std::string>{property})[property];
+}
+std::map<std::string, std::string> Project::property_get(const std::vector<std::string>& properties) const {
   check_property_file();
-  result = m_properties->select_node(query.c_str()).node().child_value();
+  std::map<std::string, std::string> results;
+  for (const std::string& property : properties) {
+    std::string query{"/plist/dict/key[text()='" + property + "']/following-sibling::string[1]"};
+    std::string result = m_properties->select_node(query.c_str()).node().child_value();
+    result = m_properties->select_node(query.c_str()).node().child_value();
 //  std::cout << "property_get " << property << "=" << result << " on thread " << m_master_of_slave << std::endl;
-  return m_properties->select_node(query.c_str()).node().child_value();
+    std::string value = m_properties->select_node(query.c_str()).node().child_value();
+    if (not value.empty())
+      results[property] = value;
+  }
+  return results;
 }
 
 std::vector<std::string> Project::property_names() const {
+  check_property_file();
   std::vector<std::string> result;
   for (const auto& node : m_properties->select_nodes(((std::string) {"/plist/dict/key"}).c_str()))
     result.push_back(node.node().child_value());
@@ -1158,15 +1194,13 @@ struct plist_writer : pugi::xml_writer {
 
 constexpr static bool use_writer = false;
 
-//std::mutex load_property_file_mutex;
 inline std::string slurp(const std::string& path) {
   std::ostringstream buf;
   std::ifstream input(path.c_str());
   buf << input.rdbuf();
   return buf.str();
 }
-void Project::load_property_file() const {
-  FileLock locker(propertyFile(), false, false);
+void Project::load_property_file_locked() const {
 //  std::cout << "load_property_file() from " << this << std::endl;
 //  std::cout << slurp(propertyFile())<<std::endl;
   auto result = m_properties->load_file(propertyFile().c_str());
@@ -1197,6 +1231,9 @@ bool Project::properties_last_written_by_me(bool removeFile) const {
 }
 void Project::check_property_file() const {
   FileLock fileLock(propertyFile(), false, false);
+  check_property_file_locked();
+}
+void Project::check_property_file_locked() const {
   auto lastwrite = fs::last_write_time(propertyFile());
   if (m_property_file_modification_time == lastwrite) { // tie-breaker
     if (not properties_last_written_by_me(false))
@@ -1204,38 +1241,39 @@ void Project::check_property_file() const {
   }
   if (m_property_file_modification_time < lastwrite) {
     {
-      load_property_file();
+      load_property_file_locked();
     }
     m_property_file_modification_time = lastwrite;
   }
 }
 
-//std::mutex save_property_file_mutex;
 void Project::save_property_file() const {
+  FileLock fileLock(propertyFile(), true, false);
+  save_property_file_locked();
+}
+void Project::save_property_file_locked() const {
   struct plist_writer writer;
   writer.file = propertyFile();
-  {
-    FileLock fileLock(propertyFile(), true, false);
-    if (not fs::exists(propertyFile())) {
-      fs::create_directories(m_filename);
-      { fs::ofstream x(propertyFile()); }
-    }
-//    std::cerr << "1 exists(propertyFile()) ? " << fs::exists(propertyFile()) << std::endl;
-    if (use_writer)
-      m_properties->save(writer, "\t", pugi::format_no_declaration);
-    else
-      m_properties->save_file(propertyFile().c_str());
-//  std::cerr << "2 exists(propertyFile()) ? " << fs::exists(propertyFile()) << std::endl;
-//  system((std::string{"cat "} + propertyFile()).c_str());
-//  std::cout << "end save_property_file" << std::endl;
-    m_property_file_modification_time = fs::last_write_time(propertyFile());
-    auto path = (fs::path{m_filename} / fs::path{writing_object_file});
-    FileLock lock(path.string(), true, false);
-    std::ofstream o{path.string()};
-    std::hash<const Project*> hasher;
-    o << hasher(this);
-//    std::cout << " writing hash " << hasher(this) << " on thread " << m_master_of_slave << std::endl;
+  if (not fs::exists(propertyFile())) {
+    fs::create_directories(m_filename);
+    { fs::ofstream x(propertyFile()); }
   }
+//    std::cerr << "1 exists(propertyFile()) ? " << fs::exists(propertyFile()) << std::endl;
+  if (use_writer)
+    m_properties->save(writer, "\t", pugi::format_no_declaration);
+  else
+    m_properties->save_file(propertyFile().c_str());
+//  std::cerr << "2 exists(propertyFile()) ? " << fs::exists(propertyFile()) << std::endl;
+//  std::cout << "save_property_file master=" << m_master_of_slave << std::endl;
+//  system((std::string{"cat "} + propertyFile()).c_str());
+//  std::cout << "end save_property_file master=" << m_master_of_slave << std::endl;
+  m_property_file_modification_time = fs::last_write_time(propertyFile());
+  auto path = (fs::path{m_filename} / fs::path{writing_object_file});
+  FileLock lock(path.string(), true, false);
+  std::ofstream o{path.string()};
+  std::hash<const Project*> hasher;
+  o << hasher(this);
+//    std::cout << " writing hash " << hasher(this) << " on thread " << m_master_of_slave << std::endl;
 //  std::cout << "written propertyFile:\n";
 //  std::cout << slurp(propertyFile())<<std::endl;
 }
@@ -1383,7 +1421,7 @@ std::vector<std::string> sjef::Project::backend_names() const {
 }
 
 std::string sjef::Project::remote_server_run(const std::string& command, int verbosity, bool wait) const {
-  const std::lock_guard<std::mutex> lock(remote_server_mutex);
+  const std::lock_guard lock(m_remote_server_mutex);
   if (verbosity > 0)
     std::cerr << command << std::endl;
   const std::string terminator{"@@@!!EOF"};
@@ -1416,7 +1454,7 @@ std::string sjef::Project::remote_server_run(const std::string& command, int ver
   return m_remote_server.last_out;
 }
 void sjef::Project::ensure_remote_server() const {
-  const std::lock_guard<std::mutex> lock(remote_server_mutex);
+  const std::lock_guard lock(m_remote_server_mutex);
 //  std::cerr << "ensure_remote_server called on thread " << std::this_thread::get_id() << std::endl;
 //  std::cerr << "m_remote_server.process.running" << m_remote_server.process.running() <<std::endl;
 //  std::cerr << "m_remote_server.host "<<m_remote_server.host << std::endl;

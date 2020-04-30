@@ -148,7 +148,11 @@ class Project {
    * @param wait Whether to wait for the job to complete instead of returning after launching it
    * @return
    */
-  bool run(std::string name, int verbosity, bool force, bool wait);
+  bool run(int verbosity = 0, bool force = false, bool wait = false);
+  bool run(std::string name, int verbosity = 0, bool force = false, bool wait = false) {
+    change_backend(name);
+    return run(verbosity, force, wait);
+  }
  public:
   /*!
    * @brief Obtain the status of the job started by run()

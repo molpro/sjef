@@ -121,16 +121,16 @@ TEST(project, move_generic) {
   ASSERT_TRUE(fs::exists(fs::path(x2.filename())));
 //  std::cerr << "filename="<<filename<<std::endl;
   x2.copy(filename);
-  EXPECT_FALSE(fs::exists(sjef::expand_path(filename+"/.lock")));
-  EXPECT_FALSE(fs::exists(sjef::expand_path(filename2+"/.lock")));
+  EXPECT_FALSE(fs::exists(sjef::expand_path(filename + "/.lock")));
+  EXPECT_FALSE(fs::exists(sjef::expand_path(filename2 + "/.lock")));
   ASSERT_TRUE(fs::exists(fs::path(x2.filename())));
   ASSERT_TRUE(fs::exists(sjef::expand_path(filename2)));
   ASSERT_TRUE(fs::exists(sjef::expand_path(filename)));
   x2.move(filename, true);
   EXPECT_FALSE(fs::exists(sjef::expand_path(filename2)));
   EXPECT_TRUE(fs::exists(sjef::expand_path(filename)));
-  EXPECT_FALSE(fs::exists(sjef::expand_path(filename+"/.lock")));
-  EXPECT_FALSE(fs::exists(sjef::expand_path(filename2+"/.lock")));
+  EXPECT_FALSE(fs::exists(sjef::expand_path(filename + "/.lock")));
+  EXPECT_FALSE(fs::exists(sjef::expand_path(filename2 + "/.lock")));
 }
 
 TEST(project, moveMolpro) {
@@ -237,25 +237,25 @@ TEST(project, properties) {
   }
   if (false) {
 
-  const auto keysnew = x.property_names();
-  for (const auto& key : keysnew) {
+    const auto keysnew = x.property_names();
+    for (const auto& key : keysnew) {
 //  for (n = 0; (key = x.property_next()) != ""; ++n) {
 //    std::cout << "key "<<key<<std::endl;
-    if (data.count("key") != 0)
-      ASSERT_EQ(x.property_get(key), data[key]);
-  }
+      if (data.count("key") != 0)
+        ASSERT_EQ(x.property_get(key), data[key]);
+    }
 //  std::cout << "data.size() "<<data.size()<<std::endl;
-  ASSERT_EQ(keysnew.size(), data.size() + ninitial);
-  for (const auto& key : x.property_names()) {
+    ASSERT_EQ(keysnew.size(), data.size() + ninitial);
+    for (const auto& key : x.property_names()) {
 //    system(("echo start deletion loop key="+key+"; cat "+x.filename()+"/Info.plist").c_str());
-    x.property_delete(key);
+      x.property_delete(key);
 //    system(("echo end deletion loop key="+key+"; cat "+x.filename()+"/Info.plist").c_str());
-  }
-  ASSERT_TRUE(x.property_names().empty());
+    }
+    ASSERT_TRUE(x.property_names().empty());
 
-  ASSERT_EQ(x.property_get("vacuous"), "");
-  x.property_set("empty", "");
-  ASSERT_EQ(x.property_get("empty"), "");
+    ASSERT_EQ(x.property_get("vacuous"), "");
+    x.property_set("empty", "");
+    ASSERT_EQ(x.property_get("empty"), "");
   }
 }
 
@@ -431,6 +431,17 @@ TEST(project, spawn_many_molpro) {
       EXPECT_EQ(p.status(false), sjef::completed);
     }
 
+}
+
+TEST(project, early_change_backend) {
+  savestate state;
+  std::string suffix{"someprogram"};
+  auto backendfile = state.testfile(std::string{"~/.sjef/"} + suffix + "/backends.xml");
+  std::ofstream(backendfile)
+      << "<?xml version=\"1.0\"?>\n<backends><backend name=\"test\" host=\"127.0.0.1\" run_command=\"true\"/></backends>"
+      << std::endl;
+  sjef::Project p(state.testfile(std::string{"early_change_backend."} + suffix));
+  p.change_backend("test");
 }
 
 TEST(backend, backend_parameter_expand) {

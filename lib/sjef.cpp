@@ -294,9 +294,15 @@ std::string Project::cache(const Backend& backend) const {
   return backend.cache + "/" + m_filename; // TODO: use boost::filesystem to avoid '/' on windows
 }
 
+std::mutex synchronize_mutex;
 bool Project::synchronize(int verbosity, bool nostatus) const {
-  const std::lock_guard lock(m_synchronize_mutex);
-  const Backend backend(property_get("backend"));
+//  const std::lock_guard lock(m_synchronize_mutex);
+  const std::lock_guard lock(synchronize_mutex);
+  auto backend_name = property_get("backend");
+//  std::cerr << "backend_name in synchronise() " << backend_name << std::endl;
+//  for (const auto& keyval : m_backends)
+//    std::cerr << "m_backends[" << keyval.first << "]=" << keyval.second.name << std::endl;
+  auto& backend = m_backends.at(backend_name);
   if (verbosity > 1)
     std::cerr << "synchronize with " << backend.name << " (" << backend.host << ") master=" << m_master_of_slave
               << std::endl;
@@ -313,11 +319,12 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
     locally_modified = m_property_file_modification_time != fs::last_write_time(propertyFile());
 //    std::cerr << "initial locally_modified=" << locally_modified << std::endl;
     for (const auto& suffix : {"inp", "xyz"}) {
-      auto lm = fs::last_write_time(filename(suffix));
-      locally_modified = locally_modified
-          or (fs::exists(filename(suffix))
-              and lm > m_input_file_modification_time[suffix]);
-      m_input_file_modification_time[suffix] = lm;
+      if (fs::exists(filename(suffix))) {
+        auto lm = fs::last_write_time(filename(suffix));
+        locally_modified = locally_modified
+            or lm > m_input_file_modification_time[suffix];
+        m_input_file_modification_time[suffix] = lm;
+      }
     }
   }
 //  std::cerr << "locally_modified=" << locally_modified << std::endl;
@@ -608,9 +615,8 @@ std::map<std::string, std::string> Project::backend_parameters(const std::string
   return result;
 }
 
-bool Project::run(std::string name, int verbosity, bool force, bool wait) {
-  throw_if_backend_invalid(name);
-  auto& backend = m_backends.at(name);
+bool Project::run(int verbosity, bool force, bool wait) {
+  auto& backend = m_backends.at(property_get("backend"));
   auto stat = status(verbosity);
   if (stat == running || stat == waiting) {
     return false;
@@ -618,7 +624,6 @@ bool Project::run(std::string name, int verbosity, bool force, bool wait) {
   if (verbosity > 0)
     std::cerr << "Project::run() run_needed()=" << run_needed(verbosity) << std::endl;
 //  if (not force and not run_needed()) return false;
-  change_backend(backend.name);
   cached_status(unevaluated);
   backend_watcher_wait_milliseconds = 0;
   std::string line;
@@ -1420,7 +1425,7 @@ std::string sjef::Project::remote_server_run(const std::string& command, int ver
     m_remote_server->in << command << " >/dev/null 2>/dev/null &" << std::endl;
     return "";
   }
-  std::cerr << "remote_server_run m_remote_server->process.running" << m_remote_server->process.running() << std::endl;
+//  std::cerr << "remote_server_run m_remote_server->process.running" << m_remote_server->process.running() << std::endl;
   m_remote_server->in << "pwd" << std::endl;
   m_remote_server->in << command << std::endl;
   m_remote_server->in << ">&2 echo '" << terminator << "' $?" << std::endl;
@@ -1469,7 +1474,7 @@ void sjef::Project::ensure_remote_server() const {
   m_remote_server->host = this->backend_get(backend, "host");
   if (m_remote_server->host == "localhost")
 //    std::cerr << "ensure_remote_server() returning for locahost master=" << m_master_of_slave << std::endl;
-  if (m_remote_server->host == "localhost") return;
+    if (m_remote_server->host == "localhost") return;
 //  std::cerr << "ssh " + m_control_path_option + " -O check " + m_remote_server->host << std::endl;
   if (m_use_control_path) {
     auto c = boost::process::child(bp::search_path("ssh"), m_control_path_option, "-O check", m_remote_server->host,
@@ -1567,10 +1572,10 @@ void sjef::Project::change_backend(std::string backend, bool force) {
   bool unchanged = property_get("backend") == backend;
 //  std::cerr << "ENTER change_backend() joinable=" << m_backend_watcher.joinable() <<", master="<<m_master_of_slave << std::endl;
   if (not force and unchanged and m_backend_watcher.joinable()) return;
-  auto be = property_get("backend");
 //  std::cerr << "change_backend to " << backend << " for project " << name() << " at address " << this << std::endl;
 //  std::cerr << "current backend " << be << ", unchanged=" << unchanged << std::endl;
   if (not unchanged) {
+    throw_if_backend_invalid(backend);
     property_set("backend", backend);
     property_delete("jobnumber");
 //    std::cerr << "deleted property jobnumber; its value now is " << property_get("jobnumber") << std::endl;

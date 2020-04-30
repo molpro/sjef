@@ -296,10 +296,11 @@ std::string Project::cache(const Backend& backend) const {
 
 std::mutex synchronize_mutex;
 bool Project::synchronize(int verbosity, bool nostatus) const {
+  verbosity += 3;
 //  const std::lock_guard lock(m_synchronize_mutex);
   const std::lock_guard lock(synchronize_mutex);
   auto backend_name = property_get("backend");
-//  std::cerr << "backend_name in synchronise() " << backend_name << std::endl;
+  std::cerr << "backend_name in synchronise() " << backend_name << std::endl;
 //  for (const auto& keyval : m_backends)
 //    std::cerr << "m_backends[" << keyval.first << "]=" << keyval.second.name << std::endl;
   auto& backend = m_backends.at(backend_name);
@@ -339,7 +340,7 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
   ensure_remote_server();
   // absolutely send reserved files
   std::string rsync = "rsync";
-  std::string rsyncopt = "--timeout=5";
+  std::string rsyncopt = "-vv --timeout=5";
   rsyncopt += " --exclude=backup";
   rsyncopt += " --exclude=*.out_*";
   rsyncopt += " --exclude=*.xml_*";
@@ -355,9 +356,11 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
       + backend.host + ":"
       + cache(backend);
   if (verbosity > 1)
-    std::cerr << "rsync 3: " << cmd << std::endl;
+    std::cerr << "First rsync: " << cmd << std::endl;
   bp::child(cmd).wait();
   // fetch all newer files from backend
+  if (property_get("_private_sjef_project_backend_inactive_synced") == "1")
+    std::cerr << "second rsync not taken" << std::endl;
   if (property_get("_private_sjef_project_backend_inactive_synced") == "1") return true;
   {
     auto cmd = std::string{bp::search_path(rsync).native()} + " " +
@@ -372,7 +375,7 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
     }
     cmd += backend.host + ":" + cache(backend) + "/ " + m_filename;
     if (verbosity > 1)
-      std::cerr << cmd << std::endl;
+      std::cerr << "second rsync " << cmd << std::endl;
     bp::child(cmd).wait();
   }
   if (not nostatus) // to avoid infinite loop with call from status()

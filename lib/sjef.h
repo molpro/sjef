@@ -40,7 +40,7 @@ class Project {
  private:
   std::unique_ptr<pugi_xml_document> m_backend_doc;
   mutable std::unique_ptr<boost::process::ipstream> m_status_stream;
-  mutable struct {
+  struct remote_server {
     boost::process::child process;
     boost::process::opstream in;
     boost::process::ipstream out;
@@ -48,7 +48,8 @@ class Project {
     std::string host;
     std::string last_out;
     std::string last_err;
-  } m_remote_server;
+  };
+  mutable std::shared_ptr<remote_server> m_remote_server;
   mutable std::string m_control_path_option;
   mutable std::chrono::milliseconds m_status_lifetime;
   mutable std::chrono::time_point<std::chrono::steady_clock> m_status_last;
@@ -134,13 +135,10 @@ class Project {
   /*!
    * @brief Synchronize the project with a cached copy belonging to a backend. name.inp, name.xyz, Info.plist, and any files brought in with import(), will be pushed from the
    * master copy to the backend, and all other files will be pulled from the backend.
-   * @param name
    * @param verbosity If >0, show underlying processing
    * @return
    */
-  bool synchronize(std::string name = "", int verbosity = 0) const;
- private:
-  bool synchronize(const Backend& backend, int verbosity = 0, bool nostatus = false) const;
+  bool synchronize(int verbosity = 0, bool nostatus = false) const;
  public:
   /*!
    * @brief Start a sjef job

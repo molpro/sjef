@@ -441,10 +441,6 @@ TEST(project, early_change_backend) {
       << "<?xml version=\"1.0\"?>\n<backends><backend name=\"test\" host=\"127.0.0.1\" run_command=\"true\"/></backends>"
       << std::endl;
   sjef::Project p(state.testfile(std::string{"early_change_backend."} + suffix));
-  for (const auto& name : p.backend_names())
-    std::cout << "defined backend: " << name << std::endl;
-//  p.change_backend("orpheus25klaus");
-//  p.change_backend("hawk");
   p.change_backend("test");
 }
 

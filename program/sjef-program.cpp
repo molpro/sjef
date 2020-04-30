@@ -246,22 +246,12 @@ int main(int argc, char* argv[]) {
       } else if (command == "sync") {
 //      Project proj(project);
         if (verboseSwitch.getValue() > 0) std::cerr << "Synchronize project " << proj.filename() << std::endl;
-        auto cbe = proj.property_get("backend");
-        if (cbe.empty()) {
-          if (!extras.empty())
-            success = proj.synchronize(extras.front(), verboseSwitch.getValue());
-        } else {
-          if (!extras.empty())
-            throw TCLAP::CmdLineParseException(
-                "Cannot synchronize with backend " + extras.front() + " because backend " + cbe + " is active");
-          success = proj.synchronize(cbe, verboseSwitch.getValue());
-        }
+        success = proj.synchronize(verboseSwitch.getValue());
       } else if (command == "edit")
         success = system(("eval ${VISUAL:-${EDITOR:-vi}} \\'" + proj.filename("inp") + "\\'").c_str());
       else if (command == "browse") {
         if (!proj.property_get("backend").empty())
-          success = proj.synchronize((proj.property_get("backend")),
-                                     verboseSwitch.getValue());
+          success = proj.synchronize(verboseSwitch.getValue());
         if (success) success = system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out") + "\\'").c_str());
       } else if (command == "clean") {
         proj.clean(true, false, false);
@@ -288,7 +278,7 @@ int main(int argc, char* argv[]) {
             proj.change_backend(arguments);
             std::cout << "backend changed to " << proj.property_get("backend") << std::endl;
           } else if (command == "sync") {
-            proj.synchronize(proj.property_get("backend"), verboseSwitch.getValue());
+            proj.synchronize(verboseSwitch.getValue());
           } else if (command == "run") {
             if (proj.run(proj.property_get("backend"), verboseSwitch.getValue(), true, false))
               std::cout << "Job number: " << proj.property_get("jobnumber") << std::endl;
@@ -309,7 +299,7 @@ int main(int argc, char* argv[]) {
             if (
                 !proj.property_get("backend").empty()
                     and
-                        proj.synchronize((proj.property_get("backend")), verboseSwitch.getValue())
+                        proj.synchronize(verboseSwitch.getValue())
                 )
               system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out") + "\\'").c_str());
           } else

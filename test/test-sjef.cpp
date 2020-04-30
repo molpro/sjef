@@ -435,7 +435,7 @@ TEST(project, spawn_many_molpro) {
 
 TEST(project, early_change_backend) {
   savestate state;
-  std::string suffix{"early_change_backend"};
+  std::string suffix{"someprogram"};
   auto backendfile = state.testfile(std::string{"~/.sjef/"} + suffix + "/backends.xml");
   std::ofstream(backendfile)
       << "<?xml version=\"1.0\"?>\n<backends><backend name=\"test\" host=\"127.0.0.1\" run_command=\"true\"/></backends>"

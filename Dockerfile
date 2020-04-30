@@ -3,9 +3,22 @@ FROM alpine:latest
 
 # Install any needed packages specified in requirements.txt
 RUN apk update && apk add --no-cache \ 
-cmake g++ gfortran libxml2-dev git doxygen boost-dev boost-filesystem wget tar build-base binutils file util-linux bash rsync
+cmake g++ gfortran libxml2-dev git doxygen boost-dev boost-filesystem wget tar build-base binutils file util-linux bash rsync openssh procps
 
-RUN apk update && apk add --no-cache procps
-#RUN apk update && apk add --no-cache curl && curl -O https://gist.github.com/ashsmith/55098099d2a5b5dfed9935dd4488abd6/raw/9113834d220fca40ed69e53c198a8891a4357d8e/ps_opt_p_enabled_for_alpine.sh \
-#  && mv ps_opt_p_enabled_for_alpine.sh /usr/local/bin/ps \
-#  && chmod +x /usr/local/bin/ps
+RUN sed -i s/#PermitRootLogin.*/PermitRootLogin\ yes/ /etc/ssh/sshd_config \
+  && echo "root:root" | chpasswd \
+  && rm -rf /var/cache/apk/*
+RUN mkdir -p /root/.ssh \
+&& echo "Host *" >> /root/.ssh/config \
+&& echo "StrictHostKeyChecking no" >> /root/.ssh/config
+RUN sed -ie 's/#Port 22/Port 22/g' /etc/ssh/sshd_config
+RUN sed -ri 's/#HostKey \/etc\/ssh\/ssh_host_key/HostKey \/etc\/ssh\/ssh_host_key/g' /etc/ssh/sshd_config
+RUN sed -ir 's/#HostKey \/etc\/ssh\/ssh_host_rsa_key/HostKey \/etc\/ssh\/ssh_host_rsa_key/g' /etc/ssh/sshd_config
+RUN sed -ir 's/#HostKey \/etc\/ssh\/ssh_host_dsa_key/HostKey \/etc\/ssh\/ssh_host_dsa_key/g' /etc/ssh/sshd_config
+RUN sed -ir 's/#HostKey \/etc\/ssh\/ssh_host_ecdsa_key/HostKey \/etc\/ssh\/ssh_host_ecdsa_key/g' /etc/ssh/sshd_config
+RUN sed -ir 's/#HostKey \/etc\/ssh\/ssh_host_ed25519_key/HostKey \/etc\/ssh\/ssh_host_ed25519_key/g' /etc/ssh/sshd_config
+RUN /usr/bin/ssh-keygen -A
+RUN ssh-keygen -t rsa -b 4096 -f  /etc/ssh/ssh_host_key
+RUN ssh-keygen -f /root/.ssh/id_rsa -N '' && cp /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
+EXPOSE 22
+ENTRYPOINT /usr/sbin/sshd && /bin/bash

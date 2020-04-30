@@ -1429,7 +1429,7 @@ std::string sjef::Project::remote_server_run(const std::string& command, int ver
   m_remote_server->last_out.clear();
   while (std::getline(m_remote_server->out, line) && line != terminator)
     m_remote_server->last_out += line + '\n';
-  if (verbosity > -1)
+  if (verbosity > 1)
     std::cerr << "out from remote command " << command << ": " << m_remote_server->last_out << std::endl;
   m_remote_server->last_err.clear();
   while (std::getline(m_remote_server->err, line) && line.substr(0, terminator.size()) != terminator)
@@ -1446,13 +1446,11 @@ std::string sjef::Project::remote_server_run(const std::string& command, int ver
                                  + "\nStandard error:\n" + m_remote_server->last_err);
   return m_remote_server->last_out;
 }
-std::mutex debug_mutex;
 void sjef::Project::ensure_remote_server() const {
   if (m_master_instance != nullptr) {
     m_remote_server = m_master_instance->m_remote_server;
     return;
   }
-  const std::lock_guard debug_lock(debug_mutex);
   const std::lock_guard lock(m_remote_server_mutex);
   if (m_remote_server == nullptr)
     m_remote_server.reset(new remote_server());
@@ -1579,6 +1577,7 @@ void sjef::Project::change_backend(std::string backend, bool force) {
     ensure_remote_server();
 //    if (this->m_backends.at(backend).host != "localhost")
 //      std::cerr << "change_backend() about to call remote_server_run() for mkdir, master=" << m_master_of_slave
+//      << "cache: " <<cache(this->m_backends.at(backend))
 //                << std::endl;
     if (this->m_backends.at(backend).host != "localhost")
       remote_server_run(std::string{"mkdir -p "} + cache(this->m_backends.at(backend)));

@@ -296,7 +296,6 @@ std::string Project::cache(const Backend& backend) const {
 
 std::mutex synchronize_mutex;
 bool Project::synchronize(int verbosity, bool nostatus) const {
-  verbosity += 3;
 //  const std::lock_guard lock(m_synchronize_mutex);
   const std::lock_guard lock(synchronize_mutex);
   auto backend_name = property_get("backend");
@@ -340,7 +339,7 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
   ensure_remote_server();
   // absolutely send reserved files
   std::string rsync = "rsync";
-  std::string rsyncopt = "-vv --timeout=5";
+  std::string rsyncopt = "--timeout=5";
   rsyncopt += " --exclude=backup";
   rsyncopt += " --exclude=*.out_*";
   rsyncopt += " --exclude=*.xml_*";

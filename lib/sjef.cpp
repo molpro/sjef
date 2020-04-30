@@ -299,7 +299,7 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
 //  const std::lock_guard lock(m_synchronize_mutex);
   const std::lock_guard lock(synchronize_mutex);
   auto backend_name = property_get("backend");
-  std::cerr << "backend_name in synchronise() " << backend_name << std::endl;
+//  std::cerr << "backend_name in synchronise() " << backend_name << std::endl;
 //  for (const auto& keyval : m_backends)
 //    std::cerr << "m_backends[" << keyval.first << "]=" << keyval.second.name << std::endl;
   auto& backend = m_backends.at(backend_name);
@@ -687,7 +687,7 @@ bool Project::run(int verbosity, bool force, bool wait) {
     property_set("_private_sjef_project_backend_inactive_synced", "0");
     if (verbosity > 3) std::cerr << "cache(backend) " << cache(backend) << std::endl;
     auto jobstring =
-        "cd " + cache(backend) + "; nohup " + run_command + " " + optionstring
+        "cd " + cache(backend) + " 2>/dev/null >/dev/null; nohup " + run_command + " " + optionstring
             + this->name()
             + ".inp";
     if (backend.run_jobnumber == "([0-9]+)") jobstring += "& echo $! "; // go asynchronous if a straight launch
@@ -871,8 +871,10 @@ status Project::status(int verbosity, bool cached) const {
 //    std::cerr << "want to use cached status but cannot because not yet evaluated " << cached_status() << std::endl;
 //  else
 //    std::cerr << "do not want to use cached status " << cached_status() << std::endl;
+//if (not m_master_of_slave) std::cerr << "slave enters status() "<<std::endl;
   if (cached and cached_status() != unevaluated and m_master_of_slave) return cached_status();
   if (property_get("backend").empty()) return unknown;
+//  if (not m_master_of_slave) std::cerr << "slave still in status() "<<std::endl;
   auto start_time = std::chrono::steady_clock::now();
   auto bes = property_get("backend");
   if (bes.empty()) bes = sjef::Backend::default_name;
@@ -1428,7 +1430,6 @@ std::string sjef::Project::remote_server_run(const std::string& command, int ver
     return "";
   }
 //  std::cerr << "remote_server_run m_remote_server->process.running" << m_remote_server->process.running() << std::endl;
-  m_remote_server->in << "pwd" << std::endl;
   m_remote_server->in << command << std::endl;
   m_remote_server->in << ">&2 echo '" << terminator << "' $?" << std::endl;
   m_remote_server->in << "echo '" << terminator << "'" << std::endl;

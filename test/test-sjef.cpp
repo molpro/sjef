@@ -442,7 +442,7 @@ TEST(project, early_change_backend) {
       << std::endl;
   sjef::Project p(state.testfile(std::string{"early_change_backend."} + suffix));
   for (const auto& name : p.backend_names())
-    std::cout << name << std::endl;
+    std::cout << "defined backend: " << name << std::endl;
 //  p.change_backend("orpheus25klaus");
 //  p.change_backend("hawk");
   p.change_backend("test");

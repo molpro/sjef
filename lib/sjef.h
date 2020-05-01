@@ -68,7 +68,7 @@ class Project {
   bool m_master_of_slave;
   mutable std::mutex m_remote_server_mutex;
   mutable std::mutex m_synchronize_mutex;
-  void report_shutdown(const std::string& message) const;
+  mutable std::string m_backend; ///< The current backend
   std::string remote_server_run(const std::string& command, int verbosity = 0, bool wait = true) const;
 ///> @private
   static const std::string s_propertyFile;

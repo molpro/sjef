@@ -297,6 +297,7 @@ std::string Project::cache(const Backend& backend) const {
 
 std::mutex synchronize_mutex;
 bool Project::synchronize(int verbosity, bool nostatus) const {
+  verbosity += 2;
 //  const std::lock_guard lock(m_synchronize_mutex);
   const std::lock_guard lock(synchronize_mutex);
   auto backend_name = property_get("backend");
@@ -334,7 +335,7 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
 //  std::cerr << "locally_modified=" << locally_modified << std::endl;
   if (not locally_modified
       and not backend_changed
-      and property_get("_private_sjef_project_backend_inactive_synced") == "1")
+      and std::stoi(property_get("_private_sjef_project_backend_inactive_synced")) > 2)
     return true;
 //  std::cerr << "really syncing" << std::endl;
   //TODO: implement more robust error checking
@@ -357,6 +358,7 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
     std::cerr << "rsyncopt: " << rsyncopt << std::endl;
   auto cmd = std::string{bp::search_path(rsync).native()} + " " +
       rsyncopt + " " +
+      "--exclude=*.out --exclude=*.xml --exclude=*.log " +
       "-L -a --update " + " " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + m_filename + "/ "
       + backend.host + ":"
       + cache(backend);
@@ -364,9 +366,10 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
     std::cerr << "First rsync: " << cmd << std::endl;
   bp::child(cmd).wait();
   // fetch all newer files from backend
-  if (property_get("_private_sjef_project_backend_inactive_synced") == "1")
+  if (std::stoi(property_get("_private_sjef_project_backend_inactive_synced")) > 2) {
     std::cerr << "second rsync not taken" << std::endl;
-  if (property_get("_private_sjef_project_backend_inactive_synced") == "1") return true;
+    return true;
+  }
   {
     auto cmd = std::string{bp::search_path(rsync).native()} + " " +
         rsyncopt +
@@ -379,15 +382,19 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
         cmd += "--exclude=" + f + " ";
     }
     cmd += backend.host + ":" + cache(backend) + "/ " + m_filename;
-    if (verbosity > 1)
+    if (verbosity > -1)
       std::cerr << "second rsync " << cmd << std::endl;
     bp::child(cmd).wait();
   }
   if (not nostatus) // to avoid infinite loop with call from status()
     status(0); // to get backend_inactive
-//  std::cerr << "synchronize backend_inactive=" << property_get("_private_sjef_project_backend_inactive") << std::endl;
-  const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced",
-                                           property_get("_private_sjef_project_backend_inactive"));
+  std::cerr << "synchronize backend_inactive=" << property_get("_private_sjef_project_backend_inactive") << std::endl;
+  if (property_get("_private_sjef_project_backend_inactive") != "0") {
+    auto n = std::stoi(property_get("_private_sjef_project_backend_inactive_synced"));
+    const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced",
+                                             std::to_string(n + 1));
+    std::cerr << "advancing count to " << n + 1 << std::endl;
+  }
 //  std::cerr << "synchronize backend_inactive_synced=" << property_get("_private_sjef_project_backend_inactive_synced") << std::endl;
   return true;
 }
@@ -859,7 +866,7 @@ std::string Project::file_contents(const std::string& suffix, const std::string&
   if (sync
       and not be.empty()
       and be != "local"
-      and property_get("_private_sjef_project_backend_inactive_synced") != "1"
+      and std::stoi(property_get("_private_sjef_project_backend_inactive_synced")) > 2
       and suffix != m_suffixes.at("inp")
       )
     synchronize();

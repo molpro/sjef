@@ -297,7 +297,6 @@ std::string Project::cache(const Backend& backend) const {
 
 std::mutex synchronize_mutex;
 bool Project::synchronize(int verbosity, bool nostatus) const {
-  verbosity += 2;
 //  const std::lock_guard lock(m_synchronize_mutex);
   const std::lock_guard lock(synchronize_mutex);
   auto backend_name = property_get("backend");

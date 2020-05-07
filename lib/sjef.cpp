@@ -1561,7 +1561,6 @@ void sjef::Project::change_backend(std::string backend, bool force) {
 //    std::cerr << "after ensure_remote_server backend " << m_master_of_slave << std::endl;
     if (m_master_of_slave) {
       if (this->m_backends.at(backend).host != "localhost") {
-        auto hostname = remote_server_run("hostname");
         remote_server_run(std::string{"mkdir -p "} + cache(this->m_backends.at(backend)));
       }
       m_unmovables.shutdown_flag.clear();

@@ -1,9 +1,16 @@
-# parent image
-FROM alpine:latest
+FROM ubuntu:focal
 
-# Install any needed packages specified in requirements.txt
-RUN apk update && apk add --no-cache \ 
-cmake g++ gfortran libxml2-dev git doxygen boost-dev boost-filesystem wget tar build-base binutils file util-linux bash rsync openssh procps
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+cmake g++ gfortran libxml2-dev git doxygen libboost-all-dev wget tar binutils file util-linux bash rsync openssh-server procps \
+  && apt-get clean
+
+RUN ( \
+    echo 'LogLevel DEBUG2'; \
+    echo 'PermitRootLogin yes'; \
+    echo 'PasswordAuthentication yes'; \
+    echo 'Subsystem sftp /usr/lib/openssh/sftp-server'; \
+  ) > /etc/ssh/sshd_config \
+  && mkdir /run/sshd
 
 RUN sed -i s/#PermitRootLogin.*/PermitRootLogin\ yes/ /etc/ssh/sshd_config \
   && echo "root:root" | chpasswd \

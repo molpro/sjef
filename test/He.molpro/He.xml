@@ -6,32 +6,28 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
  <!--
 
- Primary working directories    : /var/folders/pb/cdv3flcs7f5_rv7kw9zqg65m0000gp/T//molpro.TYFcmLBKfU
- Secondary working directories  : /var/folders/pb/cdv3flcs7f5_rv7kw9zqg65m0000gp/T//molpro.TYFcmLBKfU
+ Primary working directories    : /var/folders/bg/1lcvbnvj7sv5vwxrqbqm40v00000gn/T//molpro.sVknxJweJA
+ Secondary working directories  : /var/folders/bg/1lcvbnvj7sv5vwxrqbqm40v00000gn/T//molpro.sVknxJweJA
  Wavefunction directory         : /Users/peterk/wfu/
- Main file repository           : /var/folders/pb/cdv3flcs7f5_rv7kw9zqg65m0000gp/T//molpro.TYFcmLBKfU/
+ Main file repository           : /var/folders/bg/1lcvbnvj7sv5vwxrqbqm40v00000gn/T//molpro.sVknxJweJA/
 
  id        : peterk
 
- Nodes                 nprocs
- pjkws10.chemy.cf.ac.uk    1
+ Nodes                  nprocs
+ Peters-Mac-mini-2.local    1
 
  Using customized tuning parameters: mindgm=1; mindgv=20; mindgc=4; mindgr=1; noblas=0; minvec=7
  default implementation of scratch files=df  
 
 
- Variables initialized (935), CPU time= 0.00 sec
+ Variables initialized (940), CPU time= 0.00 sec
  --><job>
   <!--
  geometry={He}
+ basis,minao
  rhf
- mp2
- 
- 
- ccsd
- 
- Commands  initialized (796), CPU time= 0.01 sec, 620 directives.
- Default parameters read. Elapsed time= 0.23 sec
+ Commands  initialized (798), CPU time= 0.01 sec, 646 directives.
+ Default parameters read. Elapsed time= 0.21 sec
 
  Checking input...
  Passed
@@ -40,21 +36,28 @@
 
                                          ***  PROGRAM SYSTEM MOLPRO  ***
                                        Copyright, TTI GmbH Stuttgart, 2015
-                                    Version 2020.1 linked Jan 07 2020 17:18:37
+                                    Version 2020.1 linked Apr 06 2020 11:55:04
 
 
  **********************************************************************************************************************************
  LABEL *                                                                                 
-  64 bit serial version                                                                  DATE: 09-Jan-20          TIME: 16:52:45  
+  64 bit serial version                                                                  DATE: 01-May-20          TIME: 17:51:54  
  **********************************************************************************************************************************
 
- SHA1:             8f558667c1702ea555240e046f4e411da9cf092b
+ SHA1:             a361670df9941fd611af5de7bb5329191040062f
  **********************************************************************************************************************************
   -->
   <!--
 
- Variable memory set to  500000000 words,  buffer space 
+ Memory per process:       400 MW
+ Total memory per node:    400 MW
 
+ GA preallocation disabled
+ GA check disabled
+
+ Variable memory set to 400.0 MW
+
+ SETTING BASIS          =    MINAO
   --><jobstep command="RHF-SCF" commandset="SCFPRO">
    <!--
 
@@ -64,8 +67,7 @@
 
  Using spherical harmonics
 
- Library entry HE     S cc-pVDZ              selected for orbital group  1
- Library entry HE     P cc-pVDZ              selected for orbital group  1
+ Library entry HE     S MINAO                selected for orbital group  1
 
 
  PROGRAM * SEWARD (Integral evaluation for generally contracted gaussian basis sets)     Author: Roland Lindh, 1990
@@ -106,9 +108,9 @@
    1  HE      2.00    0.000000000    0.000000000    0.000000000
 
  NUCLEAR CHARGE:                    2
- NUMBER OF PRIMITIVE AOS:           7
- NUMBER OF SYMMETRY AOS:            7
- NUMBER OF CONTRACTIONS:            5   (    2Ag  +    1B3u +    1B2u +    0B1g +    1B1u +    0B2g +    0B3g +    0Au  )
+ NUMBER OF PRIMITIVE AOS:           6
+ NUMBER OF SYMMETRY AOS:            6
+ NUMBER OF CONTRACTIONS:            1   (    1Ag  +    0B3u +    0B2u +    0B1g +    0B1u +    0B2g +    0B3g +    0Au  )
  NUMBER OF INNER CORE ORBITALS:     0   (    0Ag  +    0B3u +    0B2u +    0B1g +    0B1u +    0B2g +    0B3g +    0Au  )
  NUMBER OF OUTER CORE ORBITALS:     0   (    0Ag  +    0B3u +    0B2u +    0B1g +    0B1u +    0B2g +    0B3g +    0Au  )
  NUMBER OF VALENCE ORBITALS:        1   (    1Ag  +    0B3u +    0B2u +    0B1g +    0B1u +    0B2g +    0B3g +    0Au  )
@@ -118,10 +120,7 @@
 
  Eigenvalues of metric
 
-         1 0.111E+00 0.189E+01
-         2 0.100E+01
-         3 0.100E+01
-         5 0.100E+01
+         1 0.100E+01
 
 
  Contracted 2-electron integrals neglected if value below      1.0D-11
@@ -130,13 +129,13 @@
      0.262 MB (compressed) written to integral file (100.0%)
 
 
- NUMBER OF SORTED TWO-ELECTRON INTEGRALS:         45.     BUFFER LENGTH:  32768
- NUMBER OF SEGMENTS:   1  SEGMENT LENGTH:         45      RECORD LENGTH: 524288
+ NUMBER OF SORTED TWO-ELECTRON INTEGRALS:          1.     BUFFER LENGTH:  32768
+ NUMBER OF SEGMENTS:   1  SEGMENT LENGTH:          1      RECORD LENGTH: 524288
 
  Memory used in sort:       0.56 MW
 
- SORT1 READ          61. AND WROTE          45. INTEGRALS IN      1 RECORDS. CPU TIME:     0.00 SEC, REAL TIME:     0.01 SEC
- SORT2 READ          45. AND WROTE          45. INTEGRALS IN      1 RECORDS. CPU TIME:     0.00 SEC, REAL TIME:     0.00 SEC
+ SORT1 READ           1. AND WROTE           1. INTEGRALS IN      1 RECORDS. CPU TIME:     0.00 SEC, REAL TIME:     0.00 SEC
+ SORT2 READ           1. AND WROTE           1. INTEGRALS IN      1 RECORDS. CPU TIME:     0.00 SEC, REAL TIME:     0.00 SEC
 
  FILE SIZES:   FILE 1:    30.2 MBYTE,  FILE 4:     4.2 MBYTE,   TOTAL:     34.4 MBYTE
 
@@ -151,8 +150,8 @@
                                            T        V       H0       H01     AOSYM     SMH    MOLCAS    ERIS     OPER   
 
  PROGRAMS   *        TOTAL       INT
- CPU TIMES  *         0.42      0.34
- REAL TIME  *         1.68 SEC
+ CPU TIMES  *         0.33      0.26
+ REAL TIME  *         1.20 SEC
  DISK USED  *        34.66 MB
  **********************************************************************************************************************************
 
@@ -160,7 +159,7 @@
  PROGRAM * RHF-SCF (CLOSED SHELL)       Authors: W. Meyer, H.-J. Werner
 
 
- NUMBER OF ELECTRONS:       1+    1-
+ NUMBER OF ELECTRONS:       1+    1-    SPACE SYMMETRY=1    SPIN SYMMETRY: Singlet 
  CONVERGENCE THRESHOLDS:    1.00E-05 (Density)    1.00E-07 (Energy)
  MAX. NUMBER OF ITERATIONS:       60
  INTERPOLATION TYPE:            DIIS
@@ -169,29 +168,25 @@
 
 
 
- Orbital guess generated from atomic densities. Full valence occupancy:    1   0   0   0   0   0   0   0
-
+ Orbital guess generated from atomic densities. Full valence occupancy:    1
 
  Molecular orbital dump at record        2100.2
 
- Initial occupancy:   1   0   0   0   0
+ Initial occupancy:   1
 
  ITERATION    DDIFF          GRAD             ENERGY        2-EL.EN.            DIPOLE MOMENTS         DIIS   ORB.
-    1      0.000D+00      0.000D+00        -2.85516035      2.054167    0.00000    0.00000    0.00000    0    start
-    2      0.000D+00      0.370D-03        -2.85516048      2.053762    0.00000    0.00000    0.00000    1    diag
-    3      0.581D-03      0.280D-04        -2.85516048      2.053729    0.00000    0.00000    0.00000    2    diag
-    4      0.476D-04      0.160D-09        -2.85516048      2.053729    0.00000    0.00000    0.00000    3    diag
-    5      0.147D-09      0.735D-10        -2.85516048      2.053729    0.00000    0.00000    0.00000    0    orth
+    1      0.000D+00      0.000D+00        -2.86115334      2.051807    0.00000    0.00000    0.00000    0    start
+    2      0.000D+00      0.000D+00        -2.86115334      2.051807    0.00000    0.00000    0.00000    0    orth
 
- Final occupancy:   1   0   0   0   0
+ Final occupancy:   1
 
- !RHF STATE  1.1 Energy                -2.855160477243
+ !RHF STATE  1.1 Energy                -2.861153344782
    --><property name="Energy" method="RHF" principal="true" stateSymmetry="1" stateNumber="1"
-     value="-2.85516047724274"/><!--
+     value="-2.86115334478248"/><!--
  Nuclear energy                         0.00000000
- One-electron energy                   -3.88202510
- Two-electron energy                    1.02686463
- Virial quotient                       -0.99999451
+ One-electron energy                   -3.88705707
+ Two-electron energy                    1.02590373
+ Virial quotient                       -0.99999991
  !RHF STATE  1.1 Dipole moment          0.00000000     0.00000000     0.00000000
  Dipole moment /Debye                   0.00000000     0.00000000     0.00000000
    --><property name="Dipole moment" method="RHF" principal="true" stateSymmetry="1"
@@ -199,22 +194,11 @@
 
  Orbital energies:
 
-         1.1          2.1
-     -0.914148     1.397442
-
-         1.2
-      2.524372
-
-         1.3
-      2.524372
-
-         1.5
-      2.524372
+         1.1
+     -0.917625
 
 
- HOMO      1.1    -0.914148 =     -24.8752eV
- LUMO      2.1     1.397442 =      38.0263eV
- LUMO-HOMO         2.311590 =      62.9016eV
+ HOMO      1.1    -0.917625 =     -24.9698eV
 
 
  **********************************************************************************************************************************
@@ -228,190 +212,16 @@
                                          GEOM     BASIS   MCVARS     RHF  
 
  PROGRAMS   *        TOTAL   RHF-SCF       INT
- CPU TIMES  *         0.50      0.08      0.34
- REAL TIME  *         1.82 SEC
+ CPU TIMES  *         0.38      0.05      0.26
+ REAL TIME  *         1.28 SEC
  DISK USED  *        34.66 MB
  **********************************************************************************************************************************
    -->
-   <time start="16:52:45" end="16:52:46" cpu="0.5" system="0.4" real="1.82"/>
+   <time start="17:51:54" end="17:51:55" cpu="0.38" system="0.25" real="1.28"/>
    <storage units="megabyte" memory="0.0" sf="0.0" df="34.66" eaf="0.0"/>
   </jobstep><!--
-  --><jobstep command="MP2" commandset="CCSD">
-   <!--
-
-
- PROGRAM * MP2 (Closed-shell)     Authors: C. Hampel, H.-J. Werner, 1991, M. Deegan, P.J. Knowles, 1992
-
-
- Convergence thresholds:  THRVAR = 1.00D-08  THRDEN = 1.00D-06
-
- Number of closed-shell orbitals:   1 (   1   0   0   0   0 )
- Number of external orbitals:       4 (   1   1   1   0   1 )
-
- Molecular orbitals read from record     2100.2  Type=RHF/CANONICAL (state 1.1)
-
- Number of N-1 electron functions:               1
- Number of N-2 electron functions:               1
- Number of singly external CSFs:                 1
- Number of doubly external CSFs:                 4
- Total number of CSFs:                           6
-
- Length of J-op  integral file:               0.00 MB
- Length of K-op  integral file:               0.03 MB
-
- Integral transformation finished. Total CPU:   0.00 sec, npass=  1  Memory used:   0.07 MW
-
- Memory needed for MP2:                      0.00 MW
-
- SCS-MP2 correlation energy:           -0.030994007462   (PS=  1.200000  PT=  0.333333)
- SCS-MP2 total energy:                 -2.886154484704
-
-
-  Reference energy                     -2.855160477243
-  MP2 singlet pair energy              -0.025828339551
-  MP2 triplet pair energy               0.000000000000
-  MP2 correlation energy               -0.025828339551
-
- !MP2 total energy                     -2.880988816794
-   --><property name="energy" method="Reference" stateSymmetry="1" stateNumber="1"
-     value="-2.85516047724274"/>
-      <property name="singlet pair energy" method="MP2" stateSymmetry="1" stateNumber="1"
-     value="-0.258283395513888E-01"/>
-      <property name="triplet pair energy" method="MP2" stateSymmetry="1" stateNumber="1"
-     value="0.0"/>
-      <property name="correlation energy" method="MP2" stateSymmetry="1" stateNumber="1"
-     value="-0.258283395513888E-01"/>
-      <property name="total energy" method="MP2" principal="true" stateSymmetry="1"
-     stateNumber="1" value="-2.88098881679413"/><!--
-
-
- **********************************************************************************************************************************
- DATASETS  * FILE   NREC   LENGTH (MB)   RECORD NAMES
-              1      20       29.92       500      610      700      900      950      970     1000      129      960     1100   
-                                          VAR    BASINP    GEOM    SYMINP    ZMAT    AOBASIS   BASIS     P2S    ABASIS      S 
-                                         1400     1410     1200     1210     1080     1600     1650     1300     1700     1380   
-                                           T        V       H0       H01     AOSYM     SMH    MOLCAS    ERIS     OPER     JKOP   
-
-              2       4        2.73       700     1000      520     2100   
-                                         GEOM     BASIS   MCVARS     RHF  
-
- PROGRAMS   *        TOTAL       MP2   RHF-SCF       INT
- CPU TIMES  *         0.52      0.02      0.08      0.34
- REAL TIME  *         1.87 SEC
- DISK USED  *        34.66 MB
- **********************************************************************************************************************************
-   -->
-   <time start="16:52:46" end="16:52:46" cpu="0.02" system="0.0" real="0.05"/>
-   <storage units="megabyte" memory="0.0" sf="0.0" df="34.66" eaf="0.0"/>
-  </jobstep><!--
-  --><jobstep command="CCSD" commandset="CCSD">
-   <!--
-
-
- PROGRAM * CCSD (Closed-shell coupled cluster)     Authors: C. Hampel, H.-J. Werner, 1991, M. Deegan, P.J. Knowles, 1992
-
-
- Convergence thresholds:  THRVAR = 1.00D-08  THRDEN = 1.00D-06
-
- Number of closed-shell orbitals:   1 (   1   0   0   0   0 )
- Number of external orbitals:       4 (   1   1   1   0   1 )
-
- Molecular orbitals read from record     2100.2  Type=RHF/CANONICAL (state 1.1)
-
- Number of N-1 electron functions:               1
- Number of N-2 electron functions:               1
- Number of singly external CSFs:                 1
- Number of doubly external CSFs:                 4
- Total number of CSFs:                           6
-
- Length of J-op  integral file:               0.00 MB
- Length of K-op  integral file:               0.03 MB
- Length of 3-ext integral record:             0.00 MB
-
- Integral transformation finished. Total CPU:   0.00 sec, npass=  1  Memory used:   0.07 MW
-
- Reference energy:                     -2.85516048
-
- MP2 singlet pair energy:              -0.02582834
- MP2 triplet pair energy:               0.00000000
- MP2 correlation energy:               -0.02582834
- MP2 total energy:                     -2.88098882
-
- SCS-MP2 correlation energy:           -0.03099401   (PS=  1.200000  PT=  0.333333)
- SCS-MP2 total energy:                 -2.88615448
-
- ITER.      SQ.NORM     CORR.ENERGY   TOTAL ENERGY   ENERGY CHANGE        DEN1      VAR(S)    VAR(P)  DIIS     TIME  TIME/IT
-   1      1.00658016    -0.03214041    -2.88730089    -0.00631207    -0.00507080  0.32D-06  0.19D-03  1  1     0.00     0.00
-   2      1.00728799    -0.03243584    -2.88759632    -0.00029543    -0.00151371  0.62D-07  0.53D-06  2  2     0.00     0.00
-   3      1.00730767    -0.03243359    -2.88759407     0.00000225    -0.00002069  0.59D-09  0.59D-12  3  3     0.00     0.00
-   4      1.00730820    -0.03243455    -2.88759503    -0.00000096    -0.00000100  0.53D-32  0.91D-35  4  4     0.00     0.00
-   5      1.00730810    -0.03243435    -2.88759483     0.00000019     0.00000019  0.90D-43  0.31D-44  5  5     0.00     0.00
-
- Norm of t1 vector:      0.00110138      S-energy:     0.00000000      T1 diagnostic:  0.00055069
-                                                                       D1 diagnostic:  0.00077880
-
- Doubles amplitudes (print threshold =  0.500E-01):
-
-         I         J         SYM. A    SYM. B    A         B      T(IJ, AB)
-
-         1         1         1         1         1         1     -0.06474805
-
-
- RESULTS
- =======
-
-  Reference energy                     -2.855160477243
-  CCSD singlet pair energy             -0.032434353841
-  CCSD triplet pair energy              0.000000000000
-  CCSD correlation energy              -0.032434353841
-
- !CCSD total energy                    -2.887594831084
-
- Timing summary (sec):
-
- STEP                 CPU(USER)    SYS     CPU(TOT)    WALL
- CCSD iterations         0.01      0.01      0.02      0.02
-
- Program statistics:
-
- Available memory in ccsd:               499999994
- Min. memory needed in ccsd:                   152
- Max. memory used in ccsd:                     152
- Max. memory used in cckext:                 32887 ( 5 integral passes)
-
-   --><property name="energy" method="Reference" stateSymmetry="1" stateNumber="1"
-     value="-2.85516047724274"/>
-      <property name="singlet pair energy" method="CCSD" stateSymmetry="1" stateNumber="1"
-     value="-0.324343538412254E-01"/>
-      <property name="triplet pair energy" method="CCSD" stateSymmetry="1" stateNumber="1"
-     value="0.0"/>
-      <property name="correlation energy" method="CCSD" stateSymmetry="1" stateNumber="1"
-     value="-0.324343538412168E-01"/>
-      <property name="total energy" method="CCSD" principal="true" stateSymmetry="1"
-     stateNumber="1" value="-2.88759483108395"/><!--
-
-
- **********************************************************************************************************************************
- DATASETS  * FILE   NREC   LENGTH (MB)   RECORD NAMES
-              1      20       29.92       500      610      700      900      950      970     1000      129      960     1100   
-                                          VAR    BASINP    GEOM    SYMINP    ZMAT    AOBASIS   BASIS     P2S    ABASIS      S 
-                                         1400     1410     1200     1210     1080     1600     1650     1300     1700     1380   
-                                           T        V       H0       H01     AOSYM     SMH    MOLCAS    ERIS     OPER     JKOP   
-
-              2       4        2.73       700     1000      520     2100   
-                                         GEOM     BASIS   MCVARS     RHF  
-
- PROGRAMS   *        TOTAL      CCSD       MP2   RHF-SCF       INT
- CPU TIMES  *         0.55      0.02      0.02      0.08      0.34
- REAL TIME  *         1.91 SEC
- DISK USED  *        34.66 MB
- **********************************************************************************************************************************
-   -->
-   <time start="16:52:46" end="16:52:46" cpu="0.03" system="0.01" real="0.04"/>
-   <storage units="megabyte" memory="0.0" sf="0.0" df="34.66" eaf="0.0"/>
-  </jobstep><!--
-  --><molecule id="M7DC113F" method="CCSD" basis="cc-pVDZ" energy="-2.88759483108395">
-   <cml:molecule id="M7DC113F" spinMultiplicity="1" formalCharge="0">
+  --><molecule id="M6B12817" method="RHF" basis="MINAO" energy="-2.86115334478248">
+   <cml:molecule id="M6B12817" spinMultiplicity="1" formalCharge="0">
     <cml:symmetry pointGroup="D2h" irreducibleRepresentation="1">
      <cml:transform3 title="generator" id="X">
       -1  0  0  0  0  1  0  0  0  0  1  0  0  0  0  1
@@ -439,38 +249,27 @@
     <irreducibleRepresentation index="7" id="B3g" cartesian="yz"/>
     <irreducibleRepresentation index="8" id="Au" cartesian="xyz"/>
    </symmetry>
-   <basisSet id="ORBITAL" length="5" angular="spherical" type="gaussian" groups="2"
-     cartesianLength="5" primitives="7">
-    <basisGroup id="1" minL="0" maxL="0" primitives="4" angular="spherical" contractions="2">
+   <basisSet id="ORBITAL" length="1" angular="spherical" type="gaussian" groups="1"
+     cartesianLength="1" primitives="6">
+    <basisGroup id="1" minL="0" maxL="0" primitives="6" angular="spherical" contractions="1">
      <basisExponents>
-       38.36 5.77 1.24 0.2976
+       234.0 35.16 7.989 2.212 0.6669 0.2089
      </basisExponents>
      <basisContraction id="1">
-       0.238089927053061E-01 0.154890952543894 0.469986856003557 0.513026842816795
-     </basisContraction>
-     <basisContraction id="2">
-       0.0 0.0 0.0 1.0
-     </basisContraction>
-    </basisGroup>
-    <basisGroup id="2" minL="1" maxL="1" primitives="1" angular="spherical" contractions="1">
-     <basisExponents>
-       1.275
-     </basisExponents>
-     <basisContraction id="1">
-       1.0
+       0.258700027252953E-02 0.195330020577191E-01 0.909980095862551E-01 0.272050028659319 0.47806505036213 0.307737032418794
      </basisContraction>
     </basisGroup>
     <association xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="extended">
      <bases xlink:type="locator" xlink:label="bases"
-       xlink:href="#xpointer(//molecule[@id='M7DC113F']//basisGroup[@id='1' or @id='2'])"/>
+       xlink:href="#xpointer(//molecule[@id='M6B12817']//basisGroup[@id='1'])"/>
      <atoms xlink:label="atoms"
-       xlink:href="#xpointer(//molecule[@id='M7DC113F']//atom[@id='a1'])"/>
+       xlink:href="#xpointer(//molecule[@id='M6B12817']//atom[@id='a1'])"/>
      <associate xlink:type="arc" xlink:from="atoms" xlink:to="bases"/>
     </association>
    </basisSet>
    <variables>
     <variable name="_NUMVAR" type="xsd:double" length="1">
-     <value>936.0</value>
+     <value>941.0</value>
     </variable>
     <variable name="_AVOGAD" type="xsd:double" units="1/MOL" length="1">
      <value>0.6022136736E+24</value>
@@ -635,7 +434,7 @@
      <value>0.0</value>
     </variable>
     <variable name="_MODUL_MRCC" type="xsd:double" length="1">
-     <value>1.0</value>
+     <value>0.0</value>
     </variable>
     <variable name="_MODUL_NBO6" type="xsd:double" length="1">
      <value>0.0</value>
@@ -653,7 +452,7 @@
      <value>0.0</value>
     </variable>
     <variable name="_MRCC_EXEC" type="xsd:string" length="1">
-     <value>/Users/peterk/bin/dmrcc</value>
+     <value></value>
     </variable>
     <variable name="_FITC_AO_SAVED" type="xsd:double" length="1">
      <value>0.0</value>
@@ -688,6 +487,9 @@
     <variable name="_SYNCM" type="xsd:double" length="1">
      <value>0.0</value>
     </variable>
+    <variable name="_BASIS" type="xsd:string" length="1">
+     <value>MINAO</value>
+    </variable>
     <variable name="_ZORIENT" type="xsd:double" length="1">
      <value>1.0</value>
     </variable>
@@ -704,19 +506,16 @@
      <value>0.0</value>
     </variable>
     <variable name="_PROGRAM" type="xsd:string" length="1">
-     <value>CCSD</value>
+     <value>RHF-SCF</value>
     </variable>
     <variable name="_CPUSTEP" type="xsd:double" units="SEC" length="1">
-     <value>0.3E-01</value>
+     <value>0.5E-01</value>
     </variable>
     <variable name="_SYSSTEP" type="xsd:double" units="SEC" length="1">
      <value>0.1E-01</value>
     </variable>
     <variable name="_WALLSTEP" type="xsd:double" units="SEC" length="1">
-     <value>0.4E-01</value>
-    </variable>
-    <variable name="!DFMP2" type="xsd:double" length="1">
-     <value>0.0</value>
+     <value>0.8E-01</value>
     </variable>
     <variable name="!DFSCF" type="xsd:double" length="1">
      <value>0.0</value>
@@ -725,43 +524,16 @@
      <value>0.0</value>
     </variable>
     <variable name="_CPUTOT" type="xsd:double" units="SEC" length="1">
-     <value>0.55</value>
+     <value>0.38</value>
     </variable>
-    <variable name="_CPUCCSD" type="xsd:double" units="SEC" length="1">
+    <variable name="_CPUSORT" type="xsd:double" units="SEC" length="1">
+     <value>0.2E-01</value>
+    </variable>
+    <variable name="_SYSSORT" type="xsd:double" units="SEC" length="1">
      <value>0.1E-01</value>
     </variable>
-    <variable name="_SYSCCSD" type="xsd:double" units="SEC" length="1">
-     <value>0.1E-01</value>
-    </variable>
-    <variable name="_WALLCCSD" type="xsd:double" units="SEC" length="1">
-     <value>0.199999809265137E-01</value>
-    </variable>
-    <variable name="_CPUF12" type="xsd:double" units="SEC" length="1">
-     <value>0.0</value>
-    </variable>
-    <variable name="_SYSF12" type="xsd:double" units="SEC" length="1">
-     <value>0.0</value>
-    </variable>
-    <variable name="_WALLF12" type="xsd:double" units="SEC" length="1">
-     <value>0.0</value>
-    </variable>
-    <variable name="_CPUF12B" type="xsd:double" units="SEC" length="1">
-     <value>0.0</value>
-    </variable>
-    <variable name="_SYSF12B" type="xsd:double" units="SEC" length="1">
-     <value>0.0</value>
-    </variable>
-    <variable name="_WALLF12B" type="xsd:double" units="SEC" length="1">
-     <value>0.0</value>
-    </variable>
-    <variable name="_CPUTRANS" type="xsd:double" units="SEC" length="1">
-     <value>0.0</value>
-    </variable>
-    <variable name="_SYSTRANS" type="xsd:double" units="SEC" length="1">
-     <value>0.0</value>
-    </variable>
-    <variable name="_WALLTRANS" type="xsd:double" units="SEC" length="1">
-     <value>0.0</value>
+    <variable name="_WALLSORT" type="xsd:double" units="SEC" length="1">
+     <value>0.300002098083496E-01</value>
     </variable>
     <variable name="_DFTEXFAC" type="xsd:double" units="AU" length="1">
      <value>1.0</value>
@@ -788,55 +560,16 @@
      <value>1.1</value>
     </variable>
     <variable name="_EHOMO" type="xsd:double" length="1">
-     <value>-0.914147925940615</value>
-    </variable>
-    <variable name="_LUMO" type="xsd:double" length="1">
-     <value>2.1</value>
-    </variable>
-    <variable name="_ELUMO" type="xsd:double" length="1">
-     <value>1.39744170422863</value>
-    </variable>
-    <variable name="_EMP2" type="xsd:double" units="AU" length="1">
-     <value>-2.88098881679413</value>
-    </variable>
-    <variable name="_EMP2_SING" type="xsd:double" units="AU" length="1">
-     <value>-0.258283395513888E-01</value>
-    </variable>
-    <variable name="_EMP2_TRIP" type="xsd:double" units="AU" length="1">
-     <value>0.0</value>
-    </variable>
-    <variable name="_EMP2_SCS" type="xsd:double" units="AU" length="1">
-     <value>-2.8861544847044</value>
-    </variable>
-    <variable name="_ECSING" type="xsd:double" units="AU" length="1">
-     <value>-0.324343538412254E-01</value>
-    </variable>
-    <variable name="_ECTRIP" type="xsd:double" units="AU" length="1">
-     <value>0.0</value>
-    </variable>
-    <variable name="_ENERGC" type="xsd:double" units="AU" length="1">
-     <value>-2.88759483108395</value>
-    </variable>
-    <variable name="_ENERG_CC" type="xsd:double" units="AU" length="1">
-     <value>0.0</value>
-    </variable>
-    <variable name="_ENERG_CV" type="xsd:double" units="AU" length="1">
-     <value>0.0</value>
-    </variable>
-    <variable name="_ENERG_VV" type="xsd:double" units="AU" length="1">
-     <value>-0.324343538412168E-01</value>
-    </variable>
-    <variable name="_ENERGR" type="xsd:double" units="AU" length="1">
-     <value>-2.85516047724274</value>
+     <value>-0.91762480842002</value>
     </variable>
     <variable name="_ENERGY" type="xsd:double" units="AU" length="1">
-     <value>-2.88759483108395</value>
+     <value>-2.86115334478248</value>
     </variable>
     <variable name="_ENERGY_METHOD" type="xsd:string" length="1">
-     <value>CCSD</value>
+     <value>RHF</value>
     </variable>
     <variable name="_ENERGY_BASIS" type="xsd:string" length="1">
-     <value>cc-pVDZ</value>
+     <value>MINAO</value>
     </variable>
     <variable name="_ENUC" type="xsd:double" units="AU" length="1">
      <value>0.0</value>
@@ -845,7 +578,7 @@
      <value>9999.0</value>
     </variable>
     <variable name="_GRADMETHOD" type="xsd:double" length="1">
-     <value>0.0</value>
+     <value>1.0</value>
     </variable>
     <variable name="_NMRMETHOD" type="xsd:double" length="1">
      <value>0.0</value>
@@ -857,7 +590,7 @@
      <value>-1.0</value>
     </variable>
     <variable name="_ITERATIONS" type="xsd:double" length="1">
-     <value>5.0</value>
+     <value>2.0</value>
     </variable>
     <variable name="_LASTNELEC" type="xsd:double" length="1">
      <value>2.0</value>
@@ -901,14 +634,8 @@
     <variable name="_PI" type="xsd:double" length="1">
      <value>3.14159265358979</value>
     </variable>
-    <variable name="_ECDIAG" type="xsd:double" units="AU" length="1">
-     <value>-0.324343538412254E-01</value>
-    </variable>
-    <variable name="_EPDIAG" type="xsd:double" units="AU" length="1">
-     <value>-0.324343538412254E-01</value>
-    </variable>
     <variable name="_SEIG_MIN" type="xsd:double" length="1">
-     <value>0.111155092481739</value>
+     <value>1.0</value>
     </variable>
     <variable name="_SEWPROP" type="xsd:double" length="1">
      <value>1.0</value>
@@ -917,40 +644,28 @@
      <value>1.0</value>
     </variable>
     <variable name="_SYSTOT" type="xsd:double" units="SEC" length="1">
-     <value>0.41</value>
-    </variable>
-    <variable name="_T1DIAG" type="xsd:double" units="AU" length="1">
-     <value>0.550691808797595E-03</value>
-    </variable>
-    <variable name="_D1DIAG" type="xsd:double" units="AU" length="1">
-     <value>0.77879582468933E-03</value>
+     <value>0.25</value>
     </variable>
     <variable name="_VERSION" type="xsd:double" length="1">
      <value>2020001.0</value>
     </variable>
     <variable name="_WALLTOT" type="xsd:double" units="SEC" length="1">
-     <value>1.91</value>
+     <value>1.28</value>
     </variable>
     <variable name="_DATE" type="xsd:string" length="1">
-     <value>09-Jan-20</value>
+     <value>01-May-20</value>
     </variable>
     <variable name="_LASTORB" type="xsd:string" length="1">
      <value>RHF</value>
     </variable>
-    <variable name="_METHODC" type="xsd:string" length="1">
-     <value>CCSD</value>
-    </variable>
     <variable name="_OUTPUT" type="xsd:string" length="1">
-     <value>/Volumes/Home/peterk/trees/sjef/test/He.molpro/He.xml</value>
+     <value>/Volumes/External/Users/peterk/trees/sjef/test/He.molpro/He.xml</value>
     </variable>
     <variable name="_PGROUP" type="xsd:string" length="1">
      <value>D2h</value>
     </variable>
     <variable name="_TIME" type="xsd:string" length="1">
-     <value>16:52:45</value>
-    </variable>
-    <variable name="_ANSATZ" type="xsd:string" length="1">
-     <value></value>
+     <value>17:51:54</value>
     </variable>
     <variable name="_LIBMOL" type="xsd:string" length="1">
      <value>/usr/local/share/molpro.2020.1.darwin/lib/</value>
@@ -1030,26 +745,6 @@
     <variable name="!SCFORB" type="xsd:double" length="1">
      <value>21002.0</value>
     </variable>
-    <variable name="!CIOCC" type="xsd:double" length="8">
-     <value>1.0</value>
-     <value>0.0</value>
-     <value>0.0</value>
-     <value>0.0</value>
-     <value>0.0</value>
-     <value>0.0</value>
-     <value>0.0</value>
-     <value>0.0</value>
-    </variable>
-    <variable name="!CICORE" type="xsd:double" length="8">
-     <value>0.0</value>
-     <value>0.0</value>
-     <value>0.0</value>
-     <value>0.0</value>
-     <value>0.0</value>
-     <value>0.0</value>
-     <value>0.0</value>
-     <value>0.0</value>
-    </variable>
     <variable name="!SCORE" type="xsd:double" units="AU" length="8">
      <value>0.0</value>
      <value>0.0</value>
@@ -1059,25 +754,6 @@
      <value>0.0</value>
      <value>0.0</value>
      <value>0.0</value>
-    </variable>
-    <variable name="!CICLOS" type="xsd:double" length="8">
-     <value>1.0</value>
-     <value>0.0</value>
-     <value>0.0</value>
-     <value>0.0</value>
-     <value>0.0</value>
-     <value>0.0</value>
-     <value>0.0</value>
-     <value>0.0</value>
-    </variable>
-    <variable name="!CIISTSYM" type="xsd:double" length="1">
-     <value>1.0</value>
-    </variable>
-    <variable name="!CIISTMS2" type="xsd:double" length="1">
-     <value>0.0</value>
-    </variable>
-    <variable name="!CIISTNEL" type="xsd:double" length="1">
-     <value>2.0</value>
     </variable>
     <variable name="!NEWMOL" type="xsd:double" length="1">
      <value>-1.0</value>
@@ -1544,6 +1220,9 @@
     <variable name="!IFORCE" type="xsd:double" length="1">
      <value>-1.0</value>
     </variable>
+    <variable name="!USESYM" type="xsd:double" length="1">
+     <value>-1.0</value>
+    </variable>
     <variable name="_SINDEX" type="xsd:double" length="1">
      <value>0.0</value>
     </variable>
@@ -1619,65 +1298,64 @@
    -->
    <orbitals basis="ORBITAL" angular="cartesian" spin="closed" method="RHF" type="CANONICAL"
      stateID="1" state_symmetry="1" state_nelec="2" state_ms2="0">
-    <orbital occupation="2.0" energy="-0.914148" symmetryID="1">
-      1.00000014148229 -0.159175455752991E-06 0.0 0.0 0.0
+    <orbital occupation="2.0" energy="-0.917625" symmetryID="1">
+      1.0
     </orbital>
    </orbitals>
    <stm:metadataList>
-    <stm:metadata name="dc:date" content="2020-01-09T16:52:51+00:00"/>
+    <stm:metadata name="dc:date" content="2020-05-01T17:51:55+01:00"/>
     <stm:metadata name="dc:creator" content="peterk"/>
     <stm:metadata name="cmlm:insilico" content="Molpro"/>
    </stm:metadataList>
    <platform>
-    <version major="2020" minor="1" SHA="8f558667c1702ea555240e046f4e411da9cf092b"
+    <version major="2020" minor="1" SHA="a361670df9941fd611af5de7bb5329191040062f"
       integer_bits="64" parallelism="serial"
       fortran_compiler_version="GCC version 9.2.0"
-      fortran_compiler_options="-cpp -I /Users/peterk/trees/Molpro/cmake-build-release/src -I /Users/peterk/trees/Molpro/src -I /Users/peterk/trees/Molpro/src/global -I /Users/peterk/trees/Molpro/src/Molcas/Include -I /Users/peterk/trees/Molpro/src/Molcas/slapaf_util -I /Users/peterk/trees/Molpro/src/Molcas/ma_util -I /Users/peterk/trees/Molpro/src/Molcas/integral_util -I /Users/peterk/trees/Molpro/src/. -I /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/usr/include/libxml2 -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_ppidd-src/src -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_ppidd-build/src -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src/LinAlg/lapack+blas -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src/tcgmsg -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src/comex/src-armci -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src/ma -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src/gaf2c -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src/global/src -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src/pario/sf -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src/pario/elio -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src/pario/eaf -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src/pario/dra -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src/pario -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_gci-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_gci-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_fcidump-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_fcidump-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_iterativesolver-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_iterativesolver-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/fortran -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_memory-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_memory-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_molpro_plugin-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_molpro_plugin-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_profiler-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_profiler-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_symmetry_matrix-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_symmetry_matrix-src/lib -I /Volumes/Home/local/Cellar/open-mpi/4.0.2/include -I /usr/local/include/eigen3 -I /Volumes/Home/local/Cellar/open-mpi/4.0.2/lib -I /usr/local/include -iprefix /Volumes/Home/local/Cellar/gcc/9.2.0_3/bin/../lib/gcc/9/gcc/x86_64-apple-darwin19/9.2.0/ -isysroot / -D__DYNAMIC__ -D DEV_NULL=&quot;/dev/null&quot; -D EIGEN_MPL2_ONLY -D MOLPRO -D NDEBUG -D _I8_ -D NDEBUG -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk -fPIC -mmacosx-version-min=10.15.0 -mtune=core2 -auxbase-strip CMakeFiles/molproexe.dir/global/xml.F90.o -O3 -O3 -Wall -Wextra -Wno-compare-reals -Wno-maybe-uninitialized -Wno-unused -Wno-unused-dummy-argument -Wno-unused-parameter -fdefault-integer-8 -fno-aggressive-loop-optimizations -fopenmp">
+      fortran_compiler_options="-cpp -I /Users/peterk/trees/Molpro/cmake-build-release/src -I /Users/peterk/trees/Molpro/src -I /Users/peterk/trees/Molpro/src/global -I /Users/peterk/trees/Molpro/src/Molcas/Include -I /Users/peterk/trees/Molpro/src/Molcas/slapaf_util -I /Users/peterk/trees/Molpro/src/Molcas/ma_util -I /Users/peterk/trees/Molpro/src/Molcas/integral_util -I /Users/peterk/trees/Molpro/src/. -I /Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk/usr/include/libxml2 -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_ppidd-src/src -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_ppidd-build/src -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_gci-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_gci-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_fcidump-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_fcidump-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_iterativesolver-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_iterativesolver-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/fortran -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_memory-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_memory-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_molpro_plugin-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_molpro_plugin-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_profiler-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_profiler-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_symmetry_matrix-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_symmetry_matrix-src/lib -I /usr/local/Cellar/open-mpi/4.0.2/include -I /usr/local/include/eigen3 -I /usr/local/Cellar/open-mpi/4.0.2/lib -I /usr/local/include -isysroot / -D__DYNAMIC__ -D DEV_NULL=&quot;/dev/null&quot; -D EIGEN_MPL2_ONLY -D MOLPRO -D NDEBUG -D _I8_ -D NDEBUG -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk -fPIC -mmacosx-version-min=10.15.0 -mtune=core2 -auxbase-strip CMakeFiles/molproexe.dir/global/xml.F90.o -O3 -O3 -Wall -Wextra -Wno-compare-reals -Wno-maybe-uninitialized -Wno-unused -Wno-unused-dummy-argument -Wno-unused-parameter -fdefault-integer-8 -fno-aggressive-loop-optimizations">
      2020.1
-     <date year="2020" month="1" day="9" hour="16" minute="52" second="45">
-      2020-01-09T16:52:45
+     <date year="2020" month="5" day="1" hour="17" minute="51" second="54">
+      2020-05-01T17:51:54
      </date>
     </version>
     <licence id="peterk"/>
     <parallel processes="1" nodes="1" all_processes="1" openmp="1"/>
     <dimensions natom="400" nvalence="500" nvalence_pno="1000" nbasis="12000" nstate="100"
       nsymm="16" nrec="512" nprim="2" ncol="100"/>
-    <machine hostname="pjkws10.chemy.cf.ac.uk"/>
+    <machine hostname="Peters-Mac-mini-2.local"/>
    </platform>
   </molecule><!--
 
- CCSD/cc-pVDZ energy=     -2.887594831084
+ RHF/MINAO energy=     -2.861153344782
 
-            CCSD             MP2         RHF-SCF
-     -2.88759483     -2.88098882     -2.85516048
+         RHF-SCF
+     -2.86115334
  **********************************************************************************************************************************
   -->
   <stm:metadataList>
-   <stm:metadata name="dc:date" content="2020-01-09T16:52:51+00:00"/>
+   <stm:metadata name="dc:date" content="2020-05-01T17:51:55+01:00"/>
    <stm:metadata name="dc:creator" content="peterk"/>
    <stm:metadata name="cmlm:insilico" content="Molpro"/>
   </stm:metadataList>
   <platform>
-   <version major="2020" minor="1" SHA="8f558667c1702ea555240e046f4e411da9cf092b"
+   <version major="2020" minor="1" SHA="a361670df9941fd611af5de7bb5329191040062f"
      integer_bits="64" parallelism="serial"
      fortran_compiler_version="GCC version 9.2.0"
-     fortran_compiler_options="-cpp -I /Users/peterk/trees/Molpro/cmake-build-release/src -I /Users/peterk/trees/Molpro/src -I /Users/peterk/trees/Molpro/src/global -I /Users/peterk/trees/Molpro/src/Molcas/Include -I /Users/peterk/trees/Molpro/src/Molcas/slapaf_util -I /Users/peterk/trees/Molpro/src/Molcas/ma_util -I /Users/peterk/trees/Molpro/src/Molcas/integral_util -I /Users/peterk/trees/Molpro/src/. -I /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/usr/include/libxml2 -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_ppidd-src/src -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_ppidd-build/src -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src/LinAlg/lapack+blas -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src/tcgmsg -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src/comex/src-armci -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src/ma -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src/gaf2c -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src/global/src -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src/pario/sf -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src/pario/elio -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src/pario/eaf -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src/pario/dra -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/ga-src/pario -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_gci-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_gci-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_fcidump-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_fcidump-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_iterativesolver-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_iterativesolver-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/fortran -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_memory-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_memory-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_molpro_plugin-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_molpro_plugin-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_profiler-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_profiler-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_symmetry_matrix-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_symmetry_matrix-src/lib -I /Volumes/Home/local/Cellar/open-mpi/4.0.2/include -I /usr/local/include/eigen3 -I /Volumes/Home/local/Cellar/open-mpi/4.0.2/lib -I /usr/local/include -iprefix /Volumes/Home/local/Cellar/gcc/9.2.0_3/bin/../lib/gcc/9/gcc/x86_64-apple-darwin19/9.2.0/ -isysroot / -D__DYNAMIC__ -D DEV_NULL=&quot;/dev/null&quot; -D EIGEN_MPL2_ONLY -D MOLPRO -D NDEBUG -D _I8_ -D NDEBUG -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk -fPIC -mmacosx-version-min=10.15.0 -mtune=core2 -auxbase-strip CMakeFiles/molproexe.dir/global/xml.F90.o -O3 -O3 -Wall -Wextra -Wno-compare-reals -Wno-maybe-uninitialized -Wno-unused -Wno-unused-dummy-argument -Wno-unused-parameter -fdefault-integer-8 -fno-aggressive-loop-optimizations -fopenmp">
+     fortran_compiler_options="-cpp -I /Users/peterk/trees/Molpro/cmake-build-release/src -I /Users/peterk/trees/Molpro/src -I /Users/peterk/trees/Molpro/src/global -I /Users/peterk/trees/Molpro/src/Molcas/Include -I /Users/peterk/trees/Molpro/src/Molcas/slapaf_util -I /Users/peterk/trees/Molpro/src/Molcas/ma_util -I /Users/peterk/trees/Molpro/src/Molcas/integral_util -I /Users/peterk/trees/Molpro/src/. -I /Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk/usr/include/libxml2 -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_ppidd-src/src -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_ppidd-build/src -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_gci-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_gci-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_fcidump-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_fcidump-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_iterativesolver-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_iterativesolver-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/fortran -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_memory-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_memory-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_molpro_plugin-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_molpro_plugin-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_profiler-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_profiler-src/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_symmetry_matrix-build/lib -I /Users/peterk/trees/Molpro/cmake-build-release/_deps/_private_dep_symmetry_matrix-src/lib -I /usr/local/Cellar/open-mpi/4.0.2/include -I /usr/local/include/eigen3 -I /usr/local/Cellar/open-mpi/4.0.2/lib -I /usr/local/include -isysroot / -D__DYNAMIC__ -D DEV_NULL=&quot;/dev/null&quot; -D EIGEN_MPL2_ONLY -D MOLPRO -D NDEBUG -D _I8_ -D NDEBUG -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX10.15.sdk -fPIC -mmacosx-version-min=10.15.0 -mtune=core2 -auxbase-strip CMakeFiles/molproexe.dir/global/xml.F90.o -O3 -O3 -Wall -Wextra -Wno-compare-reals -Wno-maybe-uninitialized -Wno-unused -Wno-unused-dummy-argument -Wno-unused-parameter -fdefault-integer-8 -fno-aggressive-loop-optimizations">
     2020.1
-    <date year="2020" month="1" day="9" hour="16" minute="52" second="45">
-     2020-01-09T16:52:45
+    <date year="2020" month="5" day="1" hour="17" minute="51" second="54">
+     2020-05-01T17:51:54
     </date>
    </version>
    <licence id="peterk"/>
    <parallel processes="1" nodes="1" all_processes="1" openmp="1"/>
    <dimensions natom="400" nvalence="500" nvalence_pno="1000" nbasis="12000" nstate="100"
      nsymm="16" nrec="512" nprim="2" ncol="100"/>
-   <machine hostname="pjkws10.chemy.cf.ac.uk"/>
+   <machine hostname="Peters-Mac-mini-2.local"/>
   </platform>
   <input>
    <p>geometry={He}</p>
+   <p>basis,minao</p>
    <p>rhf</p>
-   <p>mp2</p>
-   <p>ccsd</p>
   </input>
   <diagnostics warnings="0"/>
   <!--

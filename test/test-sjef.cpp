@@ -366,8 +366,8 @@ TEST(project, xmlRepair) {
 
 TEST(project, xmloutput) {
   savestate state;
-  sjef::Project He("He.molpro");
-  EXPECT_EQ(He.file_contents("xml"), He.xml());
+//  sjef::Project He("He.molpro");
+//  EXPECT_EQ(He.file_contents("xml"), He.xml());
   {
     sjef::Project newProject(state.testfile("test___.someprogram"));
     EXPECT_EQ(newProject.file_contents("xml"), "");

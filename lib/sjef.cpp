@@ -366,7 +366,7 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
   bp::child(cmd).wait();
   // fetch all newer files from backend
   if (std::stoi(property_get("_private_sjef_project_backend_inactive_synced")) > 2) {
-    std::cerr << "second rsync not taken" << std::endl;
+    //std::cerr << "second rsync not taken" << std::endl;
     return true;
   }
   {
@@ -381,13 +381,13 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
         cmd += "--exclude=" + f + " ";
     }
     cmd += backend.host + ":" + cache(backend) + "/ " + m_filename;
-    if (verbosity > -1)
+    if (verbosity > 1)
       std::cerr << "second rsync " << cmd << std::endl;
     bp::child(cmd).wait();
   }
   if (not nostatus) // to avoid infinite loop with call from status()
     status(0); // to get backend_inactive
-  std::cerr << "synchronize backend_inactive=" << property_get("_private_sjef_project_backend_inactive") << std::endl;
+  // std::cerr << "synchronize backend_inactive=" << property_get("_private_sjef_project_backend_inactive") << std::endl;
   if (property_get("_private_sjef_project_backend_inactive") != "0") {
     auto n = std::stoi(property_get("_private_sjef_project_backend_inactive_synced"));
     const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced",

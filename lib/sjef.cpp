@@ -392,7 +392,7 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
     auto n = std::stoi(property_get("_private_sjef_project_backend_inactive_synced"));
     const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced",
                                              std::to_string(n + 1));
-    std::cerr << "advancing count to " << n + 1 << std::endl;
+//    std::cerr << "advancing count to " << n + 1 << std::endl;
   }
 //  std::cerr << "synchronize backend_inactive_synced=" << property_get("_private_sjef_project_backend_inactive_synced") << std::endl;
   return true;

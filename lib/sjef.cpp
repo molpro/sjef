@@ -222,8 +222,11 @@ Project::Project(const std::string& filename,
 //  for (const auto& be : m_backends) std::cerr << "m_backend "<<be.first<<std::endl;
 
 //std::cerr << "project constructor name()="<<name()<<std::endl;
-  if (not name().empty() and name().front() != '.')
-    change_backend(property_get("backend"), true);
+  if (not name().empty() and name().front() != '.') {
+    auto be = property_get("backend");
+    if (m_backends.count(be) ==0 ) be = sjef::Backend::default_name;
+    change_backend(be, true);
+  }
 }
 
 Project::~Project() {

@@ -224,7 +224,7 @@ Project::Project(const std::string& filename,
 //std::cerr << "project constructor name()="<<name()<<std::endl;
   if (not name().empty() and name().front() != '.') {
     auto be = property_get("backend");
-    if (m_backends.count(be) ==0 ) be = sjef::Backend::default_name;
+    if (m_backends.count(be) == 0) be = sjef::Backend::default_name;
     change_backend(be, true);
   }
 }
@@ -1553,12 +1553,13 @@ void sjef::Project::change_backend(std::string backend, bool force) {
 //  std::cerr << "change_backend to " << backend << " for project " << name() << " at address " << this << std::endl;
 //  std::cerr << "current backend " << property_get("backend") << " : " << m_backend << ", unchanged=" << unchanged
 //            << std::endl;
+  if (not unchanged and not m_backend.empty())
+    property_delete("jobnumber");
   m_backend = backend;
   if (not unchanged) {
     throw_if_backend_invalid(backend);
     if (m_master_of_slave) shutdown_backend_watcher();
     property_set("backend", backend);
-    property_delete("jobnumber");
     cached_status(unevaluated);
     ensure_remote_server();
 //    std::cerr << "after ensure_remote_server backend " << m_master_of_slave << std::endl;

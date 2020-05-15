@@ -1442,7 +1442,7 @@ std::string sjef::Project::remote_server_run(const std::string& command, int ver
     std::cerr << command << std::endl;
   const std::string terminator{"@@@!!EOF"};
   if (not wait) {
-    std::cerr << "remote_server_run wait=false host=" << m_remote_server->host << ", command=" << command << std::endl;
+//    std::cerr << "remote_server_run wait=false host=" << m_remote_server->host << ", command=" << command << std::endl;
     m_remote_server->in << command << " >/dev/null 2>/dev/null &" << std::endl;
     return "";
   }

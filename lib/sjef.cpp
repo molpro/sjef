@@ -812,12 +812,16 @@ bool Project::run_needed(int verbosity) const {
         std::chrono::steady_clock::now() - start_time).count() << std::endl;
   if (run_input_hash.empty()) { // if there's no input hash, look at the xml file instead
 //      std::cerr << input_from_output() << std::endl;
-//    std::cerr << file_contents("inp") << std::endl;
+//    std::cerr << std::regex_replace(std::regex_replace(file_contents("inp"), std::regex{"\r"}, ""), std::regex{" *\n\n*"}, "\n") << std::endl;
     if (verbosity > 1)
       std::cerr << "There's no run_input_hash, so compare output and input: " <<
-                (std::regex_replace(file_contents("inp"), std::regex{" *\n\n*"}, "\n") != input_from_output())
+                (std::regex_replace(std::regex_replace(file_contents("inp"), std::regex{"\r"}, ""),
+                                    std::regex{" *\n\n*"},
+                                    "\n") != input_from_output())
                 << std::endl;
-    return (std::regex_replace(file_contents("inp"), std::regex{" *\n\n*"}, "\n") != input_from_output());
+    return (std::regex_replace(std::regex_replace(std::regex_replace(file_contents("inp"), std::regex{"\r"}, ""),
+                                                  std::regex{" *\n\n*"},
+                                                  "\n"), std::regex{"\n$"}, "") != input_from_output());
   }
   {
     if (verbosity > 1)
@@ -992,12 +996,12 @@ status Project::status(int verbosity, bool cached) const {
   if (verbosity > 2) std::cerr << "fallen through loop" << std::endl;
   synchronize(verbosity, true);
   const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive",
-                                           ((result != completed && result != killed) or
-                                               fs::exists(fs::path{filename()} / fs::path{name()
-                                                                                              + "."
-                                                                                              + m_suffixes.at("xml")}) // there may be a race, where the job status is completed, but the output file is not yet there. This is an imperfect test for that .. just whether the .xml exists at all. TODO: improve test for complete output file
-                                           )
-                                           ? "1" : "0");
+                                            ((result != completed && result != killed) or
+                                                fs::exists(fs::path{filename()} / fs::path{name()
+                                                                                               + "."
+                                                                                               + m_suffixes.at("xml")}) // there may be a race, where the job status is completed, but the output file is not yet there. This is an imperfect test for that .. just whether the .xml exists at all. TODO: improve test for complete output file
+                                            )
+                                            ? "1" : "0");
   return_point:
   auto time_taken =
       std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time);
@@ -1145,7 +1149,7 @@ void Project::recent_edit(const std::string& add, const std::string& remove) {
       ++lines;
     }
     std::string line;
-    while (in >> line && lines < recentMax) {
+    while (getline(in, line) && lines < recentMax) {
       if (line != remove && line != add && fs::exists(line)) {
         ++lines;
         out << line << std::endl;
@@ -1176,7 +1180,7 @@ std::string Project::name() const { return fs::path(m_filename).stem().string();
 int Project::recent_find(const std::string& filename) const {
   std::ifstream in(m_recent_projects_file);
   std::string line;
-  for (int position = 1; in >> line; ++position) {
+  for (int position = 1; std::getline(in, line); ++position) {
     if (fs::exists(line)) {
       if (line == filename) return position;
     } else
@@ -1188,7 +1192,7 @@ int Project::recent_find(const std::string& filename) const {
 std::string Project::recent(int number) const {
   std::ifstream in(m_recent_projects_file);
   std::string line;
-  for (int position = 0; in >> line;) {
+  for (int position = 0; std::getline(in, line);) {
     if (fs::exists(line)) ++position;
     if (position == number) return line;
   }

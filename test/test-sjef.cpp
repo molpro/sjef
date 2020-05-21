@@ -392,7 +392,9 @@ TEST(project, input_from_output) {
   savestate state("molpro");
   sjef::Project He("He.molpro");
   std::string input = He.file_contents("inp");
+  input = std::regex_replace(input, std::regex{"\r"}, "");
   input = std::regex_replace(input, std::regex{" *\n\n*"}, "\n");
+  input = std::regex_replace(input, std::regex{"\n$"}, "");
   EXPECT_EQ(input, He.input_from_output());
   auto copy = state.testfile("Hecopy.molpro");
   He.copy(copy);
@@ -451,16 +453,20 @@ TEST(project, early_change_backend) {
   savestate state(suffix);
   auto backendfile = sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml");
   std::ofstream(backendfile)
-      << "<?xml version=\"1.0\"?>\n<backends><backend name=\"test\" host=\"127.0.0.1\" run_command=\"true\"/></backends>"
-      << std::endl;
+      << "<?xml version=\"1.0\"?>" << std::endl
+      << "<backends>" << std::endl
+      << "<backend name=\"test\" host=\"localhost\" run_command=\"true\"/>" << std::endl
+      << "</backends>" << std::endl;
   auto filename = state.testfile(std::string{"early_change_backend."} + suffix);
   sjef::Project(filename).change_backend("test");
   EXPECT_EQ(sjef::Project(filename).filename(), filename);
   EXPECT_EQ(sjef::Project(filename).property_get("backend"), "test");
   EXPECT_THROW(sjef::Project(filename).change_backend("test2"), std::runtime_error);
   std::ofstream(backendfile)
-      << "<?xml version=\"1.0\"?>\n<backends><backend name=\"test2\" host=\"127.0.0.1\" run_command=\"true\"/></backends>"
-      << std::endl;
+      << "<?xml version=\"1.0\"?>" << std::endl
+      << "<backends>" << std::endl
+      << "<backend name=\"test2\" host=\"localhost\" run_command=\"true\"/>" << std::endl
+      << "</backends>" << std::endl;
   EXPECT_EQ(sjef::Project(filename).filename(), filename);
   EXPECT_EQ(sjef::Project(filename).property_get("backend"), "local");
   EXPECT_THROW(sjef::Project(filename).change_backend("test"), std::runtime_error);

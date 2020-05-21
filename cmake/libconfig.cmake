@@ -11,7 +11,7 @@ function(declare_dependency NAME URL)
     get_dependency_name(${NAME})
     file(STRINGS "${_SHA_file}" GIT_TAG)
     message(STATUS "Declare dependency NAME=${NAME} URL=${URL} TAG=${GIT_TAG} DEPENDENCY=${_dependency_name}")
-    if (UNIX)
+    if (UNIX AND NOT APPLE)
         #    horrible hack to find WSL
         file(READ "/proc/version" _PROC_VERSION)
         string(REGEX MATCH "Microsoft" WSL "${_PROC_VERSION}")

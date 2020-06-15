@@ -425,7 +425,7 @@ TEST(project, spawn_many_dummy) {
   const auto& backend = sjef::Backend::dummy_name;
   for (auto i = 0; i < 5; ++i) {
 //    std::cerr << "run number " << i << std::endl;
-    ASSERT_TRUE(p.run(backend, -1, true, true));
+    ASSERT_TRUE(p.run(-1, true, true));
     EXPECT_NE(p.property_get("jobnumber"), "-1");
     EXPECT_EQ(p.status(false), sjef::completed);
   }
@@ -439,7 +439,7 @@ TEST(project, spawn_many_molpro) {
   const auto& backend = sjef::Backend::default_name;
   if (not boost::process::search_path("molpro").empty()) // test the default backend only if it exists
     for (auto i = 0; i < 5; ++i) {
-      ASSERT_TRUE(p.run(backend, -1, true, true));
+      ASSERT_TRUE(p.run(-1, true, true));
       EXPECT_NE(p.property_get("jobnumber"), "-1");
       EXPECT_EQ(p.status(false), sjef::completed);
     }
@@ -558,7 +558,7 @@ TEST(project, recent) {
 TEST(project, dummy_backend) {
   savestate state("sjef");
   sjef::Project p(state.testfile("completely_new.sjef"));
-  p.run(sjef::Backend::dummy_name, 0, true, false);
+  p.run(0, true, false);
   p.wait();
   EXPECT_EQ(p.file_contents("out"), "dummy");
   EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
@@ -568,7 +568,7 @@ TEST(project, project_name_embedded_space) {
   savestate state("molpro");
   sjef::Project p(state.testfile("completely new.molpro"));
   std::ofstream(p.filename("inp")) << "geometry={He};rhf\n";
-  p.run(sjef::Backend::dummy_name, 0, true, false);
+  p.run(0, true, false);
   p.wait();
   EXPECT_EQ(p.file_contents("out"), "dummy");
   EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");

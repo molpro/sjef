@@ -16,8 +16,6 @@ int sjef_project_export(const char* project, const char* file);
 int sjef_project_run_needed(const char* project);
 int sjef_project_synchronize(const char* project, const char* backend, int verbosity);
 int sjef_project_run(const char* project,
-                     const char* backend,
-                     const char* options,
                      int verbosity,
                      int force,
                      int wait);

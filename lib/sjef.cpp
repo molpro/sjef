@@ -151,6 +151,7 @@ Project::Project(const std::string& filename,
                                                         "localhost",
                                                         "{$PWD}",
                                                         "/bin/sh -c 'echo dummy > ${0%.*}.out; echo \"<?xml version=\\\"1.0\\\"?>\n<root/>\" > ${0%.*}.xml'");
+  if (not sjef::check_backends(m_project_suffix)) throw std::runtime_error("sjef backend files are invalid");
   for (const auto& config_dir : std::vector<std::string>{"/usr/local/etc/sjef", "~/.sjef"}) {
     const auto config_file = expand_path(config_dir + "/" + m_project_suffix + "/backends.xml");
     if (fs::exists(config_file)) {
@@ -178,6 +179,7 @@ Project::Project(const std::string& filename,
         if ((kVal = getattribute(be, "status_running")) != "") m_backends[kName].status_running = kVal;
         if ((kVal = getattribute(be, "status_waiting")) != "") m_backends[kName].status_waiting = kVal;
         if ((kVal = getattribute(be, "kill_command")) != "") m_backends[kName].kill_command = kVal;
+        if (not check_backend(kName)) throw std::runtime_error(std::string{"sjef backend "} + kName + " is invalid");
       }
     }
 
@@ -1632,6 +1634,39 @@ void sjef::Project::backend_watcher(sjef::Project& project_,
   }
 //  std::cerr << "Project::backend_watcher stopping for " << project_.m_filename << " on thread "
 //            << std::this_thread::get_id() << std::endl;
+}
+
+bool sjef::Project::check_backend(const std::string& name) const {
+  auto be = m_backends.at(name);
+  if (be.host.empty()) return false;
+  if (be.run_command.empty()) return false;
+  if (be.run_jobnumber.empty()) return false;
+  if (be.status_command.empty()) return false;
+  if (be.status_running.empty()) return false;
+  if (be.status_waiting.empty()) return false;
+  return true;
+}
+
+bool sjef::Project::check_all_backends() const {
+  bool result = true;
+  for (const auto& backend : m_backends)
+    result = result and check_backend(backend.first);
+  return result;
+}
+
+bool check_backends(const std::string& suffix) {
+  for (const auto& config_dir : std::vector<std::string>{"/usr/local/etc/sjef", "~/.sjef"}) {
+    const auto config_file = expand_path(config_dir + "/" + suffix + "/backends.xml");
+    if (fs::exists(config_file)) {
+      std::unique_ptr<pugi_xml_document> backend_doc;
+      pugi::xml_document doc;
+      pugi::xml_parse_result result = doc.load_file(config_file.c_str());
+      if (result.status != pugi::status_ok) {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 } // namespace sjef

@@ -428,7 +428,27 @@ class Project {
    * @param name The name of the backend to be removed.
    */
   void delete_backend(const std::string& name);
+
+  /*!
+   * @brief Check whether the specification of a backend is valid
+   * @param name The name of the backend to be checked.
+   * @return
+   */
+  bool check_backend(const std::string& name) const;
+
+  /*!
+   * @brief Check the specification of all backends for validity
+   * @return
+   */
+  bool check_all_backends() const;
 };
+
+/*!
+ * @brief Check whether a backend specification file is valid. Only the top-level structure of the file is checked, to the point where it could be opened and used in a Project.
+ * @param suffix /usr/local/etc/sjef/suffix/backends.xml and ~/.sjef/suffix/backends.xml will be checked
+ * @return
+ */
+bool check_backends(const std::string& suffix);
 
 /*!
  * @brief Edit a file path name

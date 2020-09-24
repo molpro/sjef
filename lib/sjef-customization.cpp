@@ -60,7 +60,7 @@ void sjef::Project::rewrite_input_file(const std::string& input_file_name, const
 void sjef::Project::custom_initialisation() {
   if (m_project_suffix == "molpro") {
     std::ofstream s("molpro.rc");
-    s << "--xml-orbdump --xml-output --no-backup" << std::endl;
+    s << "--xml-output --no-backup" << std::endl;
   }
 }
 

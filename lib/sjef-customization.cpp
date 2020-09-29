@@ -5,6 +5,7 @@
 #include <boost/filesystem.hpp>
 #include "sjef.h"
 #include "sjef-backend.h"
+#include "FileLock.h"
 namespace fs = boost::filesystem;
 ///> @private
 struct sjef::pugi_xml_document : public pugi::xml_document {};
@@ -59,8 +60,11 @@ void sjef::Project::rewrite_input_file(const std::string& input_file_name, const
 }
 void sjef::Project::custom_initialisation() {
   if (m_project_suffix == "molpro") {
-    std::ofstream s("molpro.rc");
-    s << "--xml-output --no-backup" << std::endl;
+    sjef::FileLock source_lock(".molpro.rc.lock", true, true);
+    if (not boost::filesystem::exists("molpro.rc")) {
+      std::ofstream s("molpro.rc");
+      s << "--xml-output --no-backup" << std::endl;
+    }
   }
 }
 

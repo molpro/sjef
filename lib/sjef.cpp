@@ -296,10 +296,6 @@ bool Project::export_file(std::string file, bool overwrite) {
   return true;
 }
 
-std::string Project::cache(const Backend& backend) const {
-  return backend.cache + "/" + m_filename; // TODO: use boost::filesystem to avoid '/' on windows
-}
-
 std::mutex synchronize_mutex;
 bool Project::synchronize(int verbosity, bool nostatus) const {
 //  const std::lock_guard lock(m_synchronize_mutex);
@@ -343,7 +339,6 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
     return true;
 //  std::cerr << "really syncing" << std::endl;
   //TODO: implement more robust error checking
-//  system(("ssh " + backend.host + " mkdir -p " + cache(backend)).c_str());
 //std::cerr << "synchronize calls change_backend"<<std::endl;
 //  const_cast<Project*>(this)->change_backend(backend.name);
 //  if (m_master_of_slave) {
@@ -365,7 +360,7 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
       "--exclude=*.out --exclude=*.xml --exclude=*.log " +
       "-L -a --update " + " " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + m_filename + "/ "
       + backend.host + ":"
-      + cache(backend);
+      + (fs::path{backend.cache} / m_filename).native();
   if (verbosity > 1)
     std::cerr << "First rsync: " << cmd << std::endl;
   bp::child(cmd).wait();
@@ -385,7 +380,7 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
       if (fs::exists(f))
         cmd += "--exclude=" + f + " ";
     }
-    cmd += backend.host + ":" + cache(backend) + "/ " + m_filename;
+    cmd += backend.host + ":" + (fs::path{backend.cache} / m_filename).native();
     if (verbosity > 1)
       std::cerr << "second rsync " << cmd << std::endl;
     bp::child(cmd).wait();
@@ -655,6 +650,7 @@ bool Project::run(int verbosity, bool force, bool wait) {
   auto run_command = backend_parameter_expand(backend.name, backend.run_command);
 //  std::cerr << "run_command after expand "<<run_command<<std::endl;
   custom_run_preface();
+  auto rundir = run_directory_new();
   if (backend.host == "localhost") {
     property_set("_private_sjef_project_backend_inactive", "0");
     property_set("_private_sjef_project_backend_inactive_synced", "0");
@@ -679,15 +675,19 @@ bool Project::run(int verbosity, bool force, bool wait) {
     catch (...) {
       current_path_save = "";
     }
-    fs::current_path(m_filename);
+    fs::current_path(filename("", "", 0));
 
     if (optionstring.empty())
       c = bp::child(executable(run_command),
-                    fs::path{m_filename} / fs::path(this->name() + ".inp"));
+//                    fs::path{m_filename} / fs::path(this->name() + ".inp")
+                    filename("inp", "", rundir)
+      );
     else
       c = bp::child(executable(run_command),
                     bp::args(splitString(optionstring)),
-                    fs::path{m_filename} / fs::path(this->name() + ".inp"));
+//                    fs::path{m_filename} / fs::path(this->name() + ".inp")
+                    filename("inp", "", rundir)
+      );
     fs::current_path(current_path_save);
     if (not c.valid())
       throw std::runtime_error("Spawning run process has failed");
@@ -702,11 +702,11 @@ bool Project::run(int verbosity, bool force, bool wait) {
     synchronize(verbosity);
     property_set("_private_sjef_project_backend_inactive", "0");
     property_set("_private_sjef_project_backend_inactive_synced", "0");
-    if (verbosity > 3) std::cerr << "cache(backend) " << cache(backend) << std::endl;
+    if (verbosity > 3) std::cerr << "fs::path{backend.cache} / filename("","",rundir) " << fs::path{backend.cache} / filename("","",rundir) << std::endl;
     auto jobstring =
-        "cd " + cache(backend) + " 2>/dev/null >/dev/null; nohup " + run_command + " " + optionstring
+        std::string{"cd "} + (fs::path{backend.cache} / filename("","",rundir)).native() + " 2>/dev/null >/dev/null; nohup " + run_command + " " + optionstring
             + this->name()
-            + ".inp";
+            + "." + m_suffixes["inp"];
     if (backend.run_jobnumber == "([0-9]+)") jobstring += "& echo $! "; // go asynchronous if a straight launch
     if (verbosity > 3) std::cerr << "backend.run_jobnumber " << backend.run_jobnumber << std::endl;
     if (verbosity > 3) std::cerr << "jobstring " << jobstring << std::endl;
@@ -1584,10 +1584,8 @@ void sjef::Project::ensure_remote_server() const {
 //  std::cerr << "started remote_server " << std::endl;
 //  std::cerr << "ensure_remote_server() remote server process created : " << m_remote_server->process.id() << ", master="
 //            << m_master_of_slave << std::endl;
-//  std::cerr << "mkdir -p " << cache(this->m_backends.at(backend)) << std::endl;
 //  std::cerr << "ensure_remote_server finishing on thread " << std::this_thread::get_id() << ", master_of_slave="
 //            << m_master_of_slave << std::endl;
-//  m_remote_server->in << "mkdir -p " << cache(this->m_backends.at(backend)) << std::endl;
 }
 
 void sjef::Project::shutdown_backend_watcher() {
@@ -1632,7 +1630,7 @@ void sjef::Project::change_backend(std::string backend, bool force) {
 //    std::cerr << "after ensure_remote_server backend " << m_master_of_slave << std::endl;
     if (m_master_of_slave) {
       if (this->m_backends.at(backend).host != "localhost") {
-        remote_server_run(std::string{"mkdir -p "} + cache(this->m_backends.at(backend)));
+        remote_server_run(std::string{"mkdir -p "} + (fs::path{this->m_backends.at(backend).cache} / m_filename).native());
       }
       m_unmovables.shutdown_flag.clear();
       m_backend_watcher = std::thread(backend_watcher, std::ref(*this), backend, 100, 1000);

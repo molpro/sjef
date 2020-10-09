@@ -591,10 +591,13 @@ TEST(project, run_directory) {
     EXPECT_EQ(p.run_directory(0), (fs::path{p.filename()} / "run" / si).native());
     EXPECT_EQ(p.filename("out","",0),(fs::path{p.filename()} / "run" / si / "run_directory.out").native());
   }
+  int seq=p.run_list().size();
+  for (const auto& r : p.run_list())
+    EXPECT_EQ(r,seq--); // the run_list goes in reverse order
   p.run_delete(3);
   EXPECT_EQ(2, p.run_verify(0));
   p.run_delete(1);
   EXPECT_EQ(2, p.run_verify(0));
-  EXPECT_EQ(p.run_list(),std::set<int>{2});
+  EXPECT_EQ(p.run_list(),sjef::Project::run_list_t{2});
 //  system((std::string("ls -lR ")+p.filename()).c_str());
 }

@@ -290,7 +290,8 @@ class Project {
    * @brief Obtain the list of run numbers in reverse order, ie the most recent first
    * @return
    */
-  std::set<int> run_list() const;
+   using run_list_t = std::set<int, std::greater<int>>;
+   run_list_t run_list() const;
   /*!
    * @brief Create a new run directory. Also copy into it the input file, and any of its dependencies
    * @return The sequence number of the new run directory

@@ -1198,7 +1198,7 @@ std::string Project::run_directory(int run) const {
 }
 int Project::run_directory_new() {
   auto dirlist = run_list();
-  auto sequence = dirlist.empty() ? 1 : *(dirlist.rbegin()) + 1;
+  auto sequence = dirlist.empty() ? 1 : *(dirlist.begin()) + 1;
   dirlist.insert(sequence);
   std::stringstream ss;
   for (const auto& dir : dirlist) ss << dir << " ";
@@ -1236,12 +1236,12 @@ int Project::run_verify(int run) const {
   if (run > 0)
     return (runlist.count(run) > 0) ? run : 0;
   else if (runlist.empty()) return 0;
-  else return *(runlist.rbegin());
+  else return *(runlist.begin());
 }
 
-std::set<int> Project::run_list() const {
+Project::run_list_t Project::run_list() const {
   auto ss = std::stringstream(property_get("run_directories"));
-  std::set<int> rundirs;
+  run_list_t rundirs;
   int value;
   while (ss >> value && !ss.eof())
     rundirs.insert(value);

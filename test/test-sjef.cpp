@@ -562,6 +562,8 @@ TEST(project, dummy_backend) {
   p.wait();
   EXPECT_EQ(p.file_contents("out"), "dummy");
   EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
+  EXPECT_EQ(p.file_contents("out","", 1), "dummy");
+  EXPECT_EQ(p.xml(1), "<?xml version=\"1.0\"?>\n<root/>");
 }
 
 TEST(project, project_name_embedded_space) {

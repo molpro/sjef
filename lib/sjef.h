@@ -210,18 +210,23 @@ class Project {
   void custom_run_preface();
   /*!
    * @brief Get the xml output, completing any open tags if necessary
+   * @param run If present, look for the file in a particular run directory. Otherwise it will search in the default run directory, and if not found, the main directory
    * @param sync Whether to force a synchronisation with backend before getting the file contents
    * @return
    */
-  std::string xml(bool sync = true) const;
+  std::string xml(int run=0, bool sync = true) const;
   /*!
    * @brief Obtain the contents of a project file
    * @param suffix If present without \c name, look for a primary file with that type. If absent, the file name of the bundle is instead selected
    * @param name If present,  look for a file of this name, appended with .\c suffix if that is non-blank
+   * @param run If present, look for the file in a particular run directory. Otherwise it will search in the default run directory, and if not found, the main directory
    * @param sync Whether to force a synchronisation with backend before getting the file contents
-   * @return the fully-qualified name of the file
+   * @return the contents of the file
    */
-  std::string file_contents(const std::string& suffix = "", const std::string& name = "", bool sync = true) const;
+  std::string file_contents(const std::string& suffix = "",
+                            const std::string& name = "",
+                            int run = 0,
+                            bool sync = true) const;
 
   /*!
    * @brief Remove potentially unwanted files from the project

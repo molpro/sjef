@@ -858,11 +858,11 @@ bool Project::run_needed(int verbosity) const {
   return false;
 }
 
-std::string Project::xml(bool sync) const {
-  return xmlRepair(file_contents(m_suffixes.at("xml"), "", sync));
+std::string Project::xml(int run, bool sync) const {
+  return xmlRepair(file_contents(m_suffixes.at("xml"), "", run, sync));
 }
 
-std::string Project::file_contents(const std::string& suffix, const std::string& name, bool sync) const {
+std::string Project::file_contents(const std::string& suffix, const std::string& name, int run, bool sync) const {
 
 //  std::cerr << "file_contents " << suffix << ": " << property_get("_private_sjef_project_backend_inactive_synced")
 //            << std::endl;
@@ -874,7 +874,7 @@ std::string Project::file_contents(const std::string& suffix, const std::string&
       and suffix != m_suffixes.at("inp")
       )
     synchronize();
-  std::ifstream s(filename(suffix, name));
+  std::ifstream s(filename(suffix, name, run));
   auto result = std::string(std::istreambuf_iterator<char>(s),
                             std::istreambuf_iterator<char>());
   while (result.back() == '\n') result.pop_back();
@@ -1204,17 +1204,23 @@ int Project::run_directory_new() {
   for (const auto& dir : dirlist) ss << dir << " ";
   property_set("run_directories", ss.str());
   auto dir = fs::path{filename()} / "run" / std::to_string(sequence);
+  std::cout << "create "<<dir<<std::endl;
   if (not fs::create_directories(dir))
     throw std::runtime_error("Cannot create directory " + dir.native());
-  fs::copy(filename("inp",""),filename("inp","",sequence));
-  // copy dependent files
-  auto input = slurp(filename("inp"));
-  fs::directory_iterator end;
-  for (fs::directory_iterator iter(filename("")); iter != end; iter++) {
-    if (fs::is_regular(iter->path())) {
-      auto file = iter->path().filename().native();
-      if (input.find(file)!= std::string::npos)
-        fs::copy(filename("",file),filename("",file,sequence));
+  if (fs::exists(filename("inp", ""))) {
+//    std::cout << "copy from " << filename("inp", "") << " to " << filename("inp", "", sequence) << std::endl;
+    fs::copy(filename("inp", ""), filename("inp", "", sequence));
+    // copy dependent files
+    auto input = slurp(filename("inp"));
+    fs::directory_iterator end;
+    for (fs::directory_iterator iter(filename("")); iter != end; iter++) {
+      if (fs::is_regular(iter->path())) {
+        auto file = iter->path().filename().native();
+        if (input.find(file) != std::string::npos) {
+//          std::cout << "copy from " << filename("", file) << " to " << filename("", file, sequence) << std::endl;
+          fs::copy(filename("", file), filename("", file, sequence));
+        }
+      }
     }
   }
   return sequence;

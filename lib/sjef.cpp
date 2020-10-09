@@ -1204,7 +1204,6 @@ int Project::run_directory_new() {
   for (const auto& dir : dirlist) ss << dir << " ";
   property_set("run_directories", ss.str());
   auto dir = fs::path{filename()} / "run" / std::to_string(sequence);
-  std::cout << "create "<<dir<<std::endl;
   if (not fs::create_directories(dir))
     throw std::runtime_error("Cannot create directory " + dir.native());
   if (fs::exists(filename("inp", ""))) {

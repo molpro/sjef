@@ -297,13 +297,11 @@ class Project {
    */
    using run_list_t = std::set<int, std::greater<int>>;
    run_list_t run_list() const;
- private:
   /*!
    * @brief Create a new run directory. Also copy into it the input file, and any of its dependencies
    * @return The sequence number of the new run directory
    */
   int run_directory_new();
- public:
   /*!
    * @brief Delete a run directory
    * @param run

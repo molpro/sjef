@@ -70,30 +70,6 @@ void sjef::Project::custom_initialisation() {
 
 void sjef::Project::custom_run_preface() {
   if (m_project_suffix == "molpro") {
-    { // manage backups
-      constexpr int default_max_backups = 3;
-      bool needed = false;
-      for (const auto& suffix : std::vector<std::string>{"out", "xml", "log"})
-        needed = needed or fs::exists(filename(suffix));
-      if (needed) {
-        auto max_backupss = property_get("output_backups");
-        int max_backups = max_backupss.empty() ? default_max_backups : std::stoi(max_backupss);
-        property_set("output_backups", std::to_string(max_backups));
-        auto backup = fs::path{filename("", "backup")};
-        fs::create_directories(backup);
-        auto ss = property_get("last_output_backup");
-        int seq = ss.empty() ? 1 : std::stoi(ss) + 1;
-        property_set("last_output_backup", std::to_string(seq));
-        auto backup_dir = backup / std::to_string(seq);
-        fs::create_directories(backup_dir);
-        for (const auto& suffix : std::vector<std::string>{"out", "xml", "log"})
-          if (fs::exists(filename(suffix)))
-            fs::rename(filename(suffix), backup_dir / fs::path(filename(suffix)).filename());
-        for (int old = seq - max_backups; old > 0; --old)
-          if (fs::exists(backup / std::to_string(old)))
-            fs::remove_all(backup / std::to_string(old));
-      }
-    }
   }
 }
 

@@ -1189,7 +1189,8 @@ std::string Project::run_directory(int run) const {
     return filename();
   auto sequence = run_verify(run);
   if (sequence < 1)
-    throw std::runtime_error("Invalid run directory");
+//    throw std::runtime_error("Invalid run directory");
+    return filename(); // covers the case of old projects without run directories
   auto dir = fs::path{filename()} / "run" / std::to_string(sequence);
   if (not fs::is_directory(dir))
     throw std::runtime_error("Cannot find directory " + dir.native());

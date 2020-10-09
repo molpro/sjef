@@ -587,7 +587,7 @@ TEST(project, run_directory) {
     EXPECT_EQ(rundir, i);
     EXPECT_EQ(rundir, p.run_verify(rundir));
     EXPECT_EQ(rundir, p.run_verify(0));
-    EXPECT_EQ(p.run_directory(), p.filename());
+    EXPECT_EQ(p.run_directory(), p.filename("","",0));
     EXPECT_EQ(p.run_directory(0), (fs::path{p.filename()} / "run" / si).native());
     EXPECT_EQ(p.filename("out","",0),(fs::path{p.filename()} / "run" / si / "run_directory.out").native());
   }

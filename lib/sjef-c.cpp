@@ -419,4 +419,56 @@ char* sjef_expand_path(const char* path, const char* default_suffix) {
   catch (...) {}
   return NULL;
 }
+char* sjef_project_filename_general(const char* project, const char* suffix, const char* name, int run) {
+  try {
+    if (projects.count(project) == 0) sjef_project_open(project);
+    return strdup(projects.at(project)->filename(suffix,name,run).c_str());
+  }
+  catch (std::exception& e) { error(e); }
+  catch (...) {}
+  return NULL;
+}
+
+char* sjef_project_run_directory(const char* project, int run) {
+  try {
+    if (projects.count(project) == 0) sjef_project_open(project);
+    return strdup(projects.at(project)->run_directory(run).c_str());
+  }
+  catch (std::exception& e) { error(e); }
+  catch (...) {}
+  return NULL;
+}
+int* sjef_project_run_list(const char* project) {
+  try {
+    if (projects.count(project) == 0) sjef_project_open(project);
+    auto list = projects.at(project)->run_list();
+    int* result = (int*) malloc((list.size()+1)*sizeof(int*));
+    int sequence = 0;
+    for (const auto& item : list)
+      result[sequence++] = item;
+    return result;
+  }
+  catch (std::exception& e) { error(e); }
+  catch (...) {}
+  return NULL;
+}
+int sjef_project_run_directory_new(const char* project) {
+  try {
+    if (projects.count(project) == 0) sjef_project_open(project);
+    return projects.at(project)->run_directory_new();
+  }
+  catch (std::exception& e) { error(e); }
+  catch (...) {}
+  return -1;
+}
+void sjef_project_run_delete(const char* project, int run) {
+  try {
+    if (projects.count(project) == 0) sjef_project_open(project);
+    projects.at(project)->run_delete(run);
+    return;
+  }
+  catch (std::exception& e) { error(e); }
+  catch (...) {}
+  return;
+}
 }

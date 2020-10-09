@@ -275,12 +275,11 @@ class Project {
   /*!
    * @brief Obtain the path of a run directory
    * @param run
-   * - -1: the main project directory
    * - -0: the most recent run directory
    * - other: the specified run directory
    * @return the fully-qualified name of the directory
    */
-  std::string run_directory(int run=-1) const;
+  std::string run_directory(int run=0) const;
   /*!
    * @brief Check a run exists, and resolve most recent
    * @param run The run number to check

@@ -267,9 +267,40 @@ class Project {
    * @brief Get the file name of the bundle, or a primary file of particular type, or a general file in the bundle
    * @param suffix If present without \c name, look for a primary file with that type. If absent, the file name of the bundle is instead selected
    * @param name If present,  look for a file of this name, appended with .\c suffix if that is non-blank
+   * @param run If specified, look in a run directory for the file, instead of the main project directory. A value of 0 is interpreted as the most recent run directory.
    * @return the fully-qualified name of the file
    */
-  std::string filename(std::string suffix = "", const std::string& name = "") const;
+  std::string filename(std::string suffix = "", const std::string& name = "", int run=-1) const;
+  /*!
+   * @brief Obtain the path of a run directory
+   * @param run
+   * - -1: the main project directory
+   * - -0: the most recent run directory
+   * - other: the specified run directory
+   * @return the fully-qualified name of the directory
+   */
+  std::string run_directory(int run=-1) const;
+  /*!
+   * @brief Check a run exists, and resolve most recent
+   * @param run The run number to check
+   * @return run, or the most recent if run was zero. If the requested run is not found, return 0
+   */
+  int run_verify(int run) const;
+  /*!
+   * @brief Obtain the list of run numbers in reverse order, ie the most recent first
+   * @return
+   */
+  std::set<int> run_list() const;
+  /*!
+   * @brief Create a new run directory. Also copy into it the input file, and any of its dependencies
+   * @return The sequence number of the new run directory
+   */
+  int run_directory_new();
+  /*!
+   * @brief Delete a run directory
+   * @param run
+   */
+  void run_delete(int run);
   /*!
    * @brief
    * @return the base name of the project, ie its file name with directory and suffix stripped off

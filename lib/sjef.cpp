@@ -1162,18 +1162,90 @@ void Project::recent_edit(const std::string& add, const std::string& remove) {
   }
 }
 
-std::string Project::filename(std::string suffix, const std::string& name) const {
+std::string Project::filename(std::string suffix, const std::string& name, int run) const {
+  fs::path result{m_filename};
+  if (run > -1)
+    result = run_directory(run);
   if (m_suffixes.count(suffix) > 0) suffix = m_suffixes.at(suffix);
   if (suffix != "" and name == "")
-    return m_filename + "/" + fs::path(m_filename).stem().string() + "." + suffix;
+    result /= fs::path(m_filename).stem().string() + "." + suffix;
   else if (suffix != "" and name != "")
-    return m_filename + "/" + name + "." + suffix;
+    result /= name + "." + suffix;
   else if (name != "")
-    return m_filename + "/" + name;
-  else
-    return m_filename;
+    result /= name;
+  return result.native();
 }
 std::string Project::name() const { return fs::path(m_filename).stem().string(); }
+
+inline std::string slurp(const std::string& path) {
+  std::ostringstream buf;
+  std::ifstream input(path.c_str());
+  buf << input.rdbuf();
+  return buf.str();
+}
+
+std::string Project::run_directory(int run) const {
+  if (run < 0)
+    return filename();
+  auto sequence = run_verify(run);
+  if (sequence < 1)
+    throw std::runtime_error("Invalid run directory");
+  auto dir = fs::path{filename()} / "run" / std::to_string(sequence);
+  if (not fs::is_directory(dir))
+    throw std::runtime_error("Cannot find directory " + dir.native());
+  return dir.native();
+}
+int Project::run_directory_new() {
+  auto dirlist = run_list();
+  auto sequence = dirlist.empty() ? 1 : *(dirlist.rbegin()) + 1;
+  dirlist.insert(sequence);
+  std::stringstream ss;
+  for (const auto& dir : dirlist) ss << dir << " ";
+  property_set("run_directories", ss.str());
+  auto dir = fs::path{filename()} / "run" / std::to_string(sequence);
+  if (not fs::create_directories(dir))
+    throw std::runtime_error("Cannot create directory " + dir.native());
+  fs::copy(filename("inp",""),filename("inp","",sequence));
+  // copy dependent files
+  auto input = slurp(filename("inp"));
+  fs::directory_iterator end;
+  for (fs::directory_iterator iter(filename("")); iter != end; iter++) {
+    if (fs::is_regular(iter->path())) {
+      auto file = iter->path().filename().native();
+      if (input.find(file)!= std::string::npos)
+        fs::copy(filename("",file),filename("",file,sequence));
+    }
+  }
+  return sequence;
+}
+
+void Project::run_delete(int run) {
+  run = run_verify(run);
+  if (run == 0) return;
+  fs::remove_all(run_directory(run));
+  auto dirlist = run_list();
+  dirlist.erase(run);
+  std::stringstream ss;
+  for (const auto& dir : dirlist) ss << dir << " ";
+  property_set("run_directories", ss.str());
+}
+
+int Project::run_verify(int run) const {
+  auto runlist = run_list();
+  if (run > 0)
+    return (runlist.count(run) > 0) ? run : 0;
+  else if (runlist.empty()) return 0;
+  else return *(runlist.rbegin());
+}
+
+std::set<int> Project::run_list() const {
+  auto ss = std::stringstream(property_get("run_directories"));
+  std::set<int> rundirs;
+  int value;
+  while (ss >> value && !ss.eof())
+    rundirs.insert(value);
+  return rundirs;
+}
 
 int Project::recent_find(const std::string& filename) const {
   std::ifstream in(m_recent_projects_file);
@@ -1210,13 +1282,6 @@ struct plist_writer : pugi::xml_writer {
 };
 
 constexpr static bool use_writer = false;
-
-inline std::string slurp(const std::string& path) {
-  std::ostringstream buf;
-  std::ifstream input(path.c_str());
-  buf << input.rdbuf();
-  return buf.str();
-}
 void Project::load_property_file_locked() const {
 //  std::cout << "load_property_file() from " << this << std::endl;
 //  std::cout << slurp(propertyFile())<<std::endl;

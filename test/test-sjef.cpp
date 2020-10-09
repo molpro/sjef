@@ -574,3 +574,27 @@ TEST(project, project_name_embedded_space) {
   EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
 }
 
+TEST(project, run_directory) {
+  savestate state("molpro");
+  auto filename = state.testfile("run_directory.molpro");
+  sjef::Project p(filename);
+  std::ofstream(p.filename("inp")) << "geometry=" + p.name() + ".xyz" + "\n";
+  std::ofstream(p.filename("xyz")) << "1\n\nHe 0 0 0\n";
+  EXPECT_TRUE(fs::exists(sjef::expand_path(filename)));
+  for (int i = 1; i < 4; i++) {
+    auto si = std::to_string(i);
+    auto rundir = p.run_directory_new();
+    EXPECT_EQ(rundir, i);
+    EXPECT_EQ(rundir, p.run_verify(rundir));
+    EXPECT_EQ(rundir, p.run_verify(0));
+    EXPECT_EQ(p.run_directory(), p.filename());
+    EXPECT_EQ(p.run_directory(0), (fs::path{p.filename()} / "run" / si).native());
+    EXPECT_EQ(p.filename("out","",0),(fs::path{p.filename()} / "run" / si / "run_directory.out").native());
+  }
+  p.run_delete(3);
+  EXPECT_EQ(2, p.run_verify(0));
+  p.run_delete(1);
+  EXPECT_EQ(2, p.run_verify(0));
+  EXPECT_EQ(p.run_list(),std::set<int>{2});
+//  system((std::string("ls -lR ")+p.filename()).c_str());
+}

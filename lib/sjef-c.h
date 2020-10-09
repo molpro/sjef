@@ -96,11 +96,6 @@ inline char* sjef_project_run_directory_default(const char* project) { return sj
   */
 int* sjef_project_run_list(const char* project);
 /*!
-  * @brief Create a new run directory. Also copy into it the input file, and any of its dependencies
-  * @return The sequence number of the new run directory
-  */
-int sjef_project_run_directory_new(const char* project);
-/*!
  * @brief Delete a run directory
  * @param run
  */

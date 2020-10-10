@@ -252,7 +252,7 @@ int main(int argc, char* argv[]) {
       else if (command == "browse") {
         if (!proj.property_get("backend").empty())
           success = proj.synchronize(verboseSwitch.getValue());
-        if (success) success = system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out") + "\\'").c_str());
+        if (success) success = system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out","",0) + "\\'").c_str());
       } else if (command == "clean") {
         proj.clean(true, false, false);
       } else if (command == "property") {
@@ -301,7 +301,7 @@ int main(int argc, char* argv[]) {
                     and
                         proj.synchronize(verboseSwitch.getValue())
                 )
-              system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out") + "\\'").c_str());
+              system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out","",0) + "\\'").c_str());
           } else
             std::cout << "Unknown command: " << line << std::endl;
         }

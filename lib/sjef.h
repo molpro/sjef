@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <set>
 #include <memory>
 #include <boost/filesystem/path.hpp>
 #include <boost/process/child.hpp>
@@ -209,18 +210,23 @@ class Project {
   void custom_run_preface();
   /*!
    * @brief Get the xml output, completing any open tags if necessary
+   * @param run If present, look for the file in a particular run directory. Otherwise it will search in the default run directory, and if not found, the main directory
    * @param sync Whether to force a synchronisation with backend before getting the file contents
    * @return
    */
-  std::string xml(bool sync = true) const;
+  std::string xml(int run=0, bool sync = true) const;
   /*!
    * @brief Obtain the contents of a project file
    * @param suffix If present without \c name, look for a primary file with that type. If absent, the file name of the bundle is instead selected
    * @param name If present,  look for a file of this name, appended with .\c suffix if that is non-blank
+   * @param run If present, look for the file in a particular run directory. Otherwise it will search in the default run directory, and if not found, the main directory
    * @param sync Whether to force a synchronisation with backend before getting the file contents
-   * @return the fully-qualified name of the file
+   * @return the contents of the file
    */
-  std::string file_contents(const std::string& suffix = "", const std::string& name = "", bool sync = true) const;
+  std::string file_contents(const std::string& suffix = "",
+                            const std::string& name = "",
+                            int run = 0,
+                            bool sync = true) const;
 
   /*!
    * @brief Remove potentially unwanted files from the project
@@ -267,9 +273,40 @@ class Project {
    * @brief Get the file name of the bundle, or a primary file of particular type, or a general file in the bundle
    * @param suffix If present without \c name, look for a primary file with that type. If absent, the file name of the bundle is instead selected
    * @param name If present,  look for a file of this name, appended with .\c suffix if that is non-blank
+   * @param run If specified, look in a run directory for the file, instead of the main project directory. A value of 0 is interpreted as the most recent run directory.
    * @return the fully-qualified name of the file
    */
-  std::string filename(std::string suffix = "", const std::string& name = "") const;
+  std::string filename(std::string suffix = "", const std::string& name = "", int run=-1) const;
+  /*!
+   * @brief Obtain the path of a run directory
+   * @param run
+   * - -0: the most recent run directory
+   * - other: the specified run directory
+   * @return the fully-qualified name of the directory
+   */
+  std::string run_directory(int run=0) const;
+  /*!
+   * @brief Check a run exists, and resolve most recent
+   * @param run The run number to check
+   * @return run, or the most recent if run was zero. If the requested run is not found, return 0
+   */
+  int run_verify(int run) const;
+  /*!
+   * @brief Obtain the list of run numbers in reverse order, ie the most recent first
+   * @return
+   */
+   using run_list_t = std::set<int, std::greater<int>>;
+   run_list_t run_list() const;
+  /*!
+   * @brief Create a new run directory. Also copy into it the input file, and any of its dependencies
+   * @return The sequence number of the new run directory
+   */
+  int run_directory_new();
+  /*!
+   * @brief Delete a run directory
+   * @param run
+   */
+  void run_delete(int run);
   /*!
    * @brief
    * @return the base name of the project, ie its file name with directory and suffix stripped off
@@ -304,6 +341,7 @@ class Project {
   mutable time_t m_property_file_modification_time;
   mutable std::map<std::string, time_t> m_input_file_modification_time;
   const bool m_use_control_path;
+  std::set<std::string> m_run_directory_ignore;
   void property_delete_locked(const std::string& property);
   void check_property_file_locked() const;
   void check_property_file() const;

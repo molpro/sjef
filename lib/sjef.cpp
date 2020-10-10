@@ -34,6 +34,7 @@ struct sjef::pugi_xml_document : public pugi::xml_document {};
 
 ///> @private
 const std::string sjef::Project::s_propertyFile = "Info.plist";
+const std::string writing_object_file = ".Info.plist.writing_object";
 
 ///> @private
 inline fs::path executable(fs::path command) {
@@ -111,7 +112,8 @@ Project::Project(const std::string& filename,
     m_master_of_slave(masterProject == nullptr),
     m_property_file_modification_time(0),
     m_use_control_path(false),
-    m_backend("") {
+    m_backend(""),
+    m_run_directory_ignore({s_propertyFile,writing_object_file}) {
 //  std::cerr << "Project constructor filename="<<filename << "address "<< this<<std::endl;
   auto recent_projects_directory = expand_path(std::string{"~/.sjef/"} + m_project_suffix);
   fs::create_directories(recent_projects_directory);
@@ -1209,8 +1211,10 @@ int Project::run_directory_new() {
   fs::directory_iterator end;
   for (fs::directory_iterator iter(filename("")); iter != end; iter++) {
     auto file = iter->path().filename().native();
-    if (fs::is_regular(iter->path()) and file != "Info.plist")
+    if (fs::is_regular(iter->path()) and m_run_directory_ignore.count(file) == 0) {
+//      std::cout << "copy "<< file<<std::endl;
       fs::copy(filename("", file), filename("", file, sequence));
+    }
   }
   return sequence;
 }
@@ -1288,7 +1292,6 @@ void Project::load_property_file_locked() const {
   m_property_file_modification_time = fs::last_write_time(propertyFile());
 }
 
-static std::string writing_object_file = ".Info.plist.writing_object";
 
 bool Project::properties_last_written_by_me(bool removeFile) const {
   auto path = fs::path{m_filename} / fs::path{writing_object_file};

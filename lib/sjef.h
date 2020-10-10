@@ -341,6 +341,7 @@ class Project {
   mutable time_t m_property_file_modification_time;
   mutable std::map<std::string, time_t> m_input_file_modification_time;
   const bool m_use_control_path;
+  std::set<std::string> m_run_directory_ignore;
   void property_delete_locked(const std::string& property);
   void check_property_file_locked() const;
   void check_property_file() const;

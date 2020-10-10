@@ -73,6 +73,10 @@ void sjef::Project::custom_initialisation() {
 
 void sjef::Project::custom_run_preface() {
   if (m_project_suffix == "molpro") {
+    m_run_directory_ignore.insert(name()+".pqb");
+    m_run_directory_ignore.insert(name()+"_geometry.inp");
+    m_run_directory_ignore.insert(name()+"_geometry.out");
+    m_run_directory_ignore.insert(name()+"_geometry.xml");
   }
 }
 

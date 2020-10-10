@@ -1206,21 +1206,11 @@ int Project::run_directory_new() {
   auto dir = fs::path{filename()} / "run" / std::to_string(sequence);
   if (not fs::create_directories(dir))
     throw std::runtime_error("Cannot create directory " + dir.native());
-  if (fs::exists(filename("inp", ""))) {
-//    std::cout << "copy from " << filename("inp", "") << " to " << filename("inp", "", sequence) << std::endl;
-    fs::copy(filename("inp", ""), filename("inp", "", sequence));
-    // copy dependent files
-    auto input = slurp(filename("inp"));
-    fs::directory_iterator end;
-    for (fs::directory_iterator iter(filename("")); iter != end; iter++) {
-      if (fs::is_regular(iter->path())) {
-        auto file = iter->path().filename().native();
-        if (input.find(file) != std::string::npos) {
-//          std::cout << "copy from " << filename("", file) << " to " << filename("", file, sequence) << std::endl;
-          fs::copy(filename("", file), filename("", file, sequence));
-        }
-      }
-    }
+  fs::directory_iterator end;
+  for (fs::directory_iterator iter(filename("")); iter != end; iter++) {
+    auto file = iter->path().filename().native();
+    if (fs::is_regular(iter->path()) and file != "Info.plist")
+      fs::copy(filename("", file), filename("", file, sequence));
   }
   return sequence;
 }

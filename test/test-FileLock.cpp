@@ -2,6 +2,7 @@
 #include <gmock/gmock.h>
 #include <filesystem>
 #include <thread>
+#include <fstream>
 
 #include "FileLock.h"
 namespace fs = std::filesystem;
@@ -23,7 +24,7 @@ TEST(FileLock, many_write_threads) {
   std::string lockfile{"testing-lockfile"};
 //  if (fs::exists(lockfile))
 //    fs::remove_all(lockfile);
-  { auto toucher = fs::ofstream(lockfile); }
+  { auto toucher = std::ofstream(lockfile); }
   auto l1 = std::make_unique<sjef::FileLock>(lockfile, true);
   ASSERT_TRUE(fs::exists(lockfile));
   int n{1000};
@@ -35,7 +36,7 @@ TEST(FileLock, many_write_threads) {
   threads.reserve(messages.size());
   auto writer = [](const std::string& path, const std::string& message) {
     auto lock = sjef::FileLock(path, true);
-    fs::ofstream(path, std::ios_base::app) << message << std::endl;
+    std::ofstream(path, std::ios_base::app) << message << std::endl;
   };
   for (const auto& message : messages)
     threads.emplace_back(writer, lockfile, message);
@@ -47,7 +48,7 @@ TEST(FileLock, many_write_threads) {
     auto l = sjef::FileLock(lockfile, false);
     std::string line;
     int lines = 0;
-    for (auto s = fs::ifstream(lockfile); s; ++lines) {
+    for (auto s = std::ifstream(lockfile); s; ++lines) {
       std::getline(s, line);
       if (line.empty()) --lines;
 //      else std::cout << "line: " << line <<std::endl;

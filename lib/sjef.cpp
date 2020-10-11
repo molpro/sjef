@@ -47,7 +47,7 @@ inline std::string executable(fs::path command) {
       // TODO check that it's executable
       if (fs::is_regular_file(resolved)) return resolved.native();
     }
-    return "";//bp::search_path(command.native()).native();
+    return "";
   }
 }
 
@@ -1387,14 +1387,19 @@ inline std::string random_string(size_t length) {
 
 size_t sjef::Project::project_hash() {
   auto p = this->property_get("project_hash");
+//  system((std::string{"cat "}+filename("plist", "Info")).c_str());
+//  std::cout << "project_hash @"<<p<<"@"<<std::endl;
   size_t result;
   if (p.empty()) {
+//    FileLock pl(propertyFile()+".hashlock", true, true);
     result = std::hash<std::string>{}(random_string(32));
     this->property_set("project_hash", std::to_string(result));
+//    std::cout << "set project_hash "<<std::to_string(result)<<std::endl;
   } else {
     std::istringstream iss(p);
     iss >> result;
   }
+//  std::cout << "result "<<result<<std::endl;
   return result;
 }
 

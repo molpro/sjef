@@ -6,11 +6,11 @@
 #include <vector>
 #include <set>
 #include <memory>
-#include <boost/filesystem/path.hpp>
 #include <boost/process/child.hpp>
 #include <boost/process/pipe.hpp>
 #include <thread>
 #include <mutex>
+#include <filesystem>
 
 namespace sjef {
 class Backend; ///< @private

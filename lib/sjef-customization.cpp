@@ -1,6 +1,5 @@
 #include <pugixml.hpp>
 #include <fstream>
-#include <boost/algorithm/string.hpp>
 #include <iostream>
 #include <filesystem>
 #include "sjef.h"

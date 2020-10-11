@@ -24,6 +24,6 @@ if (NOT TARGET pugixml)
     add_library(pugixml::pugixml ALIAS pugixml)
 endif ()
 
-target_link_libraries(${LIB_NAME} PUBLIC pthread)
+target_link_libraries(${LIB_NAME} PUBLIC Boost::headers pthread)
 target_link_libraries(${LIB_NAME} PRIVATE pugixml::pugixml)
 configure_library(${LIB_NAME} pugixml)

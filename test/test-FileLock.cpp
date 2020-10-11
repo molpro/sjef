@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <thread>
 
 #include "FileLock.h"
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 TEST(FileLock, simple) {
   std::string lockfile{"testing-lockfile"};

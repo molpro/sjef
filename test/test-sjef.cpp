@@ -7,11 +7,10 @@
 #include <list>
 #include <unistd.h>
 #include <libgen.h>
-#include <boost/filesystem.hpp>
-#include <boost/process/search_path.hpp>
+#include <filesystem>
 #include <regex>
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 class savestate {
   std::string rf;
@@ -60,7 +59,7 @@ class savestate {
 };
 TEST(project, filename) {
   savestate state("sjef");
-  std::string slash{boost::filesystem::path::preferred_separator};
+  std::string slash{std::filesystem::path::preferred_separator};
   char* e = getenv(
 #ifdef _WIN32
       "TEMP"
@@ -78,8 +77,8 @@ TEST(project, filename) {
 }
 
 TEST(project, expand_path) {
-  std::string slash{boost::filesystem::path::preferred_separator};
-  std::string cwd{boost::filesystem::current_path().string()};
+  std::string slash{std::filesystem::path::preferred_separator};
+  std::string cwd{std::filesystem::current_path().string()};
   std::string home{getenv(
 #ifdef _WIN32
       "USERPROFILE"
@@ -202,7 +201,7 @@ TEST(project, import) {
   sjef::Project x(filename);
   filename = x.filename();
   auto importfile = sjef::expand_path("$TMPDIR/sjef-project-test.import");
-  boost::filesystem::ofstream ofs{importfile};
+  std::ofstream ofs{importfile};
   ofs << "Hello" << std::endl;
   x.import_file(importfile);
   x.import_file(importfile, true);
@@ -214,7 +213,7 @@ TEST(project, clean) {
   sjef::Project x(filename);
   filename = x.filename();
   ASSERT_FALSE(fs::exists(fs::path(filename) / fs::path(filename + ".out")));
-  { fs::ofstream s(fs::path(filename) / fs::path(x.name() + ".out")); }
+  { std::ofstream s(fs::path(filename) / fs::path(x.name() + ".out")); }
   ASSERT_TRUE(fs::exists(fs::path(filename) / fs::path(x.name() + ".out")));
   x.clean(true, true);
   ASSERT_FALSE(fs::exists(fs::path(filename) / fs::path(x.name() + ".out")));
@@ -429,13 +428,26 @@ TEST(project, spawn_many_dummy) {
   }
 
 }
-
+inline std::string executable(fs::path command) {
+  if (command.is_absolute())
+    return command.native();
+  else {
+    std::stringstream path{std::string{getenv("PATH")}}; // TODO windows
+    std::string elem;
+    while (std::getline(path,elem,':')) {
+      auto resolved = elem / command;
+      // TODO check that it's executable
+      if (fs::is_regular_file(resolved)) return resolved.native();
+    }
+    return "";
+  }
+}
 TEST(project, spawn_many_molpro) {
   savestate state("molpro");
   sjef::Project p(state.testfile("spawn_many.molpro"));
   { std::ofstream(p.filename("inp")) << ""; }
   const auto& backend = sjef::Backend::default_name;
-  if (not boost::process::search_path("molpro").empty()) // test the default backend only if it exists
+  if (not executable("molpro").empty()) // test the default backend only if it exists
     for (auto i = 0; i < 5; ++i) {
       ASSERT_TRUE(p.run(backend, -1, true, true));
       EXPECT_NE(p.property_get("jobnumber"), "-1");

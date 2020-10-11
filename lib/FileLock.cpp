@@ -1,15 +1,15 @@
 #include <map>
 #include <mutex>
 #include <thread>
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <filesystem>
+#include <fstream>
 #include <boost/interprocess/sync/file_lock.hpp>
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 #include "FileLock.h"
 static std::string s_lockfile(const std::string& path) {
   if (!fs::exists(path))
-    auto x = fs::ofstream(path);
+    auto x = std::ofstream(path);
   return path;
 }
 
@@ -22,7 +22,7 @@ struct sjef::FileLock::Unique_FileLock { // process-level locking
  public:
   Unique_FileLock(const std::string& path, bool erase_if_created = true)
       :
-      m_preexisting(boost::filesystem::exists(path) or not erase_if_created),
+      m_preexisting(std::filesystem::exists(path) or not erase_if_created),
       m_lockfile(s_lockfile(path)),
       m_file_lock(new boost::interprocess::file_lock(m_lockfile.c_str())),
       m_entry_count(0) {

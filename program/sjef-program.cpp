@@ -7,9 +7,6 @@ static const auto program_name = std::string("Simple Job Execution Framework");
 #include <map>
 #include <string>
 #include <cstdlib>
-#include <boost/filesystem.hpp>
-
-namespace fs = boost::filesystem;
 
 ///> @private
 int main(int argc, char* argv[]) {

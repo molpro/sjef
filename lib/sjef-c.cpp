@@ -14,7 +14,7 @@
 #include <boost/process/args.hpp>
 #include <boost/process/io.hpp>
 #include <boost/interprocess/sync/file_lock.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <pugixml.hpp>
 #include <unistd.h>
 #include <ctype.h>
@@ -25,7 +25,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #endif
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 static std::map<std::string, std::unique_ptr<sjef::Project>> projects;
 struct sjef::pugi_xml_document : public pugi::xml_document {};
 

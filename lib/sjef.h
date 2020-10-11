@@ -338,8 +338,8 @@ class Project {
   void throw_if_backend_invalid(std::string backend = "") const;
   std::string get_project_suffix(const std::string& filename, const std::string& default_suffix) const;
   static void recent_edit(const std::string& add, const std::string& remove = "");
-  mutable time_t m_property_file_modification_time;
-  mutable std::map<std::string, time_t> m_input_file_modification_time;
+  mutable std::filesystem::file_time_type m_property_file_modification_time;
+  mutable std::map<std::string, std::filesystem::file_time_type> m_input_file_modification_time;
   const bool m_use_control_path;
   std::set<std::string> m_run_directory_ignore;
   void property_delete_locked(const std::string& property);

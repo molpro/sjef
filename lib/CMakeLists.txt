@@ -7,7 +7,7 @@ target_compile_options(${LIB_NAME} PUBLIC -fPIC)
 set_target_properties(${LIB_NAME} PROPERTIES PUBLIC_HEADER "sjef.h;sjef-c.h")
 set_target_properties(${LIB_NAME} PROPERTIES OUTPUT_NAME "${LIB_FILENAME}")
 
-find_package(Boost 1.71.0 COMPONENTS filesystem REQUIRED)
+find_package(Boost 1.71.0 REQUIRED)
 
 if (NOT TARGET pugixml)
     find_package(pugixml QUIET)
@@ -24,6 +24,6 @@ if (NOT TARGET pugixml)
     add_library(pugixml::pugixml ALIAS pugixml)
 endif ()
 
-target_link_libraries(${LIB_NAME} PUBLIC Boost::filesystem pthread)
+target_link_libraries(${LIB_NAME} PUBLIC pthread)
 target_link_libraries(${LIB_NAME} PRIVATE pugixml::pugixml)
 configure_library(${LIB_NAME} pugixml)

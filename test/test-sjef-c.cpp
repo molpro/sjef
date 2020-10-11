@@ -8,10 +8,10 @@
 #include <list>
 #include <unistd.h>
 #include <libgen.h>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/process/search_path.hpp>
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 class savestate {
   std::string rf;

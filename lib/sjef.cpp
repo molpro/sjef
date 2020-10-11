@@ -1,7 +1,6 @@
 #include "sjef.h"
 #include <string>
 #include <iostream>
-#include <boost/algorithm/string.hpp>
 #include <map>
 #include <array>
 #include <regex>
@@ -12,7 +11,7 @@
 #include <boost/process/spawn.hpp>
 #include <boost/process/args.hpp>
 #include <boost/process/io.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <pugixml.hpp>
 #include <unistd.h>
 #include <ctype.h>
@@ -25,7 +24,7 @@
 #endif
 
 namespace bp = boost::process;
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 int backend_watcher_wait_milliseconds;
 
@@ -37,11 +36,19 @@ const std::string sjef::Project::s_propertyFile = "Info.plist";
 const std::string writing_object_file = ".Info.plist.writing_object";
 
 ///> @private
-inline fs::path executable(fs::path command) {
+inline std::string executable(fs::path command) {
   if (command.is_absolute())
-    return command;
-  else
-    return bp::search_path(command);
+    return command.native();
+  else {
+    std::stringstream path{std::string{getenv("PATH")}}; // TODO windows
+    std::string elem;
+    while (std::getline(path,elem,':')) {
+      auto resolved = elem / command;
+      // TODO check that it's executable
+      if (fs::is_regular_file(resolved)) return resolved.native();
+    }
+    return "";//bp::search_path(command.native()).native();
+  }
 }
 
 ///> @private
@@ -110,7 +117,7 @@ Project::Project(const std::string& filename,
 //    m_file_lock(nullptr),
     m_master_instance(masterProject),
     m_master_of_slave(masterProject == nullptr),
-    m_property_file_modification_time(0),
+//    m_property_file_modification_time(0),
     m_use_control_path(false),
     m_backend(""),
     m_run_directory_ignore({s_propertyFile,writing_object_file}) {
@@ -190,13 +197,13 @@ Project::Project(const std::string& filename,
     m_backends[sjef::Backend::default_name] = default_backend();
     const auto config_file = expand_path("~/.sjef/" + m_project_suffix + "/backends.xml");
     if (not fs::exists(config_file))
-      fs::ofstream(config_file) << "<?xml version=\"1.0\"?>\n<backends>\n</backends>" << std::endl;
+      std::ofstream(config_file) << "<?xml version=\"1.0\"?>\n<backends>\n</backends>" << std::endl;
     {
       FileLock l(config_file);
       fs::copy_file(config_file, config_file + "-");
       FileLock ll(config_file + "-");
-      auto in = fs::ifstream(config_file + "-");
-      auto out = fs::ofstream(config_file);
+      auto in = std::ifstream(config_file + "-");
+      auto out = std::ofstream(config_file);
       std::string line;
       auto be_defaults = Backend();
       while (std::getline(in, line)) {
@@ -264,7 +271,7 @@ bool Project::import_file(std::string file, bool overwrite) {
     if (fs::path{file}.extension() == m_suffixes[key])
       to = fs::path{m_filename} / fs::path{name()} / m_suffixes[key];
   //TODO: implement generation of .inp from .xml
-  boost::system::error_code ec;
+  std::error_code ec;
 //  std::cerr << "Import copies from "<<file<<" to "<<to<<std::endl;
   if (overwrite and exists(to))
     remove(to);
@@ -290,7 +297,7 @@ bool Project::export_file(std::string file, bool overwrite) {
   if (!property_get("backend").empty())synchronize(0);
   auto from = fs::path{m_filename};
   from /= fs::path{file}.filename();
-  boost::system::error_code ec;
+  std::error_code ec;
   if (overwrite and exists(fs::path{file}))
     remove(fs::path{file});
   fs::copy_file(from, file, ec);
@@ -357,7 +364,7 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
     rsyncopt += " -e 'ssh " + m_control_path_option + "'";
   if (verbosity > 2)
     std::cerr << "rsyncopt: " << rsyncopt << std::endl;
-  auto cmd = std::string{bp::search_path(rsync).native()} + " " +
+  auto cmd = executable(rsync) + " " +
       rsyncopt + " " +
       "--exclude=*.out --exclude=*.xml --exclude=*.log " +
       "-L -a --update " + " " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + m_filename + "/ "
@@ -372,7 +379,7 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
     return true;
   }
   {
-    auto cmd = std::string{bp::search_path(rsync).native()} + " " +
+    auto cmd = executable(rsync) + " " +
         rsyncopt +
         " -a --update " + (verbosity > 0 ? std::string{"-v "} : std::string{""});
     for (const auto& rf : m_reserved_files) {
@@ -420,14 +427,17 @@ void Project::force_file_names(const std::string& oldname) {
       }
     }
     catch (const std::exception& ex) {
-      throw std::runtime_error(dir_itr->path().leaf().native() + " " + ex.what());
+      throw std::runtime_error(dir_itr->path().native() + " " + ex.what());
     }
   }
 
   for (const auto& key : property_names()) {
     auto value = property_get(key);
-    boost::replace_first(value, oldname + ".", name() + ".");
-    property_set(key, value);
+    auto found = value.find(oldname + ".");
+    if (found != std::string::npos) {
+      value.replace(found,oldname.size(),name());
+      property_set(key, value);
+    }
   }
 }
 
@@ -1137,7 +1147,7 @@ void Project::recent_edit(const std::string& add, const std::string& remove) {
   {
     if (!fs::exists(recent_projects_file)) {
       fs::create_directories(fs::path(recent_projects_file).parent_path());
-      fs::ofstream junk(recent_projects_file);
+      std::ofstream junk(recent_projects_file);
     }
     FileLock lock{recent_projects_file + ".lock"};
     std::ifstream in(recent_projects_file);
@@ -1211,7 +1221,8 @@ int Project::run_directory_new() {
   fs::directory_iterator end;
   for (fs::directory_iterator iter(filename("")); iter != end; iter++) {
     auto file = iter->path().filename().native();
-    if (fs::is_regular(iter->path()) and m_run_directory_ignore.count(file) == 0) {
+    if (fs::is_regular_file(iter->path()) and m_run_directory_ignore.count(file) == 0)
+    {
 //      std::cout << "copy "<< file<<std::endl;
       fs::copy(filename("", file), filename("", file, sequence));
     }
@@ -1318,7 +1329,7 @@ void Project::check_property_file_locked() const {
   auto lastwrite = fs::last_write_time(propertyFile());
   if (m_property_file_modification_time == lastwrite) { // tie-breaker
     if (not properties_last_written_by_me(false))
-      --m_property_file_modification_time; // to mark this object's cached properties as out of date
+      m_property_file_modification_time-=std::chrono::milliseconds(1); // to mark this object's cached properties as out of date
   }
   if (m_property_file_modification_time < lastwrite) {
     {
@@ -1337,7 +1348,7 @@ void Project::save_property_file_locked() const {
   writer.file = propertyFile();
   if (not fs::exists(propertyFile())) {
     fs::create_directories(m_filename);
-    { fs::ofstream x(propertyFile()); }
+    { std::ofstream x(propertyFile()); }
   }
 //    std::cerr << "1 exists(propertyFile()) ? " << fs::exists(propertyFile()) << std::endl;
   if (use_writer)
@@ -1573,7 +1584,7 @@ void sjef::Project::ensure_remote_server() const {
 //            << " ssh command = " << bp::search_path("ssh")
 //            << " host = " << m_remote_server->host
 //            << std::endl;
-  m_remote_server->process = bp::child(bp::search_path("ssh"),
+  m_remote_server->process = bp::child(executable("ssh"),
                                        m_remote_server->host,
                                        bp::std_in < m_remote_server->in,
                                        bp::std_err > m_remote_server->err,

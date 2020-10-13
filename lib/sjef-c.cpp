@@ -350,6 +350,18 @@ char* sjef_project_backend_parameter_get(const char* project,
   return NULL;
 }
 
+char* sjef_project_backend_parameter_expand(const char* project,
+					    const char* backend,
+					    const char* templ) {
+  try {
+    if (projects.count(project) == 0) sjef_project_open(project);
+    return strdup(projects.at(project)->backend_parameter_expand(backend, templ).c_str());
+  }
+  catch (std::exception& e) { error(e); }
+  catch (...) {}
+  return NULL;
+}
+
 void sjef_project_backend_parameter_set(const char* project,
                                         const char* backend,
                                         const char* parameter,

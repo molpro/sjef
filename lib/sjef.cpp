@@ -382,7 +382,7 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
       if (fs::exists(f))
         cmd += "--exclude=" + f + " ";
     }
-    cmd += backend.host + ":" + (fs::path{backend.cache} / m_filename).native();
+    cmd += backend.host + ":" + (fs::path{backend.cache} / m_filename).native()+ "/ " + m_filename;
     if (verbosity > 1)
       std::cerr << "second rsync " << cmd << std::endl;
     bp::child(cmd).wait();

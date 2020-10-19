@@ -474,4 +474,15 @@ void sjef_project_run_delete(const char* project, int run) {
   catch (...) {}
   return;
 }
+
+void sjef_project_take_run_files(const char* project, int run, const char* fromname, const char* toname) {
+  try {
+    if (projects.count(project) == 0) sjef_project_open(project);
+    projects.at(project)->take_run_files(run,fromname,toname);
+    return;
+  }
+  catch (std::exception& e) { error(e); }
+  catch (...) {}
+  return;
+}
 }

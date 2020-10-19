@@ -48,7 +48,8 @@ inline fs::path executable(fs::path command) {
 bool copyDir(
     fs::path const& source,
     fs::path const& destination,
-    bool delete_source = false
+    bool delete_source = false,
+    bool recursive = true
 ) {
   // Check whether the function call is valid
   if (!fs::exists(source) || !fs::is_directory(source))
@@ -68,14 +69,16 @@ bool copyDir(
     fs::path current(file->path());
     if (fs::is_directory(current)) {
       // Found directory: Recursion
-      if (
-          !copyDir(
-              current,
-              destination / current.filename(),
-              delete_source
-          )
-          ) {
-        return false;
+      if (recursive) {
+        if (
+            !copyDir(
+                current,
+                destination / current.filename(),
+                delete_source
+            )
+            ) {
+          return false;
+        }
       }
     } else {
       // Found file: Copy
@@ -113,7 +116,7 @@ Project::Project(const std::string& filename,
     m_property_file_modification_time(0),
     m_use_control_path(false),
     m_backend(""),
-    m_run_directory_ignore({s_propertyFile,writing_object_file}) {
+    m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}) {
 //  std::cerr << "Project constructor filename="<<filename << "address "<< this<<std::endl;
   auto recent_projects_directory = expand_path(std::string{"~/.sjef/"} + m_project_suffix);
   fs::create_directories(recent_projects_directory);
@@ -382,7 +385,7 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
       if (fs::exists(f))
         cmd += "--exclude=" + f + " ";
     }
-    cmd += backend.host + ":" + (fs::path{backend.cache} / m_filename).native()+ "/ " + m_filename;
+    cmd += backend.host + ":" + (fs::path{backend.cache} / m_filename).native() + "/ " + m_filename;
     if (verbosity > 1)
       std::cerr << "second rsync " << cmd << std::endl;
     bp::child(cmd).wait();
@@ -408,7 +411,8 @@ void Project::force_file_names(const std::string& oldname) {
        ++dir_itr) {
     auto path = dir_itr->path();
     try {
-      if (path.stem() == oldname) {
+      auto ext = path.extension().native();
+      if (path.stem() == oldname and not ext.empty() and m_suffixes.count(ext.substr(1)) > 0) {
         auto newpath = path.parent_path();
         newpath /= name();
         newpath.replace_extension(dir_itr->path().extension());
@@ -417,6 +421,11 @@ void Project::force_file_names(const std::string& oldname) {
 
         if (newpath.extension() == ".inp")
           rewrite_input_file(newpath.string(), oldname);
+        for (const auto& key : property_names()) {
+          auto value = property_get(key);
+          if (value == path.filename().native())
+            property_set(key, newpath.filename().native());
+        }
       }
     }
     catch (const std::exception& ex) {
@@ -424,11 +433,6 @@ void Project::force_file_names(const std::string& oldname) {
     }
   }
 
-  for (const auto& key : property_names()) {
-    auto value = property_get(key);
-    boost::replace_first(value, oldname + ".", name() + ".");
-    property_set(key, value);
-  }
 }
 
 std::string Project::propertyFile() const { return (fs::path{m_filename} / fs::path{s_propertyFile}).string(); }
@@ -461,16 +465,17 @@ bool Project::move(const std::string& destination_filename, bool force) {
   return success;
 }
 
-bool Project::copy(const std::string& destination_filename, bool force, bool keep_hash) {
+bool Project::copy(const std::string& destination_filename, bool force, bool keep_hash, bool omit_run) {
   auto dest = fs::absolute(expand_path(destination_filename, fs::path{m_filename}.extension().string().substr(1)));
   if (force)
     fs::remove_all(dest);
   if (!property_get("backend").empty()) synchronize();
-  copyDir(fs::path(m_filename), dest, false);
+  copyDir(fs::path(m_filename), dest, false, not omit_run);
   Project dp(dest.string());
   dp.force_file_names(name());
   recent_edit(dp.m_filename);
   dp.property_delete("jobnumber");
+  if (omit_run) dp.property_delete("run_directories");
   dp.clean(true, true);
   if (!keep_hash)
     dp.property_delete("project_hash");
@@ -704,9 +709,12 @@ bool Project::run(int verbosity, bool force, bool wait) {
     synchronize(verbosity);
     property_set("_private_sjef_project_backend_inactive", "0");
     property_set("_private_sjef_project_backend_inactive_synced", "0");
-    if (verbosity > 3) std::cerr << "fs::path{backend.cache} / filename("","",rundir) " << fs::path{backend.cache} / filename("","",rundir) << std::endl;
+    if (verbosity > 3)
+      std::cerr << "fs::path{backend.cache} / filename("","",rundir) "
+                << fs::path{backend.cache} / filename("", "", rundir) << std::endl;
     auto jobstring =
-        std::string{"cd "} + (fs::path{backend.cache} / filename("","",rundir)).native() + " 2>/dev/null >/dev/null; nohup " + run_command + " " + optionstring
+        std::string{"cd "} + (fs::path{backend.cache} / filename("", "", rundir)).native()
+            + " 2>/dev/null >/dev/null; nohup " + run_command + " " + optionstring
             + this->name()
             + "." + m_suffixes["inp"];
     if (backend.run_jobnumber == "([0-9]+)") jobstring += "& echo $! "; // go asynchronous if a straight launch
@@ -876,6 +884,8 @@ std::string Project::file_contents(const std::string& suffix, const std::string&
       and suffix != m_suffixes.at("inp")
       )
     synchronize();
+//  std::cout << "file_contents " << filename(suffix, name, run) << std::endl;
+//  system((std::string{"ls -lR "}+filename(suffix,name,run)).c_str());
   std::ifstream s(filename(suffix, name, run));
   auto result = std::string(std::istreambuf_iterator<char>(s),
                             std::istreambuf_iterator<char>());
@@ -1168,9 +1178,10 @@ std::string Project::filename(std::string suffix, const std::string& name, int r
   fs::path result{m_filename};
   if (run > -1)
     result = run_directory(run);
+  std::string basename = result.stem().string();
   if (m_suffixes.count(suffix) > 0) suffix = m_suffixes.at(suffix);
   if (suffix != "" and name == "")
-    result /= fs::path(m_filename).stem().string() + "." + suffix;
+    result /= basename + "." + suffix;
   else if (suffix != "" and name != "")
     result /= name + "." + suffix;
   else if (name != "")
@@ -1193,7 +1204,7 @@ std::string Project::run_directory(int run) const {
   if (sequence < 1)
 //    throw std::runtime_error("Invalid run directory");
     return filename(); // covers the case of old projects without run directories
-  auto dir = fs::path{filename()} / "run" / std::to_string(sequence);
+  auto dir = fs::path{filename()} / "run" / (std::to_string(sequence) + "." + m_project_suffix);
   if (not fs::is_directory(dir))
     throw std::runtime_error("Cannot find directory " + dir.native());
   return dir.native();
@@ -1205,17 +1216,36 @@ int Project::run_directory_new() {
   std::stringstream ss;
   for (const auto& dir : dirlist) ss << dir << " ";
   property_set("run_directories", ss.str());
-  auto dir = fs::path{filename()} / "run" / std::to_string(sequence);
-  if (not fs::create_directories(dir))
-    throw std::runtime_error("Cannot create directory " + dir.native());
-  fs::directory_iterator end;
-  for (fs::directory_iterator iter(filename("")); iter != end; iter++) {
-    auto file = iter->path().filename().native();
-    if (fs::is_regular(iter->path()) and m_run_directory_ignore.count(file) == 0) {
-//      std::cout << "copy "<< file<<std::endl;
-      fs::copy(filename("", file), filename("", file, sequence));
-    }
+  auto rundir = fs::path{filename()} / "run";
+  auto dir = rundir / (std::to_string(sequence) + "." + m_project_suffix);
+  if (not fs::exists(rundir) and not fs::create_directories(rundir)) {
+    throw std::runtime_error("Cannot create directory " + rundir.native());
   }
+//  fs::directory_iterator end;
+//  for (fs::directory_iterator iter(filename("")); iter != end; iter++) {
+//    auto file = iter->path().filename().native();
+//    bool include = true;
+//    for (const auto& exclude : m_run_directory_ignore)
+//      include = include and not std::regex_search(file, std::regex{exclude});
+//    if (include and fs::is_regular(iter->path())) {
+//      std::cout << "copy " << file << std::endl;
+//      fs::copy(filename("", file), filename("", file, sequence));
+//    }
+//  }
+//  Project newproj{dir.native()};
+//  for (const auto& key : newproj.property_names()) {
+//    auto value = newproj.property_get(key);
+//    boost::replace_first(value, name() + ".", newproj.name() + ".");
+//    newproj.property_set(key, value);
+//  }
+//  if (fs::exists(filename("inp"))) {
+//  std::cout << "copy from "<<filename("inp") << " to " <<newproj.filename("inp")<<std::endl;
+//    fs::copy(filename("inp"), newproj.filename("inp"));
+//  }
+//  newproj.property_delete("jobnumber");
+//  newproj.property_delete("run_directories");
+//  newproj.property_delete("private_project_sjef_project_completed_job");
+  copy(dir.native(), false, false, true);
   return sequence;
 }
 
@@ -1291,7 +1321,6 @@ void Project::load_property_file_locked() const {
         "error in loading " + propertyFile() + "\n" + result.description() + "\n" + slurp(propertyFile()));
   m_property_file_modification_time = fs::last_write_time(propertyFile());
 }
-
 
 bool Project::properties_last_written_by_me(bool removeFile) const {
   auto path = fs::path{m_filename} / fs::path{writing_object_file};
@@ -1629,7 +1658,8 @@ void sjef::Project::change_backend(std::string backend, bool force) {
 //    std::cerr << "after ensure_remote_server backend " << m_master_of_slave << std::endl;
     if (m_master_of_slave) {
       if (this->m_backends.at(backend).host != "localhost") {
-        remote_server_run(std::string{"mkdir -p "} + (fs::path{this->m_backends.at(backend).cache} / m_filename).native());
+        remote_server_run(
+            std::string{"mkdir -p "} + (fs::path{this->m_backends.at(backend).cache} / m_filename).native());
       }
       m_unmovables.shutdown_flag.clear();
       m_backend_watcher = std::thread(backend_watcher, std::ref(*this), backend, 100, 1000);
@@ -1729,6 +1759,10 @@ bool check_backends(const std::string& suffix) {
     }
   }
   return true;
+}
+void Project::take_run_files(int run, const std::string& fromname, const std::string& toname) const {
+  auto toname_ = toname.empty() ? fromname : toname;
+  fs::copy(filename("",fromname,run), fs::path{m_filename} / toname_);
 }
 
 } // namespace sjef

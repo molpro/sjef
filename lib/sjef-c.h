@@ -103,6 +103,14 @@ int* sjef_project_run_list(const char* project);
  * @param run
  */
 void sjef_project_run_delete(const char* project, int run);
+/*!
+ * @brief Copy files from a run directory to the main project.
+ * @param project
+ * @param run Specifies the run to use as source, with 0 meaning the most recent.
+ * @param fromname The file to copy.
+ * @param toname The destination, defaulting to fromname.
+ */
+void sjef_project_take_run_files(const char* project, int run, const char* fromname, const char* toname);
 #ifdef __cplusplus
 }
 #endif // __cplusplus

@@ -1760,5 +1760,9 @@ bool check_backends(const std::string& suffix) {
   }
   return true;
 }
+void Project::take_run_files(int run, const std::string& fromname, const std::string& toname) const {
+  auto toname_ = toname.empty() ? fromname : toname;
+  fs::copy(filename("",fromname,run), fs::path{m_filename} / toname_);
+}
 
 } // namespace sjef

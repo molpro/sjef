@@ -480,6 +480,14 @@ class Project {
    * @return
    */
   bool check_all_backends() const;
+
+  /*!
+   * @brief Copy files from a run directory to the main project.
+   * @param run Specifies the run to use as source, with 0 meaning the most recent.
+   * @param fromname The file to copy.
+   * @param toname The destination, defaulting to fromname.
+   */
+  void take_run_files(int run=0, const std::string& fromname="", const std::string& toname="") const;
 };
 
 /*!

@@ -167,9 +167,11 @@ TEST(project, copyMolpro) {
   savestate state("molpro");
   auto filename_old = state.testfile("copyMolproOld.molpro");
   auto filename_new = state.testfile("copyMolproNew.molpro");
+  std::string input;
   {
     sjef::Project p(filename_old);
-    std::ofstream(p.filename("inp")) << "geometry=" + p.name() + ".xyz" + "\n";
+    input = "geometry=" + p.name() + ".xyz" ;
+    std::ofstream(p.filename("inp")) << input + "\n";
     std::ofstream(p.filename("xyz")) << "1\n\nHe 0 0 0\n";
     p.copy(filename_new, true);
   }
@@ -179,7 +181,7 @@ TEST(project, copyMolpro) {
   EXPECT_TRUE(fs::exists(sjef::expand_path(filename_new)));
   std::string inp;
   std::ifstream(p.filename("inp")) >> inp;
-  EXPECT_EQ(inp, "geometry=" + p.name() + ".xyz");
+  EXPECT_EQ(inp, input);
 }
 
 TEST(project, erase) {
@@ -584,7 +586,11 @@ TEST(project, run_directory) {
   savestate state("molpro");
   auto filename = state.testfile("run_directory.molpro");
   sjef::Project p(filename);
-  std::ofstream(p.filename("inp")) << "geometry=" + p.name() + ".xyz" + "\n";
+  std::string input = "geometry=" + p.name() + ".xyz";
+  std::ofstream(p.filename("inp")) << input + "\n";
+  std::string input2;
+  std::ifstream(p.filename("inp")) >> input2;
+  EXPECT_EQ(input,input2);
   std::ofstream(p.filename("xyz")) << "1\n\nHe 0 0 0\n";
   EXPECT_TRUE(fs::exists(sjef::expand_path(filename)));
   for (int i = 1; i < 4; i++) {
@@ -597,6 +603,9 @@ TEST(project, run_directory) {
     EXPECT_EQ(p.run_directory(0), (fs::path{p.filename()} / "run" / si).native());
     EXPECT_EQ(p.filename("out", "", 0), (fs::path{p.filename()} / "run" / si / (std::to_string(i)+".out")).native());
   }
+  p.take_run_files(3,"3.inp","copied.inp");
+  std::ifstream(p.filename("","copied.inp")) >> input2;
+  EXPECT_EQ(input,input2);
   int seq = p.run_list().size();
   for (const auto& r : p.run_list())
     EXPECT_EQ(r, seq--); // the run_list goes in reverse order

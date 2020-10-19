@@ -411,7 +411,8 @@ void Project::force_file_names(const std::string& oldname) {
        ++dir_itr) {
     auto path = dir_itr->path();
     try {
-      if (path.stem() == oldname) {
+      auto ext = path.extension().native();
+      if (path.stem() == oldname and not ext.empty() and m_suffixes.count(ext.substr(1)) > 0) {
         auto newpath = path.parent_path();
         newpath /= name();
         newpath.replace_extension(dir_itr->path().extension());
@@ -420,6 +421,11 @@ void Project::force_file_names(const std::string& oldname) {
 
         if (newpath.extension() == ".inp")
           rewrite_input_file(newpath.string(), oldname);
+        for (const auto& key : property_names()) {
+          auto value = property_get(key);
+          if (value == path.filename().native())
+            property_set(key, newpath.filename().native());
+        }
       }
     }
     catch (const std::exception& ex) {
@@ -427,11 +433,6 @@ void Project::force_file_names(const std::string& oldname) {
     }
   }
 
-  for (const auto& key : property_names()) {
-    auto value = property_get(key);
-    boost::replace_first(value, oldname + ".", name() + ".");
-    property_set(key, value);
-  }
 }
 
 std::string Project::propertyFile() const { return (fs::path{m_filename} / fs::path{s_propertyFile}).string(); }
@@ -470,12 +471,11 @@ bool Project::copy(const std::string& destination_filename, bool force, bool kee
     fs::remove_all(dest);
   if (!property_get("backend").empty()) synchronize();
   copyDir(fs::path(m_filename), dest, false, not omit_run);
-  if (omit_run)
-    fs::remove_all(dest / "run");
   Project dp(dest.string());
   dp.force_file_names(name());
   recent_edit(dp.m_filename);
   dp.property_delete("jobnumber");
+  if (omit_run) dp.property_delete("run_directories");
   dp.clean(true, true);
   if (!keep_hash)
     dp.property_delete("project_hash");

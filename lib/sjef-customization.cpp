@@ -44,20 +44,6 @@ std::string sjef::Project::referenced_file_contents(const std::string& line) con
 }
 
 void sjef::Project::rewrite_input_file(const std::string& input_file_name, const std::string& old_name) {
-  if (m_project_suffix == "molpro") {
-    constexpr bool debug = false;
-    std::ifstream in(input_file_name);
-    std::string contents((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-    if (debug)
-      std::cerr << "rewrite_input_file(" << input_file_name << ", " << old_name << ") original contents:\n" << contents
-                << std::endl;
-    boost::replace_all(contents, "geometry=" + old_name + ".xyz", "geometry=" + this->name() + ".xyz");
-    if (debug)
-      std::cerr << "rewrite_input_file(" << input_file_name << ", " << old_name << ") final contents:\n" << contents
-                << std::endl;
-    std::ofstream out(input_file_name);
-    out << contents;
-  }
 }
 void sjef::Project::custom_initialisation() {
   if (m_project_suffix == "molpro") {

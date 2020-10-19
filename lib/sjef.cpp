@@ -644,7 +644,7 @@ bool Project::run(int verbosity, bool force, bool wait) {
   }
   if (verbosity > 0)
     std::cerr << "Project::run() run_needed()=" << run_needed(verbosity) << std::endl;
-//  if (not force and not run_needed()) return false;
+  if (not force and not run_needed()) return false;
   cached_status(unevaluated);
   backend_watcher_wait_milliseconds = 0;
   std::string line;
@@ -781,10 +781,13 @@ bool Project::run_needed(int verbosity) const {
   auto statuss = status();
   if (statuss == running or statuss == waiting) return false;
   auto inpfile = filename("inp");
-  auto xmlfile = filename("xml");
-  if (verbosity > 1)
+  auto xmlfile = filename("xml", "", 0);
+  if (verbosity > 1) {
+    std::cout << "inpfile " << inpfile << std::endl;
+    std::cout << "xmlfile " << xmlfile << std::endl;
     std::cerr << ", time " << std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now() - start_time).count() << std::endl;
+  }
   if (verbosity > 0)
     std::cerr << "sjef::Project::run_needed, input file exists ?=" << fs::exists(inpfile) << std::endl;
   if (verbosity > 1)
@@ -1762,7 +1765,7 @@ bool check_backends(const std::string& suffix) {
 }
 void Project::take_run_files(int run, const std::string& fromname, const std::string& toname) const {
   auto toname_ = toname.empty() ? fromname : toname;
-  fs::copy(filename("",fromname,run), fs::path{m_filename} / toname_);
+  fs::copy(filename("", fromname, run), fs::path{m_filename} / toname_);
 }
 
 } // namespace sjef

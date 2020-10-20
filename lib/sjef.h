@@ -97,10 +97,10 @@ class Project {
    * @param destination_filename
    * @param force whether to first remove anything already existing at the new location
    * @param keep_hash whether to clone the project_hash, or allow a fresh one to be generated
-   * @param omit_run whether to omit copying the run directory
+   * @param slave if set, (a) omit copying the run directory (b) do not register the project in recent projects list
    * @return true if the copy was successful
    */
-  bool copy(const std::string& destination_filename, bool force = false, bool keep_hash = false, bool omit_run = false);
+  bool copy(const std::string& destination_filename, bool force = false, bool keep_hash = false, bool slave = false);
   /*!
    * @brief Move the project to another location
    * @param destination_filename

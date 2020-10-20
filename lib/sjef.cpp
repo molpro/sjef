@@ -150,7 +150,10 @@ Project::Project(const std::string& filename,
 //      std::cerr << "key "<<std::string{"IMPORT"}+std::to_string(i)<<", value "<<property_get(std::string{"IMPORT"}+std::to_string(i))<<std::endl;
     m_reserved_files.push_back(property_get(std::string{"IMPORT"} + std::to_string(i)));
   }
-  recent_edit(m_filename);
+  // If this is a run-directory project, do not add to recent list
+  if (fs::path{m_filename}.parent_path().filename().native() != "run"
+      and not fs::exists(fs::path{m_filename}.parent_path().parent_path() / "Info.plist"))
+    recent_edit(m_filename);
 
   m_backends[sjef::Backend::dummy_name] = sjef::Backend(sjef::Backend::dummy_name,
                                                         "localhost",
@@ -465,17 +468,18 @@ bool Project::move(const std::string& destination_filename, bool force) {
   return success;
 }
 
-bool Project::copy(const std::string& destination_filename, bool force, bool keep_hash, bool omit_run) {
+bool Project::copy(const std::string& destination_filename, bool force, bool keep_hash, bool slave) {
   auto dest = fs::absolute(expand_path(destination_filename, fs::path{m_filename}.extension().string().substr(1)));
   if (force)
     fs::remove_all(dest);
   if (!property_get("backend").empty()) synchronize();
-  copyDir(fs::path(m_filename), dest, false, not omit_run);
+  copyDir(fs::path(m_filename), dest, false, not slave);
   Project dp(dest.string());
   dp.force_file_names(name());
-  recent_edit(dp.m_filename);
+  if (not slave)
+    recent_edit(dp.m_filename);
   dp.property_delete("jobnumber");
-  if (omit_run) dp.property_delete("run_directories");
+  if (slave) dp.property_delete("run_directories");
   dp.clean(true, true);
   if (!keep_hash)
     dp.property_delete("project_hash");
@@ -1661,8 +1665,10 @@ void sjef::Project::change_backend(std::string backend, bool force) {
 //    std::cerr << "after ensure_remote_server backend " << m_master_of_slave << std::endl;
     if (m_master_of_slave) {
       if (this->m_backends.at(backend).host != "localhost") {
+//        std::cout << "change_backend remote_server_run " << std::endl;
         remote_server_run(
-            std::string{"mkdir -p "} + (fs::path{this->m_backends.at(backend).cache} / m_filename).native());
+            std::string{"mkdir -p "} + (fs::path{this->m_backends.at(backend).cache} / m_filename).native(), 0);
+        std::cout << "change_backend remote_server_run has returned " << std::endl;
       }
       m_unmovables.shutdown_flag.clear();
       m_backend_watcher = std::thread(backend_watcher, std::ref(*this), backend, 100, 1000);

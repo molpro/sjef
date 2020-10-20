@@ -1280,7 +1280,8 @@ Project::run_list_t Project::run_list() const {
   run_list_t rundirs;
   int value;
   while (ss >> value && !ss.eof())
-    rundirs.insert(value);
+    if (fs::exists(fs::path{m_filename} / "run" / (std::to_string(value)+"."+m_project_suffix)))
+      rundirs.insert(value);
   return rundirs;
 }
 

@@ -215,7 +215,7 @@ class Project {
    * @param sync Whether to force a synchronisation with backend before getting the file contents
    * @return
    */
-  std::string xml(int run=0, bool sync = true) const;
+  std::string xml(int run = 0, bool sync = true) const;
   /*!
    * @brief Obtain the contents of a project file
    * @param suffix If present without \c name, look for a primary file with that type. If absent, the file name of the bundle is instead selected
@@ -277,7 +277,7 @@ class Project {
    * @param run If specified, look in a run directory for the file, instead of the main project directory. A value of 0 is interpreted as the most recent run directory.
    * @return the fully-qualified name of the file
    */
-  std::string filename(std::string suffix = "", const std::string& name = "", int run=-1) const;
+  std::string filename(std::string suffix = "", const std::string& name = "", int run = -1) const;
   /*!
    * @brief Obtain the path of a run directory
    * @param run
@@ -285,7 +285,7 @@ class Project {
    * - other: the specified run directory
    * @return the fully-qualified name of the directory
    */
-  std::string run_directory(int run=0) const;
+  std::string run_directory(int run = 0) const;
   /*!
    * @brief Check a run exists, and resolve most recent
    * @param run The run number to check
@@ -296,8 +296,8 @@ class Project {
    * @brief Obtain the list of run numbers in reverse order, ie the most recent first
    * @return
    */
-   using run_list_t = std::set<int, std::greater<int>>;
-   run_list_t run_list() const;
+  using run_list_t = std::set<int, std::greater<int>>;
+  run_list_t run_list() const;
   /*!
    * @brief Create a new run directory. Also copy into it the input file, and any of its dependencies
    * @return The sequence number of the new run directory
@@ -487,7 +487,7 @@ class Project {
    * @param fromname The file to copy.
    * @param toname The destination, defaulting to fromname.
    */
-  void take_run_files(int run=0, const std::string& fromname="", const std::string& toname="") const;
+  void take_run_files(int run = 0, const std::string& fromname = "", const std::string& toname = "") const;
 };
 
 /*!

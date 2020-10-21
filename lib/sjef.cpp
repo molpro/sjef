@@ -305,7 +305,7 @@ bool Project::export_file(std::string file, bool overwrite) {
 }
 
 std::mutex synchronize_mutex;
-bool Project::synchronize(int verbosity, bool nostatus) const {
+bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
 //  const std::lock_guard lock(m_synchronize_mutex);
   const std::lock_guard lock(synchronize_mutex);
   auto backend_name = property_get("backend");
@@ -341,7 +341,8 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
     }
   }
 //  std::cerr << "locally_modified=" << locally_modified << std::endl;
-  if (not locally_modified
+  if (not force
+      and not locally_modified
       and not backend_changed
       and std::stoi(property_get("_private_sjef_project_backend_inactive_synced")) > 2)
     return true;
@@ -674,7 +675,7 @@ bool Project::run(int verbosity, bool force, bool wait) {
       optionstring = "'" + *sp + "' " + optionstring;
     if (verbosity > 1)
       std::cerr << "run local job executable=" << executable(run_command) << " " << optionstring << " "
-                << fs::path{m_filename} / fs::path(this->name() + ".inp")
+                << filename("inp", "", rundir)
                 << std::endl;
     if (verbosity > 2)
       for (const auto& o : splitString(optionstring))
@@ -710,7 +711,9 @@ bool Project::run(int verbosity, bool force, bool wait) {
   } else { // remote host
     if (verbosity > 0) std::cerr << "run remote job on " << backend.name << std::endl;
     bp::ipstream c_err, c_out;
-    synchronize(verbosity);
+//    property_set("_private_sjef_project_backend_inactive_synced", 0);
+    synchronize(verbosity, false, true);
+    cached_status(unknown);
     property_set("_private_sjef_project_backend_inactive", "0");
     property_set("_private_sjef_project_backend_inactive_synced", "0");
     if (verbosity > 3)
@@ -718,13 +721,15 @@ bool Project::run(int verbosity, bool force, bool wait) {
                 << fs::path{backend.cache} / filename("", "", rundir) << std::endl;
     auto jobstring =
         std::string{"cd "} + (fs::path{backend.cache} / filename("", "", rundir)).native()
-            + " 2>/dev/null >/dev/null; nohup " + run_command + " " + optionstring
-            + this->name()
-            + "." + m_suffixes["inp"];
+            + "; nohup " + run_command + " " + optionstring
+            + fs::path{filename("inp", "", rundir)}.filename().native();
     if (backend.run_jobnumber == "([0-9]+)") jobstring += "& echo $! "; // go asynchronous if a straight launch
     if (verbosity > 3) std::cerr << "backend.run_jobnumber " << backend.run_jobnumber << std::endl;
     if (verbosity > 3) std::cerr << "jobstring " << jobstring << std::endl;
     auto run_output = remote_server_run(jobstring);
+    cached_status(unevaluated);
+    synchronize(verbosity, false, true);
+    status(0, false);
     if (verbosity > 3) std::cerr << "run_output " << run_output << std::endl;
     std::smatch match;
     if (std::regex_search(run_output, match, std::regex{backend.run_jobnumber})) {
@@ -1280,7 +1285,7 @@ Project::run_list_t Project::run_list() const {
   run_list_t rundirs;
   int value;
   while (ss >> value && !ss.eof())
-    if (fs::exists(fs::path{m_filename} / "run" / (std::to_string(value)+"."+m_project_suffix)))
+    if (fs::exists(fs::path{m_filename} / "run" / (std::to_string(value) + "." + m_project_suffix)))
       rundirs.insert(value);
   return rundirs;
 }
@@ -1612,6 +1617,7 @@ void sjef::Project::ensure_remote_server() const {
 //            << std::endl;
   m_remote_server->process = bp::child(bp::search_path("ssh"),
                                        m_remote_server->host,
+                                       "/bin/sh",
                                        bp::std_in < m_remote_server->in,
                                        bp::std_err > m_remote_server->err,
                                        bp::std_out > m_remote_server->out);

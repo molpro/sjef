@@ -139,9 +139,10 @@ class Project {
    * @brief Synchronize the project with a cached copy belonging to a backend. name.inp, name.xyz, Info.plist, and any files brought in with import(), will be pushed from the
    * master copy to the backend, and all other files will be pulled from the backend.
    * @param verbosity If >0, show underlying processing
+   * @param force If true, always do the sync
    * @return
    */
-  bool synchronize(int verbosity = 0, bool nostatus = false) const;
+  bool synchronize(int verbosity = 0, bool nostatus = false, bool force = false) const;
  public:
   /*!
    * @brief Start a sjef job

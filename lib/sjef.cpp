@@ -473,7 +473,10 @@ bool Project::copy(const std::string& destination_filename, bool force, bool kee
   auto dest = fs::absolute(expand_path(destination_filename, fs::path{m_filename}.extension().string().substr(1)));
   if (force)
     fs::remove_all(dest);
-  if (!property_get("backend").empty()) synchronize();
+  try { // try to synchronize if we can, but still do the copy if not
+    if (!property_get("backend").empty()) synchronize();
+  }
+  catch (...) {}
   copyDir(fs::path(m_filename), dest, false, not slave);
   Project dp(dest.string());
   dp.force_file_names(name());
@@ -1571,7 +1574,7 @@ std::string sjef::Project::remote_server_run(const std::string& command, int ver
     std::cerr << "err from remote command " << command << ": " << m_remote_server->last_err << std::endl;
   if (verbosity > 1)
     std::cerr << "last line=" << line << std::endl;
-  auto rc = std::stoi(line.substr(terminator.size() + 1));
+  auto rc = line.empty() ? -1 : std::stoi(line.substr(terminator.size() + 1));
   if (verbosity > 1)
     std::cerr << "rc=" << rc << std::endl;
   if (rc != 0)
@@ -1673,9 +1676,12 @@ void sjef::Project::change_backend(std::string backend, bool force) {
     if (m_master_of_slave) {
       if (this->m_backends.at(backend).host != "localhost") {
 //        std::cout << "change_backend remote_server_run " << std::endl;
-        remote_server_run(
-            std::string{"mkdir -p "} + (fs::path{this->m_backends.at(backend).cache} / m_filename).native(), 0);
-        std::cout << "change_backend remote_server_run has returned " << std::endl;
+        try {
+          remote_server_run(
+              std::string{"mkdir -p "} + (fs::path{this->m_backends.at(backend).cache} / m_filename).native(), 0);
+          std::cout << "change_backend remote_server_run has returned " << std::endl;
+        }
+        catch (...) {}
       }
       m_unmovables.shutdown_flag.clear();
       m_backend_watcher = std::thread(backend_watcher, std::ref(*this), backend, 100, 1000);

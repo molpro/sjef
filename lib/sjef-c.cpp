@@ -464,6 +464,15 @@ int* sjef_project_run_list(const char* project) {
   catch (...) {}
   return NULL;
 }
+int sjef_project_run_directory_next(const char* project) {
+  try {
+    if (projects.count(project) == 0) sjef_project_open(project);
+    return projects.at(project)->run_directory_next();
+  }
+  catch (std::exception& e) { error(e); }
+  catch (...) {}
+  return 1;
+}
 void sjef_project_run_delete(const char* project, int run) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);

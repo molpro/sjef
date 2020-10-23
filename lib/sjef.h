@@ -310,6 +310,11 @@ class Project {
    */
   void run_delete(int run);
   /*!
+   * @brief Obtain the sequence number of the next run directory to be created
+   * @return
+   */
+  int run_directory_next() const;
+  /*!
    * @brief
    * @return the base name of the project, ie its file name with directory and suffix stripped off
    */

@@ -1226,7 +1226,7 @@ std::string Project::run_directory(int run) const {
 }
 int Project::run_directory_new() {
   auto dirlist = run_list();
-  auto sequence = dirlist.empty() ? 1 : *(dirlist.begin()) + 1;
+  auto sequence = run_directory_next();
   dirlist.insert(sequence);
   std::stringstream ss;
   for (const auto& dir : dirlist) ss << dir << " ";
@@ -1291,6 +1291,11 @@ Project::run_list_t Project::run_list() const {
     if (fs::exists(fs::path{m_filename} / "run" / (std::to_string(value) + "." + m_project_suffix)))
       rundirs.insert(value);
   return rundirs;
+}
+
+int Project::run_directory_next() const {
+  auto dirlist = run_list();
+  return dirlist.empty() ? 1 : *(dirlist.begin()) + 1;;
 }
 
 int Project::recent_find(const std::string& filename) const {
@@ -1679,7 +1684,7 @@ void sjef::Project::change_backend(std::string backend, bool force) {
         try {
           remote_server_run(
               std::string{"mkdir -p "} + (fs::path{this->m_backends.at(backend).cache} / m_filename).native(), 0);
-          std::cout << "change_backend remote_server_run has returned " << std::endl;
+//          std::cout << "change_backend remote_server_run has returned " << std::endl;
         }
         catch (...) {}
       }

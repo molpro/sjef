@@ -99,6 +99,12 @@ inline char* sjef_project_run_directory_default(const char* project) { return sj
   */
 int* sjef_project_run_list(const char* project);
 /*!
+ * @brief Obtain the sequence number of the next run directory to be created
+ * @param project
+ * @return
+ */
+int sjef_project_run_directory_next(const char* project);
+/*!
  * @brief Delete a run directory
  * @param run
  */

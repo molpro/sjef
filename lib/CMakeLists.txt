@@ -10,10 +10,19 @@ set_target_properties(${LIB_NAME} PROPERTIES OUTPUT_NAME "${LIB_FILENAME}")
 find_package(Boost 1.71.0 COMPONENTS filesystem REQUIRED)
 
 if (NOT TARGET pugixml)
-    get_dependency(pugixml)
+    find_package(pugixml QUIET)
+    if (TARGET pugixml)
+        set_target_properties(pugixml PROPERTIES IMPORTED_GLOBAL TRUE)
+    else ()
+        include(FetchContent)
+        FetchContent_Declare(pugixml
+                GIT_REPOSITORY https://github.com/zeux/pugixml
+                GIT_TAG v1.10)
+        FetchContent_MakeAvailable(pugixml)
+    endif ()
+    set_target_properties(pugixml PROPERTIES COMPILE_FLAGS "-fPIC")
     add_library(pugixml::pugixml ALIAS pugixml)
 endif ()
-set_target_properties(pugixml PROPERTIES COMPILE_FLAGS "-fPIC")
 
 target_link_libraries(${LIB_NAME} PUBLIC Boost::filesystem pthread)
 target_link_libraries(${LIB_NAME} PRIVATE pugixml::pugixml)

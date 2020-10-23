@@ -4,9 +4,11 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <set>
 #include <memory>
 #include <boost/filesystem/path.hpp>
 #include <boost/process/child.hpp>
+#include <boost/process/pipe.hpp>
 #include <thread>
 #include <mutex>
 
@@ -95,9 +97,10 @@ class Project {
    * @param destination_filename
    * @param force whether to first remove anything already existing at the new location
    * @param keep_hash whether to clone the project_hash, or allow a fresh one to be generated
+   * @param slave if set, (a) omit copying the run directory (b) do not register the project in recent projects list
    * @return true if the copy was successful
    */
-  bool copy(const std::string& destination_filename, bool force = false, bool keep_hash = false);
+  bool copy(const std::string& destination_filename, bool force = false, bool keep_hash = false, bool slave = false);
   /*!
    * @brief Move the project to another location
    * @param destination_filename
@@ -136,9 +139,10 @@ class Project {
    * @brief Synchronize the project with a cached copy belonging to a backend. name.inp, name.xyz, Info.plist, and any files brought in with import(), will be pushed from the
    * master copy to the backend, and all other files will be pulled from the backend.
    * @param verbosity If >0, show underlying processing
+   * @param force If true, always do the sync
    * @return
    */
-  bool synchronize(int verbosity = 0, bool nostatus = false) const;
+  bool synchronize(int verbosity = 0, bool nostatus = false, bool force = false) const;
  public:
   /*!
    * @brief Start a sjef job
@@ -208,18 +212,23 @@ class Project {
   void custom_run_preface();
   /*!
    * @brief Get the xml output, completing any open tags if necessary
+   * @param run If present, look for the file in a particular run directory. Otherwise it will search in the default run directory, and if not found, the main directory
    * @param sync Whether to force a synchronisation with backend before getting the file contents
    * @return
    */
-  std::string xml(bool sync = true) const;
+  std::string xml(int run = 0, bool sync = true) const;
   /*!
    * @brief Obtain the contents of a project file
    * @param suffix If present without \c name, look for a primary file with that type. If absent, the file name of the bundle is instead selected
    * @param name If present,  look for a file of this name, appended with .\c suffix if that is non-blank
+   * @param run If present, look for the file in a particular run directory. Otherwise it will search in the default run directory, and if not found, the main directory
    * @param sync Whether to force a synchronisation with backend before getting the file contents
-   * @return the fully-qualified name of the file
+   * @return the contents of the file
    */
-  std::string file_contents(const std::string& suffix = "", const std::string& name = "", bool sync = true) const;
+  std::string file_contents(const std::string& suffix = "",
+                            const std::string& name = "",
+                            int run = 0,
+                            bool sync = true) const;
 
   /*!
    * @brief Remove potentially unwanted files from the project
@@ -266,9 +275,40 @@ class Project {
    * @brief Get the file name of the bundle, or a primary file of particular type, or a general file in the bundle
    * @param suffix If present without \c name, look for a primary file with that type. If absent, the file name of the bundle is instead selected
    * @param name If present,  look for a file of this name, appended with .\c suffix if that is non-blank
+   * @param run If specified, look in a run directory for the file, instead of the main project directory. A value of 0 is interpreted as the most recent run directory.
    * @return the fully-qualified name of the file
    */
-  std::string filename(std::string suffix = "", const std::string& name = "") const;
+  std::string filename(std::string suffix = "", const std::string& name = "", int run = -1) const;
+  /*!
+   * @brief Obtain the path of a run directory
+   * @param run
+   * - -0: the most recent run directory
+   * - other: the specified run directory
+   * @return the fully-qualified name of the directory
+   */
+  std::string run_directory(int run = 0) const;
+  /*!
+   * @brief Check a run exists, and resolve most recent
+   * @param run The run number to check
+   * @return run, or the most recent if run was zero. If the requested run is not found, return 0
+   */
+  int run_verify(int run) const;
+  /*!
+   * @brief Obtain the list of run numbers in reverse order, ie the most recent first
+   * @return
+   */
+  using run_list_t = std::set<int, std::greater<int>>;
+  run_list_t run_list() const;
+  /*!
+   * @brief Create a new run directory. Also copy into it the input file, and any of its dependencies
+   * @return The sequence number of the new run directory
+   */
+  int run_directory_new();
+  /*!
+   * @brief Delete a run directory
+   * @param run
+   */
+  void run_delete(int run);
   /*!
    * @brief
    * @return the base name of the project, ie its file name with directory and suffix stripped off
@@ -303,6 +343,7 @@ class Project {
   mutable time_t m_property_file_modification_time;
   mutable std::map<std::string, time_t> m_input_file_modification_time;
   const bool m_use_control_path;
+  std::set<std::string> m_run_directory_ignore;
   void property_delete_locked(const std::string& property);
   void check_property_file_locked() const;
   void check_property_file() const;
@@ -427,7 +468,35 @@ class Project {
    * @param name The name of the backend to be removed.
    */
   void delete_backend(const std::string& name);
+
+  /*!
+   * @brief Check whether the specification of a backend is valid
+   * @param name The name of the backend to be checked.
+   * @return
+   */
+  bool check_backend(const std::string& name) const;
+
+  /*!
+   * @brief Check the specification of all backends for validity
+   * @return
+   */
+  bool check_all_backends() const;
+
+  /*!
+   * @brief Copy files from a run directory to the main project.
+   * @param run Specifies the run to use as source, with 0 meaning the most recent.
+   * @param fromname The file to copy.
+   * @param toname The destination, defaulting to fromname.
+   */
+  void take_run_files(int run = 0, const std::string& fromname = "", const std::string& toname = "") const;
 };
+
+/*!
+ * @brief Check whether a backend specification file is valid. Only the top-level structure of the file is checked, to the point where it could be opened and used in a Project.
+ * @param suffix /usr/local/etc/sjef/suffix/backends.xml and ~/.sjef/suffix/backends.xml will be checked
+ * @return
+ */
+bool check_backends(const std::string& suffix);
 
 /*!
  * @brief Edit a file path name

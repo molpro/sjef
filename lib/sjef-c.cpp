@@ -133,7 +133,6 @@ int sjef_project_synchronize(const char* project, const char* backend, int verbo
 }
 int sjef_project_run(const char* project,
                      const char* backend,
-                     const char* options,
                      int verbosity,
                      int force,
                      int wait) {
@@ -351,6 +350,18 @@ char* sjef_project_backend_parameter_get(const char* project,
   return NULL;
 }
 
+char* sjef_project_backend_parameter_expand(const char* project,
+					    const char* backend,
+					    const char* templ) {
+  try {
+    if (projects.count(project) == 0) sjef_project_open(project);
+    return strdup(projects.at(project)->backend_parameter_expand(backend, templ).c_str());
+  }
+  catch (std::exception& e) { error(e); }
+  catch (...) {}
+  return NULL;
+}
+
 void sjef_project_backend_parameter_set(const char* project,
                                         const char* backend,
                                         const char* parameter,
@@ -419,5 +430,59 @@ char* sjef_expand_path(const char* path, const char* default_suffix) {
   catch (std::exception& e) { error(e); }
   catch (...) {}
   return NULL;
+}
+char* sjef_project_filename_general(const char* project, const char* suffix, const char* name, int run) {
+  try {
+    if (projects.count(project) == 0) sjef_project_open(project);
+    return strdup(projects.at(project)->filename(suffix,name,run).c_str());
+  }
+  catch (std::exception& e) { error(e); }
+  catch (...) {}
+  return NULL;
+}
+
+char* sjef_project_run_directory(const char* project, int run) {
+  try {
+    if (projects.count(project) == 0) sjef_project_open(project);
+    return strdup(projects.at(project)->run_directory(run).c_str());
+  }
+  catch (std::exception& e) { error(e); }
+  catch (...) {}
+  return NULL;
+}
+int* sjef_project_run_list(const char* project) {
+  try {
+    if (projects.count(project) == 0) sjef_project_open(project);
+    auto list = projects.at(project)->run_list();
+    int* result = (int*) malloc((list.size()+1)*sizeof(int*));
+    int sequence = 0;
+    for (const auto& item : list)
+      result[sequence++] = item;
+    return result;
+  }
+  catch (std::exception& e) { error(e); }
+  catch (...) {}
+  return NULL;
+}
+void sjef_project_run_delete(const char* project, int run) {
+  try {
+    if (projects.count(project) == 0) sjef_project_open(project);
+    projects.at(project)->run_delete(run);
+    return;
+  }
+  catch (std::exception& e) { error(e); }
+  catch (...) {}
+  return;
+}
+
+void sjef_project_take_run_files(const char* project, int run, const char* fromname, const char* toname) {
+  try {
+    if (projects.count(project) == 0) sjef_project_open(project);
+    projects.at(project)->take_run_files(run,fromname,toname);
+    return;
+  }
+  catch (std::exception& e) { error(e); }
+  catch (...) {}
+  return;
 }
 }

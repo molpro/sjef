@@ -20,7 +20,6 @@ set(PROGRAM_FILENAME "sjef")
 set(PROGRAM_NAME "sjef-program")
 
 set(CMAKE_POLICY_DEFAULT_CMP0048 NEW)
-add_subdirectory(dependencies)
 add_subdirectory(lib)
 
 if (BUILD_TESTS)

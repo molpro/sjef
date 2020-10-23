@@ -34,6 +34,7 @@ struct sjef::pugi_xml_document : public pugi::xml_document {};
 
 ///> @private
 const std::string sjef::Project::s_propertyFile = "Info.plist";
+const std::string writing_object_file = ".Info.plist.writing_object";
 
 ///> @private
 inline fs::path executable(fs::path command) {
@@ -47,7 +48,8 @@ inline fs::path executable(fs::path command) {
 bool copyDir(
     fs::path const& source,
     fs::path const& destination,
-    bool delete_source = false
+    bool delete_source = false,
+    bool recursive = true
 ) {
   // Check whether the function call is valid
   if (!fs::exists(source) || !fs::is_directory(source))
@@ -67,14 +69,16 @@ bool copyDir(
     fs::path current(file->path());
     if (fs::is_directory(current)) {
       // Found directory: Recursion
-      if (
-          !copyDir(
-              current,
-              destination / current.filename(),
-              delete_source
-          )
-          ) {
-        return false;
+      if (recursive) {
+        if (
+            !copyDir(
+                current,
+                destination / current.filename(),
+                delete_source
+            )
+            ) {
+          return false;
+        }
       }
     } else {
       // Found file: Copy
@@ -111,7 +115,8 @@ Project::Project(const std::string& filename,
     m_master_of_slave(masterProject == nullptr),
     m_property_file_modification_time(0),
     m_use_control_path(false),
-    m_backend("") {
+    m_backend(""),
+    m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}) {
 //  std::cerr << "Project constructor filename="<<filename << "address "<< this<<std::endl;
   auto recent_projects_directory = expand_path(std::string{"~/.sjef/"} + m_project_suffix);
   fs::create_directories(recent_projects_directory);
@@ -145,12 +150,16 @@ Project::Project(const std::string& filename,
 //      std::cerr << "key "<<std::string{"IMPORT"}+std::to_string(i)<<", value "<<property_get(std::string{"IMPORT"}+std::to_string(i))<<std::endl;
     m_reserved_files.push_back(property_get(std::string{"IMPORT"} + std::to_string(i)));
   }
-  recent_edit(m_filename);
+  // If this is a run-directory project, do not add to recent list
+  if (fs::path{m_filename}.parent_path().filename().native() != "run"
+      and not fs::exists(fs::path{m_filename}.parent_path().parent_path() / "Info.plist"))
+    recent_edit(m_filename);
 
   m_backends[sjef::Backend::dummy_name] = sjef::Backend(sjef::Backend::dummy_name,
                                                         "localhost",
                                                         "{$PWD}",
                                                         "/bin/sh -c 'echo dummy > ${0%.*}.out; echo \"<?xml version=\\\"1.0\\\"?>\n<root/>\" > ${0%.*}.xml'");
+  if (not sjef::check_backends(m_project_suffix)) throw std::runtime_error("sjef backend files are invalid");
   for (const auto& config_dir : std::vector<std::string>{"/usr/local/etc/sjef", "~/.sjef"}) {
     const auto config_file = expand_path(config_dir + "/" + m_project_suffix + "/backends.xml");
     if (fs::exists(config_file)) {
@@ -178,6 +187,7 @@ Project::Project(const std::string& filename,
         if ((kVal = getattribute(be, "status_running")) != "") m_backends[kName].status_running = kVal;
         if ((kVal = getattribute(be, "status_waiting")) != "") m_backends[kName].status_waiting = kVal;
         if ((kVal = getattribute(be, "kill_command")) != "") m_backends[kName].kill_command = kVal;
+        if (not check_backend(kName)) throw std::runtime_error(std::string{"sjef backend "} + kName + " is invalid");
       }
     }
 
@@ -294,12 +304,8 @@ bool Project::export_file(std::string file, bool overwrite) {
   return true;
 }
 
-std::string Project::cache(const Backend& backend) const {
-  return backend.cache + "/" + m_filename; // TODO: use boost::filesystem to avoid '/' on windows
-}
-
 std::mutex synchronize_mutex;
-bool Project::synchronize(int verbosity, bool nostatus) const {
+bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
 //  const std::lock_guard lock(m_synchronize_mutex);
   const std::lock_guard lock(synchronize_mutex);
   auto backend_name = property_get("backend");
@@ -335,13 +341,13 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
     }
   }
 //  std::cerr << "locally_modified=" << locally_modified << std::endl;
-  if (not locally_modified
+  if (not force
+      and not locally_modified
       and not backend_changed
       and std::stoi(property_get("_private_sjef_project_backend_inactive_synced")) > 2)
     return true;
 //  std::cerr << "really syncing" << std::endl;
   //TODO: implement more robust error checking
-//  system(("ssh " + backend.host + " mkdir -p " + cache(backend)).c_str());
 //std::cerr << "synchronize calls change_backend"<<std::endl;
 //  const_cast<Project*>(this)->change_backend(backend.name);
 //  if (m_master_of_slave) {
@@ -363,7 +369,7 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
       "--exclude=*.out --exclude=*.xml --exclude=*.log " +
       "-L -a --update " + " " + (verbosity > 0 ? std::string{"-v "} : std::string{""}) + m_filename + "/ "
       + backend.host + ":"
-      + cache(backend);
+      + (fs::path{backend.cache} / m_filename).native();
   if (verbosity > 1)
     std::cerr << "First rsync: " << cmd << std::endl;
   bp::child(cmd).wait();
@@ -383,7 +389,7 @@ bool Project::synchronize(int verbosity, bool nostatus) const {
       if (fs::exists(f))
         cmd += "--exclude=" + f + " ";
     }
-    cmd += backend.host + ":" + cache(backend) + "/ " + m_filename;
+    cmd += backend.host + ":" + (fs::path{backend.cache} / m_filename).native() + "/ " + m_filename;
     if (verbosity > 1)
       std::cerr << "second rsync " << cmd << std::endl;
     bp::child(cmd).wait();
@@ -409,7 +415,8 @@ void Project::force_file_names(const std::string& oldname) {
        ++dir_itr) {
     auto path = dir_itr->path();
     try {
-      if (path.stem() == oldname) {
+      auto ext = path.extension().native();
+      if (path.stem() == oldname and not ext.empty() and m_suffixes.count(ext.substr(1)) > 0) {
         auto newpath = path.parent_path();
         newpath /= name();
         newpath.replace_extension(dir_itr->path().extension());
@@ -418,6 +425,11 @@ void Project::force_file_names(const std::string& oldname) {
 
         if (newpath.extension() == ".inp")
           rewrite_input_file(newpath.string(), oldname);
+        for (const auto& key : property_names()) {
+          auto value = property_get(key);
+          if (value == path.filename().native())
+            property_set(key, newpath.filename().native());
+        }
       }
     }
     catch (const std::exception& ex) {
@@ -425,11 +437,6 @@ void Project::force_file_names(const std::string& oldname) {
     }
   }
 
-  for (const auto& key : property_names()) {
-    auto value = property_get(key);
-    boost::replace_first(value, oldname + ".", name() + ".");
-    property_set(key, value);
-  }
 }
 
 std::string Project::propertyFile() const { return (fs::path{m_filename} / fs::path{s_propertyFile}).string(); }
@@ -462,16 +469,21 @@ bool Project::move(const std::string& destination_filename, bool force) {
   return success;
 }
 
-bool Project::copy(const std::string& destination_filename, bool force, bool keep_hash) {
+bool Project::copy(const std::string& destination_filename, bool force, bool keep_hash, bool slave) {
   auto dest = fs::absolute(expand_path(destination_filename, fs::path{m_filename}.extension().string().substr(1)));
   if (force)
     fs::remove_all(dest);
-  if (!property_get("backend").empty()) synchronize();
-  copyDir(fs::path(m_filename), dest, false);
+  try { // try to synchronize if we can, but still do the copy if not
+    if (!property_get("backend").empty()) synchronize();
+  }
+  catch (...) {}
+  copyDir(fs::path(m_filename), dest, false, not slave);
   Project dp(dest.string());
   dp.force_file_names(name());
-  recent_edit(dp.m_filename);
+  if (not slave)
+    recent_edit(dp.m_filename);
   dp.property_delete("jobnumber");
+  if (slave) dp.property_delete("run_directories");
   dp.clean(true, true);
   if (!keep_hash)
     dp.property_delete("project_hash");
@@ -640,7 +652,7 @@ bool Project::run(int verbosity, bool force, bool wait) {
   }
   if (verbosity > 0)
     std::cerr << "Project::run() run_needed()=" << run_needed(verbosity) << std::endl;
-//  if (not force and not run_needed()) return false;
+  if (not force and not run_needed()) return false;
   cached_status(unevaluated);
   backend_watcher_wait_milliseconds = 0;
   std::string line;
@@ -653,6 +665,7 @@ bool Project::run(int verbosity, bool force, bool wait) {
   auto run_command = backend_parameter_expand(backend.name, backend.run_command);
 //  std::cerr << "run_command after expand "<<run_command<<std::endl;
   custom_run_preface();
+  auto rundir = run_directory_new();
   if (backend.host == "localhost") {
     property_set("_private_sjef_project_backend_inactive", "0");
     property_set("_private_sjef_project_backend_inactive_synced", "0");
@@ -665,7 +678,7 @@ bool Project::run(int verbosity, bool force, bool wait) {
       optionstring = "'" + *sp + "' " + optionstring;
     if (verbosity > 1)
       std::cerr << "run local job executable=" << executable(run_command) << " " << optionstring << " "
-                << fs::path{m_filename} / fs::path(this->name() + ".inp")
+                << filename("inp", "", rundir)
                 << std::endl;
     if (verbosity > 2)
       for (const auto& o : splitString(optionstring))
@@ -677,15 +690,19 @@ bool Project::run(int verbosity, bool force, bool wait) {
     catch (...) {
       current_path_save = "";
     }
-    fs::current_path(m_filename);
+    fs::current_path(filename("", "", 0));
 
     if (optionstring.empty())
       c = bp::child(executable(run_command),
-                    fs::path{m_filename} / fs::path(this->name() + ".inp"));
+//                    fs::path{m_filename} / fs::path(this->name() + ".inp")
+                    filename("inp", "", rundir)
+      );
     else
       c = bp::child(executable(run_command),
                     bp::args(splitString(optionstring)),
-                    fs::path{m_filename} / fs::path(this->name() + ".inp"));
+//                    fs::path{m_filename} / fs::path(this->name() + ".inp")
+                    filename("inp", "", rundir)
+      );
     fs::current_path(current_path_save);
     if (not c.valid())
       throw std::runtime_error("Spawning run process has failed");
@@ -697,18 +714,25 @@ bool Project::run(int verbosity, bool force, bool wait) {
   } else { // remote host
     if (verbosity > 0) std::cerr << "run remote job on " << backend.name << std::endl;
     bp::ipstream c_err, c_out;
-    synchronize(verbosity);
+//    property_set("_private_sjef_project_backend_inactive_synced", 0);
+    synchronize(verbosity, false, true);
+    cached_status(unknown);
     property_set("_private_sjef_project_backend_inactive", "0");
     property_set("_private_sjef_project_backend_inactive_synced", "0");
-    if (verbosity > 3) std::cerr << "cache(backend) " << cache(backend) << std::endl;
+    if (verbosity > 3)
+      std::cerr << "fs::path{backend.cache} / filename("","",rundir) "
+                << fs::path{backend.cache} / filename("", "", rundir) << std::endl;
     auto jobstring =
-        "cd " + cache(backend) + " 2>/dev/null >/dev/null; nohup " + run_command + " " + optionstring
-            + this->name()
-            + ".inp";
+        std::string{"cd "} + (fs::path{backend.cache} / filename("", "", rundir)).native()
+            + "; nohup " + run_command + " " + optionstring
+            + fs::path{filename("inp", "", rundir)}.filename().native();
     if (backend.run_jobnumber == "([0-9]+)") jobstring += "& echo $! "; // go asynchronous if a straight launch
     if (verbosity > 3) std::cerr << "backend.run_jobnumber " << backend.run_jobnumber << std::endl;
     if (verbosity > 3) std::cerr << "jobstring " << jobstring << std::endl;
     auto run_output = remote_server_run(jobstring);
+    cached_status(unevaluated);
+    synchronize(verbosity, false, true);
+    status(0, false);
     if (verbosity > 3) std::cerr << "run_output " << run_output << std::endl;
     std::smatch match;
     if (std::regex_search(run_output, match, std::regex{backend.run_jobnumber})) {
@@ -769,10 +793,13 @@ bool Project::run_needed(int verbosity) const {
   auto statuss = status();
   if (statuss == running or statuss == waiting) return false;
   auto inpfile = filename("inp");
-  auto xmlfile = filename("xml");
-  if (verbosity > 1)
+  auto xmlfile = filename("xml", "", 0);
+  if (verbosity > 1) {
+    std::cout << "inpfile " << inpfile << std::endl;
+    std::cout << "xmlfile " << xmlfile << std::endl;
     std::cerr << ", time " << std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now() - start_time).count() << std::endl;
+  }
   if (verbosity > 0)
     std::cerr << "sjef::Project::run_needed, input file exists ?=" << fs::exists(inpfile) << std::endl;
   if (verbosity > 1)
@@ -860,11 +887,11 @@ bool Project::run_needed(int verbosity) const {
   return false;
 }
 
-std::string Project::xml(bool sync) const {
-  return xmlRepair(file_contents(m_suffixes.at("xml"), "", sync));
+std::string Project::xml(int run, bool sync) const {
+  return xmlRepair(file_contents(m_suffixes.at("xml"), "", run, sync));
 }
 
-std::string Project::file_contents(const std::string& suffix, const std::string& name, bool sync) const {
+std::string Project::file_contents(const std::string& suffix, const std::string& name, int run, bool sync) const {
 
 //  std::cerr << "file_contents " << suffix << ": " << property_get("_private_sjef_project_backend_inactive_synced")
 //            << std::endl;
@@ -876,7 +903,9 @@ std::string Project::file_contents(const std::string& suffix, const std::string&
       and suffix != m_suffixes.at("inp")
       )
     synchronize();
-  std::ifstream s(filename(suffix, name));
+//  std::cout << "file_contents " << filename(suffix, name, run) << std::endl;
+//  system((std::string{"ls -lR "}+filename(suffix,name,run)).c_str());
+  std::ifstream s(filename(suffix, name, run));
   auto result = std::string(std::istreambuf_iterator<char>(s),
                             std::istreambuf_iterator<char>());
   while (result.back() == '\n') result.pop_back();
@@ -1164,18 +1193,109 @@ void Project::recent_edit(const std::string& add, const std::string& remove) {
   }
 }
 
-std::string Project::filename(std::string suffix, const std::string& name) const {
+std::string Project::filename(std::string suffix, const std::string& name, int run) const {
+  fs::path result{m_filename};
+  if (run > -1)
+    result = run_directory(run);
+  std::string basename = result.stem().string();
   if (m_suffixes.count(suffix) > 0) suffix = m_suffixes.at(suffix);
   if (suffix != "" and name == "")
-    return m_filename + "/" + fs::path(m_filename).stem().string() + "." + suffix;
+    result /= basename + "." + suffix;
   else if (suffix != "" and name != "")
-    return m_filename + "/" + name + "." + suffix;
+    result /= name + "." + suffix;
   else if (name != "")
-    return m_filename + "/" + name;
-  else
-    return m_filename;
+    result /= name;
+  return result.native();
 }
 std::string Project::name() const { return fs::path(m_filename).stem().string(); }
+
+inline std::string slurp(const std::string& path) {
+  std::ostringstream buf;
+  std::ifstream input(path.c_str());
+  buf << input.rdbuf();
+  return buf.str();
+}
+
+std::string Project::run_directory(int run) const {
+  if (run < 0)
+    return filename();
+  auto sequence = run_verify(run);
+  if (sequence < 1)
+//    throw std::runtime_error("Invalid run directory");
+    return filename(); // covers the case of old projects without run directories
+  auto dir = fs::path{filename()} / "run" / (std::to_string(sequence) + "." + m_project_suffix);
+  if (not fs::is_directory(dir))
+    throw std::runtime_error("Cannot find directory " + dir.native());
+  return dir.native();
+}
+int Project::run_directory_new() {
+  auto dirlist = run_list();
+  auto sequence = dirlist.empty() ? 1 : *(dirlist.begin()) + 1;
+  dirlist.insert(sequence);
+  std::stringstream ss;
+  for (const auto& dir : dirlist) ss << dir << " ";
+  property_set("run_directories", ss.str());
+  auto rundir = fs::path{filename()} / "run";
+  auto dir = rundir / (std::to_string(sequence) + "." + m_project_suffix);
+  if (not fs::exists(rundir) and not fs::create_directories(rundir)) {
+    throw std::runtime_error("Cannot create directory " + rundir.native());
+  }
+//  fs::directory_iterator end;
+//  for (fs::directory_iterator iter(filename("")); iter != end; iter++) {
+//    auto file = iter->path().filename().native();
+//    bool include = true;
+//    for (const auto& exclude : m_run_directory_ignore)
+//      include = include and not std::regex_search(file, std::regex{exclude});
+//    if (include and fs::is_regular(iter->path())) {
+//      std::cout << "copy " << file << std::endl;
+//      fs::copy(filename("", file), filename("", file, sequence));
+//    }
+//  }
+//  Project newproj{dir.native()};
+//  for (const auto& key : newproj.property_names()) {
+//    auto value = newproj.property_get(key);
+//    boost::replace_first(value, name() + ".", newproj.name() + ".");
+//    newproj.property_set(key, value);
+//  }
+//  if (fs::exists(filename("inp"))) {
+//  std::cout << "copy from "<<filename("inp") << " to " <<newproj.filename("inp")<<std::endl;
+//    fs::copy(filename("inp"), newproj.filename("inp"));
+//  }
+//  newproj.property_delete("jobnumber");
+//  newproj.property_delete("run_directories");
+//  newproj.property_delete("private_project_sjef_project_completed_job");
+  copy(dir.native(), false, false, true);
+  return sequence;
+}
+
+void Project::run_delete(int run) {
+  run = run_verify(run);
+  if (run == 0) return;
+  fs::remove_all(run_directory(run));
+  auto dirlist = run_list();
+  dirlist.erase(run);
+  std::stringstream ss;
+  for (const auto& dir : dirlist) ss << dir << " ";
+  property_set("run_directories", ss.str());
+}
+
+int Project::run_verify(int run) const {
+  auto runlist = run_list();
+  if (run > 0)
+    return (runlist.count(run) > 0) ? run : 0;
+  else if (runlist.empty()) return 0;
+  else return *(runlist.begin());
+}
+
+Project::run_list_t Project::run_list() const {
+  auto ss = std::stringstream(property_get("run_directories"));
+  run_list_t rundirs;
+  int value;
+  while (ss >> value && !ss.eof())
+    if (fs::exists(fs::path{m_filename} / "run" / (std::to_string(value) + "." + m_project_suffix)))
+      rundirs.insert(value);
+  return rundirs;
+}
 
 int Project::recent_find(const std::string& filename) const {
   std::ifstream in(m_recent_projects_file);
@@ -1212,13 +1332,6 @@ struct plist_writer : pugi::xml_writer {
 };
 
 constexpr static bool use_writer = false;
-
-inline std::string slurp(const std::string& path) {
-  std::ostringstream buf;
-  std::ifstream input(path.c_str());
-  buf << input.rdbuf();
-  return buf.str();
-}
 void Project::load_property_file_locked() const {
 //  std::cout << "load_property_file() from " << this << std::endl;
 //  std::cout << slurp(propertyFile())<<std::endl;
@@ -1228,8 +1341,6 @@ void Project::load_property_file_locked() const {
         "error in loading " + propertyFile() + "\n" + result.description() + "\n" + slurp(propertyFile()));
   m_property_file_modification_time = fs::last_write_time(propertyFile());
 }
-
-static std::string writing_object_file = ".Info.plist.writing_object";
 
 bool Project::properties_last_written_by_me(bool removeFile) const {
   auto path = fs::path{m_filename} / fs::path{writing_object_file};
@@ -1467,7 +1578,7 @@ std::string sjef::Project::remote_server_run(const std::string& command, int ver
     std::cerr << "err from remote command " << command << ": " << m_remote_server->last_err << std::endl;
   if (verbosity > 1)
     std::cerr << "last line=" << line << std::endl;
-  auto rc = std::stoi(line.substr(terminator.size() + 1));
+  auto rc = line.empty() ? -1 : std::stoi(line.substr(terminator.size() + 1));
   if (verbosity > 1)
     std::cerr << "rc=" << rc << std::endl;
   if (rc != 0)
@@ -1513,6 +1624,7 @@ void sjef::Project::ensure_remote_server() const {
 //            << std::endl;
   m_remote_server->process = bp::child(bp::search_path("ssh"),
                                        m_remote_server->host,
+                                       "/bin/sh",
                                        bp::std_in < m_remote_server->in,
                                        bp::std_err > m_remote_server->err,
                                        bp::std_out > m_remote_server->out);
@@ -1521,10 +1633,8 @@ void sjef::Project::ensure_remote_server() const {
 //  std::cerr << "started remote_server " << std::endl;
 //  std::cerr << "ensure_remote_server() remote server process created : " << m_remote_server->process.id() << ", master="
 //            << m_master_of_slave << std::endl;
-//  std::cerr << "mkdir -p " << cache(this->m_backends.at(backend)) << std::endl;
 //  std::cerr << "ensure_remote_server finishing on thread " << std::this_thread::get_id() << ", master_of_slave="
 //            << m_master_of_slave << std::endl;
-//  m_remote_server->in << "mkdir -p " << cache(this->m_backends.at(backend)) << std::endl;
 }
 
 void sjef::Project::shutdown_backend_watcher() {
@@ -1569,7 +1679,13 @@ void sjef::Project::change_backend(std::string backend, bool force) {
 //    std::cerr << "after ensure_remote_server backend " << m_master_of_slave << std::endl;
     if (m_master_of_slave) {
       if (this->m_backends.at(backend).host != "localhost") {
-        remote_server_run(std::string{"mkdir -p "} + cache(this->m_backends.at(backend)));
+//        std::cout << "change_backend remote_server_run " << std::endl;
+        try {
+          remote_server_run(
+              std::string{"mkdir -p "} + (fs::path{this->m_backends.at(backend).cache} / m_filename).native(), 0);
+          std::cout << "change_backend remote_server_run has returned " << std::endl;
+        }
+        catch (...) {}
       }
       m_unmovables.shutdown_flag.clear();
       m_backend_watcher = std::thread(backend_watcher, std::ref(*this), backend, 100, 1000);
@@ -1636,6 +1752,43 @@ void sjef::Project::backend_watcher(sjef::Project& project_,
   }
 //  std::cerr << "Project::backend_watcher stopping for " << project_.m_filename << " on thread "
 //            << std::this_thread::get_id() << std::endl;
+}
+
+bool sjef::Project::check_backend(const std::string& name) const {
+  auto be = m_backends.at(name);
+  if (be.host.empty()) return false;
+  if (be.run_command.empty()) return false;
+  if (be.run_jobnumber.empty()) return false;
+  if (be.status_command.empty()) return false;
+  if (be.status_running.empty()) return false;
+  if (be.status_waiting.empty()) return false;
+  return true;
+}
+
+bool sjef::Project::check_all_backends() const {
+  bool result = true;
+  for (const auto& backend : m_backends)
+    result = result and check_backend(backend.first);
+  return result;
+}
+
+bool check_backends(const std::string& suffix) {
+  for (const auto& config_dir : std::vector<std::string>{"/usr/local/etc/sjef", "~/.sjef"}) {
+    const auto config_file = expand_path(config_dir + "/" + suffix + "/backends.xml");
+    if (fs::exists(config_file)) {
+      std::unique_ptr<pugi_xml_document> backend_doc;
+      pugi::xml_document doc;
+      pugi::xml_parse_result result = doc.load_file(config_file.c_str());
+      if (result.status != pugi::status_ok) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+void Project::take_run_files(int run, const std::string& fromname, const std::string& toname) const {
+  auto toname_ = toname.empty() ? fromname : toname;
+  fs::copy(filename("", fromname, run), fs::path{m_filename} / toname_);
 }
 
 } // namespace sjef

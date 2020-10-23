@@ -124,6 +124,8 @@ int main(int argc, char* argv[]) {
     TCLAP::SwitchArg
         forceArg("f", "force", "Allow operations that would result in overwriting an existing file", false);
     cmd.add(forceArg);
+    TCLAP::SwitchArg norunSwitch("n", "no-run-directories", "Do not copy run directories", false);
+    cmd.add(norunSwitch);
     TCLAP::SwitchArg
         waitArg("w", "wait", "Wait for completion of a job launched by run", false);
     cmd.add(waitArg);
@@ -215,7 +217,7 @@ int main(int argc, char* argv[]) {
       else if (command == "new") {
         success = proj.import_file(extras, forceArg.getValue());
       } else if (command == "copy")
-        proj.copy(extras.front(), forceArg.getValue());
+        proj.copy(extras.front(), forceArg.getValue(), false, norunSwitch.getValue());
       else if (command == "move")
         success = proj.move(extras.front(), forceArg.getValue());
       else if (command == "erase")
@@ -252,7 +254,8 @@ int main(int argc, char* argv[]) {
       else if (command == "browse") {
         if (!proj.property_get("backend").empty())
           success = proj.synchronize(verboseSwitch.getValue());
-        if (success) success = system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out") + "\\'").c_str());
+        if (success)
+          success = system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out", "", 0) + "\\'").c_str());
       } else if (command == "clean") {
         proj.clean(true, false, false);
       } else if (command == "property") {
@@ -301,7 +304,7 @@ int main(int argc, char* argv[]) {
                     and
                         proj.synchronize(verboseSwitch.getValue())
                 )
-              system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out") + "\\'").c_str());
+              system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out", "", 0) + "\\'").c_str());
           } else
             std::cout << "Unknown command: " << line << std::endl;
         }

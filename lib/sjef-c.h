@@ -17,7 +17,6 @@ int sjef_project_run_needed(const char* project);
 int sjef_project_synchronize(const char* project, const char* backend, int verbosity);
 int sjef_project_run(const char* project,
                      const char* backend,
-                     const char* options,
                      int verbosity,
                      int force,
                      int wait);
@@ -31,6 +30,14 @@ char* sjef_project_property_get(const char* project, const char* key);
 char** sjef_project_properties_get(const char* project, const char** key);
 void sjef_project_property_delete(const char* project, const char* key);
 char* sjef_project_filename(const char* project);
+/*!
+ * @brief Get the file name of the bundle, or a primary file of particular type, or a general file in the bundle
+ * @param suffix If present without \c name, look for a primary file with that type. If absent, the file name of the bundle is instead selected
+ * @param name If present,  look for a file of this name, appended with .\c suffix if that is non-blank
+ * @param run If specified, look in a run directory for the file, instead of the main project directory. A value of 0 is interpreted as the most recent run directory.
+ * @return the fully-qualified name of the file
+ */
+char* sjef_project_filename_general(const char* project, const char* suffix, const char* name, int run);
 char* sjef_project_name(const char* project);
 size_t sjef_project_project_hash(const char* project);
 size_t sjef_project_input_hash(const char* project);
@@ -38,6 +45,9 @@ int sjef_project_recent_find(const char* filename);
 char* sjef_project_recent(int number, const char* suffix);
 int sjef_project_change_backend(const char* project, const char* backend);
 char* sjef_project_backend_parameter_get(const char* project, const char* backend, const char* parameter);
+char* sjef_project_backend_parameter_expand(const char* project,
+					    const char* backend,
+					    const char* templ);
 void sjef_project_backend_parameter_set(const char* project,
                                         const char* backend,
                                         const char* parameter,
@@ -73,6 +83,34 @@ char* sjef_project_backend_parameter_documentation(const char* project,
                                                    const char* backend,
                                                    const char* parameter);
 
+
+/*!
+  * @brief Obtain the path of a run directory
+  * @param run
+  * - -0: the most recent run directory
+  * - other: the specified run directory
+  * @return the fully-qualified name of the directory
+  */
+char* sjef_project_run_directory(const char* project, int run);
+inline char* sjef_project_run_directory_default(const char* project) { return sjef_project_run_directory(project,0);}
+/*!
+  * @brief Obtain the list of run numbers in reverse order, ie the most recent first
+  * @return
+  */
+int* sjef_project_run_list(const char* project);
+/*!
+ * @brief Delete a run directory
+ * @param run
+ */
+void sjef_project_run_delete(const char* project, int run);
+/*!
+ * @brief Copy files from a run directory to the main project.
+ * @param project
+ * @param run Specifies the run to use as source, with 0 meaning the most recent.
+ * @param fromname The file to copy.
+ * @param toname The destination, defaulting to fromname.
+ */
+void sjef_project_take_run_files(const char* project, int run, const char* fromname, const char* toname);
 #ifdef __cplusplus
 }
 #endif // __cplusplus

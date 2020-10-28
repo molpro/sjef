@@ -92,7 +92,7 @@ char* sjef_project_backend_parameter_documentation(const char* project,
   * @return the fully-qualified name of the directory
   */
 char* sjef_project_run_directory(const char* project, int run);
-inline char* sjef_project_run_directory_default(const char* project) { return sjef_project_run_directory(project,0);}
+static inline char* sjef_project_run_directory_default(const char* project) { return sjef_project_run_directory(project,0);}
 /*!
   * @brief Obtain the list of run numbers in reverse order, ie the most recent first
   * @return

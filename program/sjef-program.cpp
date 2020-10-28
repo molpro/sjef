@@ -1,5 +1,6 @@
 #include <iostream>
-#include "sjef.h"
+#include "sjef-program.h"
+#include <sjef.h>
 using Project = sjef::Project;
 static const auto program_name = std::string("Simple Job Execution Framework");
 #include <tclap/CmdLine.h>
@@ -12,7 +13,8 @@ static const auto program_name = std::string("Simple Job Execution Framework");
 namespace fs = boost::filesystem;
 
 ///> @private
-int main(int argc, char* argv[]) {
+extern "C"
+int sjef_program(int argc, char* argv[]) {
   std::string default_suffix{""};
   std::string eraseCandidate;
   try {

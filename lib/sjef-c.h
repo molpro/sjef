@@ -95,7 +95,7 @@ char* sjef_project_run_directory(const char* project, int run);
 static inline char* sjef_project_run_directory_default(const char* project) { return sjef_project_run_directory(project,0);}
 /*!
   * @brief Obtain the list of run numbers in reverse order, ie the most recent first
-  * @return
+  * @return zero-terminated list (note that run numbers are positive integers)
   */
 int* sjef_project_run_list(const char* project);
 /*!

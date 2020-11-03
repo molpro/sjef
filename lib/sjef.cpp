@@ -158,7 +158,7 @@ Project::Project(const std::string& filename,
   m_backends[sjef::Backend::dummy_name] = sjef::Backend(sjef::Backend::dummy_name,
                                                         "localhost",
                                                         "{$PWD}",
-                                                        "/bin/sh -c 'echo dummy > ${0%.*}.out; echo \"<?xml version=\\\"1.0\\\"?>\n<root/>\" > ${0%.*}.xml'");
+                                                        "/bin/sh -c 'eval filename=${0}; echo dummy > ${filename%.*}.out; echo \"<?xml version=\\\"1.0\\\"?>\n<root/>\" > ${filename%.*}.xml'");
   if (not sjef::check_backends(m_project_suffix)) throw std::runtime_error("sjef backend files are invalid");
   for (const auto& config_dir : std::vector<std::string>{"/usr/local/etc/sjef", "~/.sjef"}) {
     const auto config_file = expand_path(config_dir + "/" + m_project_suffix + "/backends.xml");
@@ -644,6 +644,11 @@ std::map<std::string, std::string> Project::backend_parameters(const std::string
   return result;
 }
 
+static std::string shell_escape(const std::string& name) {
+  return std::regex_replace(name,std::regex{" "},"\\ ");
+}
+
+
 bool Project::run(int verbosity, bool force, bool wait) {
   auto& backend = m_backends.at(property_get("backend"));
   auto stat = status(verbosity);
@@ -695,13 +700,13 @@ bool Project::run(int verbosity, bool force, bool wait) {
     if (optionstring.empty())
       c = bp::child(executable(run_command),
 //                    fs::path{m_filename} / fs::path(this->name() + ".inp")
-                    filename("inp", "", rundir)
+                    shell_escape(filename("inp", "", rundir))
       );
     else
       c = bp::child(executable(run_command),
                     bp::args(splitString(optionstring)),
 //                    fs::path{m_filename} / fs::path(this->name() + ".inp")
-                    filename("inp", "", rundir)
+                    shell_escape(filename("inp", "", rundir))
       );
     fs::current_path(current_path_save);
     if (not c.valid())

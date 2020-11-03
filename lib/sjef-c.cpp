@@ -458,7 +458,7 @@ int* sjef_project_run_list(const char* project) {
     int sequence = 0;
     for (const auto& item : list)
       result[sequence++] = item;
-    result[sequence] = NULL;
+    result[sequence] = 0;
     return result;
   }
   catch (std::exception& e) { error(e); }

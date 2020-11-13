@@ -1236,6 +1236,7 @@ int Project::run_directory_new() {
   if (not fs::exists(rundir) and not fs::create_directories(rundir)) {
     throw std::runtime_error("Cannot create directory " + rundir.native());
   }
+  set_current_run(0);
 //  fs::directory_iterator end;
 //  for (fs::directory_iterator iter(filename("")); iter != end; iter++) {
 //    auto file = iter->path().filename().native();
@@ -1279,6 +1280,8 @@ int Project::run_verify(int run) const {
   auto runlist = run_list();
   if (run > 0)
     return (runlist.count(run) > 0) ? run : 0;
+  const auto currentRun = current_run();
+  if (currentRun > 0) return currentRun;
   else if (runlist.empty()) return 0;
   else return *(runlist.begin());
 }
@@ -1790,6 +1793,15 @@ bool check_backends(const std::string& suffix) {
 void Project::take_run_files(int run, const std::string& fromname, const std::string& toname) const {
   auto toname_ = toname.empty() ? fromname : toname;
   fs::copy(filename("", fromname, run), fs::path{m_filename} / toname_);
+}
+
+void Project::set_current_run(unsigned int run) {
+  property_set("current_run", std::to_string(run));
+}
+
+unsigned int Project::current_run() const {
+  auto s = property_get("current_run");
+  return s.empty() ? 0 : std::stoi(s);
 }
 
 } // namespace sjef

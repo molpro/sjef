@@ -495,4 +495,25 @@ void sjef_project_take_run_files(const char* project, int run, const char* fromn
   catch (...) {}
   return;
 }
+
+void sjef_project_set_current_run(const char* project, unsigned int run) {
+  try {
+    if (projects.count(project) == 0) sjef_project_open(project);
+    projects.at(project)->set_current_run(run);
+    return;
+  }
+  catch (std::exception& e) { error(e); }
+  catch (...) {}
+  return;
+}
+
+unsigned int sjef_project_current_run(const char* project) {
+  try {
+    if (projects.count(project) == 0) sjef_project_open(project);
+    return projects.at(project)->current_run();
+  }
+  catch (std::exception& e) { error(e); }
+  catch (...) {}
+  return 0;
+}
 }

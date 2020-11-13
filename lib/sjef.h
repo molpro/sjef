@@ -212,7 +212,7 @@ class Project {
   void custom_run_preface();
   /*!
    * @brief Get the xml output, completing any open tags if necessary
-   * @param run If present, look for the file in a particular run directory. Otherwise it will search in the default run directory, and if not found, the main directory
+   * @param run If present, look for the file in a particular run directory. Otherwise it will search in the currently focussed run directory, and if not found, the main directory
    * @param sync Whether to force a synchronisation with backend before getting the file contents
    * @return
    */
@@ -221,7 +221,7 @@ class Project {
    * @brief Obtain the contents of a project file
    * @param suffix If present without \c name, look for a primary file with that type. If absent, the file name of the bundle is instead selected
    * @param name If present,  look for a file of this name, appended with .\c suffix if that is non-blank
-   * @param run If present, look for the file in a particular run directory. Otherwise it will search in the default run directory, and if not found, the main directory
+   * @param run If present, look for the file in a particular run directory. Otherwise it will search in the currently focussed run directory, and if not found, the main directory
    * @param sync Whether to force a synchronisation with backend before getting the file contents
    * @return the contents of the file
    */
@@ -282,7 +282,7 @@ class Project {
   /*!
    * @brief Obtain the path of a run directory
    * @param run
-   * - -0: the most recent run directory
+   * - -0: the currently focussed run directory
    * - other: the specified run directory
    * @return the fully-qualified name of the directory
    */
@@ -489,11 +489,23 @@ class Project {
 
   /*!
    * @brief Copy files from a run directory to the main project.
-   * @param run Specifies the run to use as source, with 0 meaning the most recent.
+   * @param run Specifies the run to use as source, with 0 meaning the currently focussed run directory.
    * @param fromname The file to copy.
    * @param toname The destination, defaulting to fromname.
    */
   void take_run_files(int run = 0, const std::string& fromname = "", const std::string& toname = "") const;
+
+  /*!
+   * @brief Set the focussed run directory
+   * @param run The index of an existing run directory, a positive integer, or zero, indicating that the focus is on the most recent run directory
+   */
+  void set_current_run(unsigned int run= 0);
+
+  /*!
+   * @brief Get the focussed run directory
+   * @return The run directory, or zero if there is no run directory yet.
+   */
+  unsigned int current_run() const;
 };
 
 /*!

@@ -117,6 +117,18 @@ void sjef_project_run_delete(const char* project, int run);
  * @param toname The destination, defaulting to fromname.
  */
 void sjef_project_take_run_files(const char* project, int run, const char* fromname, const char* toname);
+/*!
+ * @brief Set the focussed run directory
+ * @param project
+ * @param run The index of an existing run directory, a positive integer, or zero, indicating that the focus is on the most recent run directory
+ */
+void sjef_project_set_current_run(const char* project, unsigned int run);
+/*!
+ * @brief Get the focussed run directory
+ * @param project
+ * @return
+ */
+unsigned int sjef_project_current_run(const char* project);
 #ifdef __cplusplus
 }
 #endif // __cplusplus

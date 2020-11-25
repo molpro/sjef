@@ -87,7 +87,7 @@ char* sjef_project_backend_parameter_documentation(const char* project,
 /*!
   * @brief Obtain the path of a run directory
   * @param run
-  * - -0: the most recent run directory
+  * - 0: the most recent run directory
   * - other: the specified run directory
   * @return the fully-qualified name of the directory
   */

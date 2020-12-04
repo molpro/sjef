@@ -280,10 +280,9 @@ size_t sjef_project_input_hash(const char* project) {
 }
 int sjef_project_recent_find(const char* filename) {
   try {
-    return sjef::Project("",
-                         false,
-                         fs::path{filename}.extension().string().substr(1)
-    ).recent_find(std::string(filename));
+    const char* dot;
+    for (dot = filename + strlen(filename); dot > filename && *dot != '.'; dot--);
+    return sjef::Project::recent_find(std::string{dot+1}, filename);
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -351,8 +350,8 @@ char* sjef_project_backend_parameter_get(const char* project,
 }
 
 char* sjef_project_backend_parameter_expand(const char* project,
-					    const char* backend,
-					    const char* templ) {
+                                            const char* backend,
+                                            const char* templ) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
     return strdup(projects.at(project)->backend_parameter_expand(backend, templ).c_str());
@@ -419,7 +418,7 @@ char** sjef_project_backend_names(const char* project) {
 }
 
 char* sjef_project_recent(int number, const char* suffix) {
-  return strdup(sjef::Project::recent(suffix,number).c_str());
+  return strdup(sjef::Project::recent(suffix, number).c_str());
 }
 char* sjef_expand_path(const char* path, const char* default_suffix) {
   try {
@@ -432,7 +431,7 @@ char* sjef_expand_path(const char* path, const char* default_suffix) {
 char* sjef_project_filename_general(const char* project, const char* suffix, const char* name, int run) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    return strdup(projects.at(project)->filename(suffix,name,run).c_str());
+    return strdup(projects.at(project)->filename(suffix, name, run).c_str());
   }
   catch (std::exception& e) { error(e); }
   catch (...) {}
@@ -452,7 +451,7 @@ int* sjef_project_run_list(const char* project) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
     auto list = projects.at(project)->run_list();
-    int* result = (int*) malloc((list.size()+1)*sizeof(int*));
+    int* result = (int*) malloc((list.size() + 1) * sizeof(int*));
     int sequence = 0;
     for (const auto& item : list)
       result[sequence++] = item;
@@ -486,7 +485,7 @@ void sjef_project_run_delete(const char* project, int run) {
 void sjef_project_take_run_files(const char* project, int run, const char* fromname, const char* toname) {
   try {
     if (projects.count(project) == 0) sjef_project_open(project);
-    projects.at(project)->take_run_files(run,fromname,toname);
+    projects.at(project)->take_run_files(run, fromname, toname);
     return;
   }
   catch (std::exception& e) { error(e); }

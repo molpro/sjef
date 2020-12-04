@@ -321,15 +321,19 @@ class Project {
   std::string name() const;
   /*!
    * @brief Look for a project by name in the user-global recent project list
+   * @param suffix the project suffix
    * @param filename
    * @return 0 if failure, otherwise the rank of the project (1 is newest)
    */
+  static int recent_find(const std::string& suffix, const std::string& filename);
   int recent_find(const std::string& filename) const;
   /*!
    * @brief Look for a project by rank in the user-global recent project list
+   * @param suffix the project suffix
    * @param number the rank of the project (1 is newest)
    * @return the filename of the project, or "" if not found
    */
+  static std::string recent(const std::string& suffix, int number = 1);
   std::string recent(int number = 1) const;
   void ensure_remote_server() const;
   /*!

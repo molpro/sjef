@@ -419,9 +419,7 @@ char** sjef_project_backend_names(const char* project) {
 }
 
 char* sjef_project_recent(int number, const char* suffix) {
-  return strdup(sjef::Project("$TMPDIR/.sjef.recent",
-                              false,
-                              suffix).recent(number).c_str());
+  return strdup(sjef::Project::recent(suffix,number).c_str());
 }
 char* sjef_expand_path(const char* path, const char* default_suffix) {
   try {

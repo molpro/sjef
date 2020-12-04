@@ -1313,15 +1313,20 @@ int Project::recent_find(const std::string& filename) const {
   return 0;
 }
 
-std::string Project::recent(int number) const {
-  std::ifstream in(m_recent_projects_file);
+std::string Project::recent(const std::string& suffix, int number) {
+  auto recent_projects_directory = expand_path(std::string{"~/.sjef/"} + suffix);
+  fs::create_directories(recent_projects_directory);
+  std::ifstream in(expand_path(recent_projects_directory + "/projects"));
   std::string line;
   for (int position = 0; in >> line;) {
     if (fs::exists(line)) ++position;
     if (position == number) return line;
   }
   return "";
+}
 
+std::string Project::recent(int number) const {
+  return recent(m_project_suffix, number);
 }
 
 ///> @private

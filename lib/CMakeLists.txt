@@ -1,4 +1,4 @@
-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.12.0" CACHE STRING "Minimum OS X deployment version")
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.12.0" CACHE STRING "Minimum OS X deployment version" FORCE)
 add_library(${LIB_NAME}
         sjef-backend.cpp
         sjef.cpp

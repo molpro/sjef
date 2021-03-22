@@ -16,8 +16,8 @@ class Backend {
   std::string run_command;
   std::string run_jobnumber;
   std::string status_command;
-  std::string status_waiting;
   std::string status_running;
+  std::string status_waiting;
   std::string kill_command;
   static std::string default_name;
   static std::string dummy_name;

@@ -11,8 +11,8 @@ const std::vector<std::string> sjef::Backend::s_keys = std::vector<std::string>{
     "run_command",
     "run_jobnumber",
     "status_command",
-    "status_waiting",
     "status_running",
+    "status_waiting",
     "kill_command"
 };
 

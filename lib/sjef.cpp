@@ -676,6 +676,11 @@ bool Project::run(int verbosity, bool force, bool wait) {
 //    for (const auto& sp : spl)
     for (auto sp = spl.rbegin(); sp < spl.rend() - 1; sp++)
       optionstring = "'" + *sp + "' " + optionstring;
+    if (executable(run_command).empty()) {
+      for (const auto& p: ::boost::this_process::path())
+        std::cerr << "path " << p << std::endl;
+      throw std::runtime_error("Cannot find run command "+run_command);
+    }
     if (verbosity > 1)
       std::cerr << "run local job executable=" << executable(run_command) << " " << optionstring << " "
                 << filename("inp", "", rundir)

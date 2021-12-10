@@ -700,19 +700,20 @@ bool Project::run(int verbosity, bool force, bool wait) {
     if (optionstring.empty())
       c = bp::child(executable(run_command),
 //                    fs::path{m_filename} / fs::path(this->name() + ".inp")
-                    filename("inp", "", rundir)
+                    fs::relative(filename("inp", "", rundir))
       );
     else
       c = bp::child(executable(run_command),
                     bp::args(splitString(optionstring)),
 //                    fs::path{m_filename} / fs::path(this->name() + ".inp")
-                    filename("inp", "", rundir)
+                    fs::relative(filename("inp", "", rundir))
       );
     fs::current_path(current_path_save);
     if (not c.valid())
       throw std::runtime_error("Spawning run process has failed");
     c.detach();
     property_set("jobnumber", std::to_string(c.id()));
+    status(0,false); // to force status cache
     if (verbosity > 1) std::cerr << "jobnumber " << c.id() << ", running=" << c.running() << std::endl;
     if (wait) this->wait();
     return true;
@@ -1370,7 +1371,7 @@ bool Project::properties_last_written_by_me(bool removeFile) const {
   if (not i.is_open()) return false;
   std::hash<const Project*> hasher;
   auto me = hasher(this);
-  std::hash<const Project*>::result_type writer;
+  decltype(me) writer;
   i >> writer;
   if (removeFile and writer == me)
     fs::remove(path);
@@ -1818,6 +1819,27 @@ void Project::set_current_run(unsigned int run) {
 unsigned int Project::current_run() const {
   auto s = property_get("current_run");
   return s.empty() ? 0 : std::stoi(s);
+}
+
+void Project::add_backend(const std::string &name,
+                          const std::map<std::string, std::string> &fields) {
+  m_backends[name] = Backend(name);
+  if (fields.count("host") > 0)
+    m_backends[name].host = fields.at("host");
+  if (fields.count("cache") > 0)
+    m_backends[name].cache = fields.at("cache");
+  if (fields.count("run_command") > 0)
+    m_backends[name].run_command = fields.at("run_command");
+  if (fields.count("run_jobnumber") > 0)
+    m_backends[name].run_jobnumber = fields.at("run_jobnumber");
+  if (fields.count("status_command") > 0)
+    m_backends[name].status_command = fields.at("status_command");
+  if (fields.count("status_running") > 0)
+    m_backends[name].status_running = fields.at("status_running");
+  if (fields.count("status_waiting") > 0)
+    m_backends[name].status_waiting = fields.at("status_waiting");
+  if (fields.count("kill_command") > 0)
+    m_backends[name].kill_command = fields.at("kill_command");
 }
 
 } // namespace sjef

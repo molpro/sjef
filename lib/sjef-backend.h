@@ -42,6 +42,7 @@ class Backend {
   }
   static const std::vector<std::string> s_keys ;
   std::string str() const;
+  static const std::vector<std::string>& keys() ;
 };
 }
 

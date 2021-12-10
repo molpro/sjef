@@ -1371,7 +1371,7 @@ bool Project::properties_last_written_by_me(bool removeFile) const {
   if (not i.is_open()) return false;
   std::hash<const Project*> hasher;
   auto me = hasher(this);
-  std::hash<const Project*>::result_type writer;
+  decltype(me) writer;
   i >> writer;
   if (removeFile and writer == me)
     fs::remove(path);

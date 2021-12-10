@@ -579,7 +579,7 @@ TEST(project, project_name_embedded_space) {
       << "while [ ${1#-} != ${1} ]; do shift; done; "
          "echo dummy > \"${1%.*}.out\";echo '<?xml "
          "version=\"1.0\"?>\n<root/>' > \"${1%.*}.xml\";";
-  p.run("local", 0, true, false);
+  p.run("light", 0, true, false);
   p.wait();
 //  timespec delay; delay.tv_sec=0; delay.tv_nsec=10000000;
 //  nanosleep(&delay,NULL);

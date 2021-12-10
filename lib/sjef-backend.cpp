@@ -27,6 +27,10 @@ std::string sjef::Backend::str() const {
   return ss.str();
 }
 
+const std::vector<std::string>& sjef::Backend::keys() {
+  return s_keys;
+}
+
 extern "C" char** sjef_backend_keys() {
   char** result = (char**) malloc((sjef::Backend::s_keys.size() + 1) * sizeof(char*));
   size_t offset = 0;

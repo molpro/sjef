@@ -574,12 +574,48 @@ TEST(project, project_name_embedded_space) {
   savestate state("molpro");
   sjef::Project p(state.testfile("completely new.molpro"));
   std::ofstream(p.filename("inp")) << "geometry={He};rhf\n";
-  p.run(sjef::Backend::dummy_name, 0, true, false);
+  p.add_backend("light",{{"run_command",std::string{"sh "}+(fs::current_path()/"light.sh").string()}});
+  std::ofstream("light.sh")
+      << "while [ ${1#-} != ${1} ]; do shift; done; "
+         "echo dummy > \"${1%.*}.out\";echo '<?xml "
+         "version=\"1.0\"?>\n<root/>' > \"${1%.*}.xml\";";
+  p.run("local", 0, true, false);
   p.wait();
-  timespec delay; delay.tv_sec=0; delay.tv_nsec=10000000;
-  nanosleep(&delay,NULL);
+//  timespec delay; delay.tv_sec=0; delay.tv_nsec=10000000;
+//  nanosleep(&delay,NULL);
   EXPECT_EQ(p.file_contents("out"), "dummy");
   EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
+  fs::remove("light.sh");
+}
+
+TEST(project, project_dir_embedded_space) {
+  savestate state("molpro");
+  auto dir=fs::absolute("has some spaces");
+  fs::remove_all(dir);
+  std::cout << dir << std::endl;
+  ASSERT_TRUE(fs::create_directories(dir));
+  {
+    sjef::Project p(state.testfile((dir / "run_directory.molpro").string()));
+    std::ofstream(p.filename("inp")) << "geometry={He};rhf\n";
+    p.add_backend("light", {{"run_command",
+                             std::string{"sh "} +
+                                 (fs::current_path() / "light.sh").string()}});
+    std::ofstream("light.sh")
+        << "while [ ${1#-} != ${1} ]; do shift; done; "
+           "echo dummy > \"${1%.*}.out\";echo '<?xml "
+           "version=\"1.0\"?>\n<root/>' > \"${1%.*}.xml\";";
+    p.run("light", 0, true, false);
+    p.wait();
+//    timespec delay;
+//    delay.tv_sec = 0;
+//    delay.tv_nsec = 10000000000;
+//    nanosleep(&delay, NULL);
+    //  sleep(10);
+    EXPECT_EQ(p.file_contents("out"), "dummy");
+    EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
+    fs::remove("light.sh");
+  }
+  fs::remove_all(dir);
 }
 
 TEST(project, run_directory) {
@@ -615,4 +651,15 @@ TEST(project, run_directory) {
   EXPECT_EQ(2, p.run_verify(0));
   EXPECT_EQ(p.run_list(), sjef::Project::run_list_t{2});
 //  system((std::string("ls -lR ")+p.filename()).c_str());
+}
+
+TEST(project, blanks_in_directory_name) {
+  savestate state("molpro");
+  auto dir=fs::absolute("has some spaces");
+  fs::remove_all(dir);
+  std::cout << dir << std::endl;
+  ASSERT_TRUE(fs::create_directories(dir));
+  auto filename = state.testfile((dir / "run_directory.molpro").string());
+  sjef::Project p(filename);
+  fs::remove_all(dir);
 }

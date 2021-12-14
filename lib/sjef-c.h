@@ -15,11 +15,7 @@ int sjef_project_import(const char* project, const char* file);
 int sjef_project_export(const char* project, const char* file);
 int sjef_project_run_needed(const char* project);
 int sjef_project_synchronize(const char* project, const char* backend, int verbosity);
-int sjef_project_run(const char* project,
-                     const char* backend,
-                     int verbosity,
-                     int force,
-                     int wait);
+int sjef_project_run(const char* project, const char* backend, int verbosity, int force, int wait);
 int sjef_project_status(const char* project, int verbosity);
 const char* sjef_project_status_message(const char* project, int verbosity);
 int sjef_project_status_initiate(const char* project, int verbosity);
@@ -33,9 +29,11 @@ char* sjef_project_filename(const char* project);
 /*!
  * @brief Get the file name of the bundle, or a primary file of particular type, or a general file in the bundle
  * @param project The project
- * @param suffix If present without \c name, look for a primary file with that type. If absent, the file name of the bundle is instead selected
+ * @param suffix If present without \c name, look for a primary file with that type. If absent, the file name of the
+ * bundle is instead selected
  * @param name If present,  look for a file of this name, appended with .\c suffix if that is non-blank
- * @param run If specified, look in a run directory for the file, instead of the main project directory. A value of 0 is interpreted as the most recent run directory.
+ * @param run If specified, look in a run directory for the file, instead of the main project directory. A value of 0 is
+ * interpreted as the most recent run directory.
  * @return the fully-qualified name of the file
  */
 char* sjef_project_filename_general(const char* project, const char* suffix, const char* name, int run);
@@ -46,12 +44,8 @@ int sjef_project_recent_find(const char* filename);
 char* sjef_project_recent(int number, const char* suffix);
 int sjef_project_change_backend(const char* project, const char* backend);
 char* sjef_project_backend_parameter_get(const char* project, const char* backend, const char* parameter);
-char* sjef_project_backend_parameter_expand(const char* project,
-					    const char* backend,
-					    const char* templ);
-void sjef_project_backend_parameter_set(const char* project,
-                                        const char* backend,
-                                        const char* parameter,
+char* sjef_project_backend_parameter_expand(const char* project, const char* backend, const char* templ);
+void sjef_project_backend_parameter_set(const char* project, const char* backend, const char* parameter,
                                         const char* value);
 void sjef_project_backend_parameter_delete(const char* project, const char* backend, const char* parameter);
 /*!
@@ -63,7 +57,7 @@ void sjef_project_backend_parameter_delete(const char* project, const char* back
  */
 char** sjef_project_backend_parameters(const char* project, const char* backend, int def);
 char** sjef_project_backend_names(const char* project);
-//char** sjef_global_backends();
+// char** sjef_global_backends();
 char* sjef_expand_path(const char* path, const char* default_suffix);
 /*!
  * @brief Obtain a list of the names of the defined fields in a sjef::Backend
@@ -80,26 +74,25 @@ char** sjef_backend_keys();
  */
 char* sjef_backend_value(const char* project, const char* backend, const char* key);
 
-char* sjef_project_backend_parameter_documentation(const char* project,
-                                                   const char* backend,
-                                                   const char* parameter);
-
+char* sjef_project_backend_parameter_documentation(const char* project, const char* backend, const char* parameter);
 
 /*!
-  * @brief Obtain the path of a run directory
-  * @param project The project
-  * @param run
-  * - 0: the most recent run directory
-  * - other: the specified run directory
-  * @return the fully-qualified name of the directory
-  */
+ * @brief Obtain the path of a run directory
+ * @param project The project
+ * @param run
+ * - 0: the most recent run directory
+ * - other: the specified run directory
+ * @return the fully-qualified name of the directory
+ */
 char* sjef_project_run_directory(const char* project, int run);
-static inline char* sjef_project_run_directory_default(const char* project) { return sjef_project_run_directory(project,0);}
+static inline char* sjef_project_run_directory_default(const char* project) {
+  return sjef_project_run_directory(project, 0);
+}
 /*!
-  * @brief Obtain the list of run numbers in reverse order, ie the most recent first
-  * @param project The project
-  * @return zero-terminated list (note that run numbers are positive integers)
-  */
+ * @brief Obtain the list of run numbers in reverse order, ie the most recent first
+ * @param project The project
+ * @return zero-terminated list (note that run numbers are positive integers)
+ */
 int* sjef_project_run_list(const char* project);
 /*!
  * @brief Obtain the sequence number of the next run directory to be created
@@ -124,7 +117,8 @@ void sjef_project_take_run_files(const char* project, int run, const char* fromn
 /*!
  * @brief Set the focussed run directory
  * @param project
- * @param run The index of an existing run directory, a positive integer, or zero, indicating that the focus is on the most recent run directory
+ * @param run The index of an existing run directory, a positive integer, or zero, indicating that the focus is on the
+ * most recent run directory
  */
 void sjef_project_set_current_run(const char* project, unsigned int run);
 /*!
@@ -137,5 +131,4 @@ unsigned int sjef_project_current_run(const char* project);
 }
 #endif // __cplusplus
 
-
-#endif //SJEF_LIB_SJEF_C_H_
+#endif // SJEF_LIB_SJEF_C_H_

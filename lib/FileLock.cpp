@@ -1,9 +1,9 @@
+#include <boost/filesystem/fstream.hpp>
+#include <boost/filesystem/operations.hpp>
+#include <boost/interprocess/sync/file_lock.hpp>
 #include <map>
 #include <mutex>
 #include <thread>
-#include <boost/filesystem/operations.hpp>
-#include <boost/filesystem/fstream.hpp>
-#include <boost/interprocess/sync/file_lock.hpp>
 namespace fs = boost::filesystem;
 
 #include "FileLock.h"
@@ -19,14 +19,11 @@ struct sjef::FileLock::Unique_FileLock { // process-level locking
   std::unique_ptr<boost::interprocess::file_lock> m_file_lock;
   mutex_t m_mutex;
   int m_entry_count;
- public:
+
+public:
   Unique_FileLock(const std::string& path, bool erase_if_created = true)
-      :
-      m_preexisting(boost::filesystem::exists(path) or not erase_if_created),
-      m_lockfile(s_lockfile(path)),
-      m_file_lock(new boost::interprocess::file_lock(m_lockfile.c_str())),
-      m_entry_count(0) {
-  }
+      : m_preexisting(boost::filesystem::exists(path) or not erase_if_created), m_lockfile(s_lockfile(path)),
+        m_file_lock(new boost::interprocess::file_lock(m_lockfile.c_str())), m_entry_count(0) {}
   ~Unique_FileLock() {
     m_file_lock.reset(nullptr);
     if (not m_preexisting) {
@@ -35,12 +32,10 @@ struct sjef::FileLock::Unique_FileLock { // process-level locking
   }
 };
 
-std::map<std::string, std::shared_ptr<sjef::FileLock::Unique_FileLock> > s_Unique_FileLocks;
+std::map<std::string, std::shared_ptr<sjef::FileLock::Unique_FileLock>> s_Unique_FileLocks;
 std::mutex s_Unique_FileLocks_mutex;
 
-sjef::FileLock::FileLock(const std::string& path, bool exclusive, bool erase_if_created)
-    :
-    m_exclusive(exclusive) {
+sjef::FileLock::FileLock(const std::string& path, bool exclusive, bool erase_if_created) : m_exclusive(exclusive) {
   {
     std::lock_guard<std::mutex> s_Unique_FileLocks_guard(s_Unique_FileLocks_mutex);
     if (s_Unique_FileLocks.count(path) <= 0)
@@ -51,8 +46,7 @@ sjef::FileLock::FileLock(const std::string& path, bool exclusive, bool erase_if_
   if (m_exclusive) {
     m_lock_guard.reset(new std::lock_guard(m_unique->m_mutex));
     m_unique->m_file_lock->lock();
-  }
-  else {
+  } else {
     m_shared_lock.reset(new std::shared_lock(m_unique->m_mutex));
     m_unique->m_file_lock->lock_sharable();
   }
@@ -70,7 +64,8 @@ sjef::FileLock::~FileLock() {
 
   {
     std::lock_guard<std::mutex> s_Unique_FileLocks_guard(s_Unique_FileLocks_mutex);
-    if (s_Unique_FileLocks[m_unique->m_lockfile].use_count() <= 2) // I am the last user of the Unique_FileLock so it can be trashed
+    if (s_Unique_FileLocks[m_unique->m_lockfile].use_count() <=
+        2) // I am the last user of the Unique_FileLock so it can be trashed
     {
       s_Unique_FileLocks.erase((m_unique->m_lockfile));
     }

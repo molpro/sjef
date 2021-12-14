@@ -23,17 +23,16 @@ int main() {
   }
   free(backends);
 
-  printf("%s\n",sjef_backend_value(projectname,"local","host"));
+  printf("%s\n", sjef_backend_value(projectname, "local", "host"));
 
-//  const char* empty[]={NULL};
-//  sjef_backend_new("thing",empty,empty);
-//
-//  const char* newkeys[]={"run_command","status_command"};
-//  const char* newvals[]={"true","status"};
-//  sjef_backend_new("thing",newkeys,newvals);
-//  system("cat ~/.sjef/backends.xml");
-//  sjef_backend_remove("thing");
-//  sjef_backend_remove("thing");
-//  system("cat ~/.sjef/backends.xml");
-
+  //  const char* empty[]={NULL};
+  //  sjef_backend_new("thing",empty,empty);
+  //
+  //  const char* newkeys[]={"run_command","status_command"};
+  //  const char* newvals[]={"true","status"};
+  //  sjef_backend_new("thing",newkeys,newvals);
+  //  system("cat ~/.sjef/backends.xml");
+  //  sjef_backend_remove("thing");
+  //  sjef_backend_remove("thing");
+  //  system("cat ~/.sjef/backends.xml");
 }

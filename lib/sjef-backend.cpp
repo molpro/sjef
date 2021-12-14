@@ -1,10 +1,11 @@
 #include "sjef-backend.h"
-#include <sstream>
 #include <mutex>
+#include <sstream>
 
 std::string sjef::Backend::default_name = "local";
 std::string sjef::Backend::dummy_name = "__dummy";
 const std::vector<std::string> sjef::Backend::s_keys = std::vector<std::string>{
+    // clang-format off
     "name",
     "host",
     "cache",
@@ -14,6 +15,7 @@ const std::vector<std::string> sjef::Backend::s_keys = std::vector<std::string>{
     "status_running",
     "status_waiting",
     "kill_command"
+    // clang-format on
 };
 
 std::string sjef::Backend::str() const {
@@ -27,16 +29,13 @@ std::string sjef::Backend::str() const {
   return ss.str();
 }
 
-const std::vector<std::string>& sjef::Backend::keys() {
-  return s_keys;
-}
+const std::vector<std::string>& sjef::Backend::keys() { return s_keys; }
 
 extern "C" char** sjef_backend_keys() {
-  char** result = (char**) malloc((sjef::Backend::s_keys.size() + 1) * sizeof(char*));
+  char** result = (char**)malloc((sjef::Backend::s_keys.size() + 1) * sizeof(char*));
   size_t offset = 0;
   for (const auto& key : sjef::Backend::s_keys)
     result[offset++] = strdup(key.c_str());
   result[offset] = nullptr;
   return result;
 }
-

@@ -400,7 +400,7 @@ char** sjef_project_backend_parameters(const char* project, const char* backend,
 
 char** sjef_project_backend_names(const char* project) {
   char** result = NULL;
-  bool unopened;
+  bool unopened = true;
   try {
     unopened = (projects.count(project) == 0);
     if (unopened) sjef_project_open(project);

@@ -255,7 +255,7 @@ TEST(project, properties) {
 //  for (n = 0; (key = x.property_next()) != ""; ++n) {
 //    std::cout << "key "<<key<<std::endl;
       if (data.count("key") != 0)
-        ASSERT_EQ(x.property_get(key), data[key]);
+        { ASSERT_EQ(x.property_get(key), data[key]); }
     }
 //  std::cout << "data.size() "<<data.size()<<std::endl;
     ASSERT_EQ(keysnew.size(), data.size() + ninitial);

@@ -298,15 +298,19 @@ int sjef_program(int argc, char* argv[]) {
             property_process(argv);
           } else if (command == "clean") {
             proj.clean(true, false, false);
-          } else if (command == "edit")
-            system(("eval ${VISUAL:-${EDITOR:-vi}} \\'" + proj.filename("inp") + "\\'").c_str());
-          else if (command == "browse") {
-            if (
-                !proj.property_get("backend").empty()
-                    and
-                        proj.synchronize(verboseSwitch.getValue())
-                )
-              system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out", "", 0) + "\\'").c_str());
+          } else if (command == "edit") {
+            if (system(("eval ${VISUAL:-${EDITOR:-vi}} \\'" +
+                        proj.filename("inp") + "\\'")
+                           .c_str()) != 0)
+              throw std::runtime_error("Editor failed");
+          } else if (command == "browse") {
+            if (!proj.property_get("backend").empty() and
+                proj.synchronize(verboseSwitch.getValue())) {
+              if (system(("eval ${PAGER:-${EDITOR:-less}} \\'" +
+                          proj.filename("out", "", 0) + "\\'")
+                             .c_str()) != 0)
+                throw std::runtime_error("Editor failed");
+            }
           } else
             std::cout << "Unknown command: " << line << std::endl;
         }

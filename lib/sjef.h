@@ -119,9 +119,11 @@ class Project {
    * @param overwrite Whether to overwrite an existing file.
    */
   bool import_file(std::string file, bool overwrite = false);
-  bool import_file(const std::vector<std::string> files, bool overwrite = false) {
-    bool result;
-    for (const auto& file : files) result &= import_file(file, overwrite);
+  bool import_file(const std::vector<std::string> files,
+                   bool overwrite = false) {
+    bool result = true;
+    for (const auto &file : files)
+      result &= import_file(file, overwrite);
     return result;
   }
   /*!
@@ -130,15 +132,18 @@ class Project {
    * @param overwrite Whether to overwrite an existing file.
    */
   bool export_file(std::string file, bool overwrite = false);
-  bool export_file(const std::vector<std::string>& files, bool overwrite = false) {
-    bool result;
-    for (const auto& file : files) result &= export_file(file, overwrite);
+  bool export_file(const std::vector<std::string> &files,
+                   bool overwrite = false) {
+    bool result = true;
+    for (const auto &file : files)
+      result &= export_file(file, overwrite);
     return result;
   }
   /*!
    * @brief Synchronize the project with a cached copy belonging to a backend. name.inp, name.xyz, Info.plist, and any files brought in with import(), will be pushed from the
    * master copy to the backend, and all other files will be pulled from the backend.
    * @param verbosity If >0, show underlying processing
+   * @param nostatus Not used any more
    * @param force If true, always do the sync
    * @return
    */
@@ -146,7 +151,6 @@ class Project {
  public:
   /*!
    * @brief Start a sjef job
-   * @param name The name of the backend
    * @param verbosity If >0, show underlying processing
    * @param force Whether to force submission of the job even though run_needed() reports that it's unnecessary
    * @param wait Whether to wait for the job to complete instead of returning after launching it

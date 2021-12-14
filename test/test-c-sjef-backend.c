@@ -25,7 +25,7 @@ int main() {
 
   printf("%s\n",sjef_backend_value(projectname,"local","host"));
 
-  const char* empty[]={NULL};
+//  const char* empty[]={NULL};
 //  sjef_backend_new("thing",empty,empty);
 //
 //  const char* newkeys[]={"run_command","status_command"};

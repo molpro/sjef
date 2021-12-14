@@ -32,6 +32,7 @@ void sjef_project_property_delete(const char* project, const char* key);
 char* sjef_project_filename(const char* project);
 /*!
  * @brief Get the file name of the bundle, or a primary file of particular type, or a general file in the bundle
+ * @param project The project
  * @param suffix If present without \c name, look for a primary file with that type. If absent, the file name of the bundle is instead selected
  * @param name If present,  look for a file of this name, appended with .\c suffix if that is non-blank
  * @param run If specified, look in a run directory for the file, instead of the main project directory. A value of 0 is interpreted as the most recent run directory.
@@ -86,6 +87,7 @@ char* sjef_project_backend_parameter_documentation(const char* project,
 
 /*!
   * @brief Obtain the path of a run directory
+  * @param project The project
   * @param run
   * - 0: the most recent run directory
   * - other: the specified run directory
@@ -95,6 +97,7 @@ char* sjef_project_run_directory(const char* project, int run);
 static inline char* sjef_project_run_directory_default(const char* project) { return sjef_project_run_directory(project,0);}
 /*!
   * @brief Obtain the list of run numbers in reverse order, ie the most recent first
+  * @param project The project
   * @return zero-terminated list (note that run numbers are positive integers)
   */
 int* sjef_project_run_list(const char* project);
@@ -106,12 +109,13 @@ int* sjef_project_run_list(const char* project);
 int sjef_project_run_directory_next(const char* project);
 /*!
  * @brief Delete a run directory
+ * @param project The project
  * @param run
  */
 void sjef_project_run_delete(const char* project, int run);
 /*!
  * @brief Copy files from a run directory to the main project.
- * @param project
+ * @param project The project
  * @param run Specifies the run to use as source, with 0 meaning the most recent.
  * @param fromname The file to copy.
  * @param toname The destination, defaulting to fromname.

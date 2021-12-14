@@ -502,7 +502,6 @@ static std::vector<std::string> splitString(std::string input, char c = ' ', cha
   std::vector<std::string> result;
   const char* str0 = strdup(input.c_str());
   const char* str = str0;
-  bool quoteActive = false;
   do {
     while (*str == c && *str) ++str;
     const char* begin = str;
@@ -958,7 +957,6 @@ status Project::status(int verbosity, bool cached) const {
       pid == "" ? unknown : ((be.host + ":" + pid) == property_get("_private_sjef_project_killed_job") ? killed
                                                                                                        : completed);
   if (be.host == "localhost") {
-    auto spacepos = be.status_command.find_first_of(" ");
     bp::child c;
     bp::ipstream is;
     std::string line;
@@ -1073,7 +1071,6 @@ std::string sjef::Project::status_message(int verbosity) const {
 void Project::wait(unsigned int maximum_microseconds) const {
   unsigned int microseconds = 1;
 //  std::cout << "wait enters with status " << status() << std::endl;
-  sjef::status stat;
   while (true) {
     auto stat = status();
     if (stat == completed or stat == killed) break;

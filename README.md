@@ -13,7 +13,7 @@ A library that supports the running of any program asynchronously either locally
 
 
 The library is implemented natively in C++ via the `sjef::Project` class, together with a C binding.
-There is additionally a free-standing [sjef](program/sjef-program.md) program that implements most of the library functions through command-line options, as well as the [pysjef](https://gitlab.com/molpro/pysjef) Python bundle that includes in addition support for analysing marked-up output produced in one or more projects.
+There is additionally a free-standing [sjef](sjef-program.md) program that implements most of the library functions through command-line options, as well as the [pysjef](https://gitlab.com/molpro/pysjef) Python bundle that includes in addition support for analysing marked-up output produced in one or more projects.
 
 ### Customization
 - Code can be added to utilize additional information available in some programs - for example, the reconstruction from an output file of the input that generated it, in order to know whether the input file has since been modified.

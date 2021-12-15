@@ -642,14 +642,3 @@ TEST(project, run_directory) {
   EXPECT_EQ(p.run_list(), sjef::Project::run_list_t{2});
   //  system((std::string("ls -lR ")+p.filename()).c_str());
 }
-
-TEST(project, blanks_in_directory_name) {
-  savestate state("molpro");
-  auto dir = fs::absolute("has some spaces");
-  fs::remove_all(dir);
-  std::cout << dir << std::endl;
-  ASSERT_TRUE(fs::create_directories(dir));
-  auto filename = state.testfile((dir / "run_directory.molpro").string());
-  sjef::Project p(filename);
-  fs::remove_all(dir);
-}

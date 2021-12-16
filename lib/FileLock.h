@@ -24,7 +24,7 @@ public:
   explicit FileLock(const std::string& path, bool exclusive = true, bool erase_if_created = true);
   ~FileLock();
   ///> @private
-  class Unique_FileLock;
+  struct Unique_FileLock;
 
 private:
   using mutex_t = std::shared_mutex;

@@ -14,7 +14,7 @@
 namespace sjef {
 class Backend;           ///< @private
 class FileLock;          ///< @private
-class pugi_xml_document; ///< @private
+struct pugi_xml_document; ///< @private
 static constexpr int recentMax = 128;
 enum status : int { unknown = 0, running = 1, waiting = 2, completed = 3, unevaluated = 4, killed = 5 };
 class Project {

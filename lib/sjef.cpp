@@ -1754,13 +1754,13 @@ void sjef::Project::change_backend(std::string backend, bool force) {
         }
       }
       m_unmovables.shutdown_flag.clear();
-      m_backend_watcher = std::thread(backend_watcher, std::ref(*this), backend, 100, 1000);
+      m_backend_watcher = std::thread(backend_watcher, std::ref(*this), backend, 100, 1000, 10);
     }
   }
 }
 
 void sjef::Project::backend_watcher(sjef::Project& project_, const std::string& backend, int min_wait_milliseconds,
-                                    int max_wait_milliseconds) noexcept {
+                                    int max_wait_milliseconds, int poll_milliseconds) noexcept {
   //  std::cerr << "Project::backend_watcher starting for " << project_.m_filename << " on thread "
   //            << std::this_thread::get_id() << std::endl;
   project_.m_backend_watcher_instance.reset(new sjef::Project(project_.m_filename, true, "", {{}}, &project_));
@@ -1768,7 +1768,7 @@ void sjef::Project::backend_watcher(sjef::Project& project_, const std::string& 
   if (max_wait_milliseconds <= 0)
     max_wait_milliseconds = min_wait_milliseconds;
   constexpr auto radix = 2;
-  backend_watcher_wait_milliseconds = std::max(min_wait_milliseconds, 1);
+  backend_watcher_wait_milliseconds = std::max(min_wait_milliseconds, poll_milliseconds);
   try {
     //    std::cerr << "sjef::Project::backend_watcher() START for project " << project.name() << " at address " <<
     //    &project
@@ -1782,14 +1782,18 @@ void sjef::Project::backend_watcher(sjef::Project& project_, const std::string& 
     for (auto iter = 0; true; ++iter) {
       //      std::cerr << "iter " << iter ;
       //      std::cerr << "; going to sleep for " << backend_watcher_wait_milliseconds << "ms" << std::endl;
-      std::this_thread::sleep_for(std::chrono::milliseconds(backend_watcher_wait_milliseconds));
+      //      std::this_thread::sleep_for(std::chrono::milliseconds(backend_watcher_wait_milliseconds));
+//      std::cout << "repeats: "<<backend_watcher_wait_milliseconds / poll_milliseconds<<std::endl;
+      for (int repeat = 0; repeat < backend_watcher_wait_milliseconds / poll_milliseconds; ++repeat) {
+        if (shutdown_flag.test_and_set())
+          goto finished;
+        shutdown_flag.clear();
+        std::this_thread::sleep_for(std::chrono::milliseconds(poll_milliseconds));
+      }
       backend_watcher_wait_milliseconds =
           std::max(std::min(backend_watcher_wait_milliseconds * radix, max_wait_milliseconds),
                    min_wait_milliseconds <= 0 ? 1 : min_wait_milliseconds);
       //      std::cerr << "... watcher for project " << &project << " waking up" << std::endl;
-      if (shutdown_flag.test_and_set())
-        break;
-      shutdown_flag.clear();
       try {
         project.synchronize(0);
       } catch (const std::exception& ex) {
@@ -1806,6 +1810,7 @@ void sjef::Project::backend_watcher(sjef::Project& project_, const std::string& 
       //      std::cerr << "... watcher for project "<<&project<<" back from status"<<std::endl;
       //      std::cerr << "sjef::Project::backend_watcher() status " << project.cached_status() << std::endl;
     }
+    finished:;
   } catch (...) {
   }
   //  std::cerr << "Project::backend_watcher stopping for " << project_.m_filename << " on thread "

@@ -26,14 +26,13 @@ public:
     fs::create_directories(sjef::expand_path(std::string{"~/.sjef"}));
     for (const auto& suffix : m_suffixes) {
       auto path = sjef::expand_path(std::string{"~/.sjef/"} + suffix);
+      if (not fs::exists(path))
+        m_not_preexisting.insert(path);
+      if (fs::exists(path) and not fs::exists(path + ".save"))
+        fs::rename(path, path + ".save");
       if (not fs::exists(path)) {
-        //        std::cout << "creating new " << path << std::endl;
         if (not fs::create_directories(path))
           throw std::runtime_error(std::string{"Creating directory "} + path + " has failed");
-        m_not_preexisting.insert(path);
-      } else if (not fs::exists(path + ".save")) {
-        //        std::cout << "saving " << path << std::endl;
-        fs::rename(path, path + ".save");
       }
     }
   }
@@ -660,11 +659,13 @@ TEST(project, sync_backend) {
   std::string suffix{"sync_backend"};
   savestate state(suffix);
   ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{"~/.sjef/"} + suffix)));
-  const auto cache = state.testfile("test-remote-cache");
+  const auto cache = state.testfile(fs::current_path() / "test-remote-cache");
+  if (not fs::create_directories(cache))
+    throw std::runtime_error("cannot create " + cache);
   const auto run_script = state.testfile("light.sh");
   std::ofstream(sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml"))
-      << "<?xml version=\"1.0\"?> <backends> <backend name=\"test-remote\" run_command=\"sh " << run_script
-      << "\" host=\"127.0.0.1\" cache=\"" << cache << "\"/></backends>";
+      << "<?xml version=\"1.0\"?>\n<backends>\n <backend name=\"test-remote\" run_command=\"sh " << run_script
+      << "\" host=\"127.0.0.1\" cache=\"" << cache << "\"/>\n</backends>";
   std::ofstream(run_script) << "while [ ${1#-} != ${1} ]; do shift; done; "
                                "echo dummy > \"${1%.*}.out\";echo '<?xml "
                                "version=\"1.0\"?>\n<root/>' > \"${1%.*}.xml\";";
@@ -675,7 +676,7 @@ TEST(project, sync_backend) {
       << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
       << "ms" << std::endl;
   std::ofstream(p.filename("inp")) << "some input";
-//  std::cerr << "input file created " << p.filename("inp") << std::endl;
+  //  std::cerr << "input file created " << p.filename("inp") << std::endl;
 
   p.run("test-remote", 0, true, false);
   std::cout
@@ -689,10 +690,10 @@ TEST(project, sync_backend) {
       << "ms" << std::endl;
   ASSERT_EQ(p.file_contents("out"), "dummy");
   ASSERT_EQ(p.file_contents("xml"), "<?xml version=\"1.0\"?>\n<root/>");
-//  std::cout << "output: " << p.file_contents("out");
-//  std::cout << "xml: " << p.file_contents("xml");
-//      std::cout << "sleeping"<<std::endl;
-//      sleep(3);
+  //  std::cout << "output: " << p.file_contents("out");
+  //  std::cout << "xml: " << p.file_contents("xml");
+  //      std::cout << "sleeping"<<std::endl;
+  //      sleep(3);
   std::cout
       << "time to end "
       << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()

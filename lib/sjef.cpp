@@ -298,7 +298,7 @@ bool Project::export_file(std::string file, bool overwrite) {
 
 std::mutex synchronize_mutex;
 bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
-//  verbosity += 2;
+    verbosity += 2;
   if (verbosity > 0)
     std::cerr << "Project::synchronize(" << verbosity << ", " << nostatus << ", " << force << ") "
               << (m_master_of_slave ? "master" : "slave") << std::endl;
@@ -382,6 +382,7 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
   rsync_options_first.push_back("-L");
   rsync_options_first.push_back("-a");
   rsync_options_first.push_back("--update");
+  //  rsync_options_first.push_back("--mkpath"); // needs rsync >= 3.2.3
   rsync_options_first.push_back(m_filename + "/");
   rsync_options_first.push_back(backend.host + ":" + (fs::path{backend.cache} / m_filename).native());
   //  auto cmd = std::string{bp::search_path(rsync).native()} + " " + rsyncopt + " " +
@@ -391,9 +392,9 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
   //  if (verbosity > -1)
   //    std::cerr << "First rsync: " << cmd << std::endl;
   if (verbosity > 0) {
-    std::cerr << "First rsync: " << rsync_command;
+    std::cerr << "Push rsync: " << rsync_command;
     for (const auto& o : rsync_options_first)
-      std::cerr << " " << o;
+      std::cerr << " '" << o << "'";
     std::cerr << std::endl;
   }
   auto start_time = std::chrono::steady_clock::now();
@@ -429,9 +430,9 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
     //    if (verbosity > 1)
     //      std::cerr << "second rsync " << cmd << std::endl;
     if (verbosity > 0) {
-      std::cerr << "Second rsync: " << rsync_command;
+      std::cerr << "Pull rsync: " << rsync_command;
       for (const auto& o : rsync_options_second)
-        std::cerr << " " << o;
+        std::cerr << " '" << o << "'";
       std::cerr << std::endl;
     }
     auto start_time = std::chrono::steady_clock::now();

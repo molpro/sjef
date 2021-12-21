@@ -350,12 +350,14 @@ TEST(project, input_hash_molpro) {
     ss << "1\nThe xyz file\nHe 0 0 0" << std::endl;
   }
   auto xph = x.input_hash();
-  state.testfile("$TMPDIR/try2.molpro");
-  ASSERT_TRUE(x.copy("$TMPDIR/try2.molpro"));
-  sjef::Project x2("$TMPDIR/try2.molpro");
+  auto try2 = state.testfile("$TMPDIR/try2.molpro");
+  fs::remove_all(try2);
+  ASSERT_TRUE(x.copy(try2));
+  sjef::Project x2(try2);
   ASSERT_EQ(xph, x2.input_hash());
-  state.testfile("$TMPDIR/try3.molpro");
-  x.move("$TMPDIR/try3.molpro");
+  auto try3 = state.testfile("$TMPDIR/try3.molpro");
+  fs::remove_all(try3);
+  x.move(try3);
   ASSERT_EQ(xph, x.input_hash());
 }
 

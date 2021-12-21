@@ -5,6 +5,7 @@
 #include "sjef.h"
 #include <boost/filesystem.hpp>
 #include <boost/process/search_path.hpp>
+#include <chrono>
 #include <libgen.h>
 #include <list>
 #include <map>
@@ -20,24 +21,25 @@ class savestate {
   std::set<std::string> m_not_preexisting;
 
 public:
-  explicit savestate(std::vector<std::string> suffixes = {"sjef", "molpro", "someprogram"}) : m_suffixes(suffixes) {
+  explicit savestate(const std::vector<std::string> suffixes = {"sjef", "molpro", "someprogram"})
+      : m_suffixes(suffixes) {
     fs::create_directories(sjef::expand_path(std::string{"~/.sjef"}));
     for (const auto& suffix : m_suffixes) {
       auto path = sjef::expand_path(std::string{"~/.sjef/"} + suffix);
-      if (not fs::exists(path)) {
-        //        std::cout << "creating new " << path << std::endl;
-        fs::create_directories(path);
+      if (not fs::exists(path))
         m_not_preexisting.insert(path);
-      } else if (not fs::exists(path + ".save")) {
-        //        std::cout << "saving " << path << std::endl;
+      if (fs::exists(path) and not fs::exists(path + ".save"))
         fs::rename(path, path + ".save");
+      if (not fs::exists(path)) {
+        if (not fs::create_directories(path))
+          throw std::runtime_error(std::string{"Creating directory "} + path + " has failed");
       }
     }
   }
   explicit savestate(std::string suffix) : savestate(std::vector<std::string>{{suffix}}) {}
   ~savestate() {
     for (const auto& file : testfiles)
-      sjef::Project::erase(file);
+      fs::remove_all(file);
     for (const auto& suffix : m_suffixes) {
       auto path = sjef::expand_path(std::string{"~/.sjef/"} + suffix);
       if (m_not_preexisting.count(path) != 0) {
@@ -50,9 +52,11 @@ public:
       }
     }
   }
+  std::string testfile(const char* file) { return testfile(std::string{file}); }
+  std::string testfile(const fs::path& file) { return testfile(file.string()); }
   std::string testfile(const std::string& file) {
     testfiles.push_back(sjef::expand_path(file));
-    sjef::Project::erase(testfiles.back());
+    fs::remove_all(testfiles.back());
     return testfiles.back();
   }
 };
@@ -346,12 +350,14 @@ TEST(project, input_hash_molpro) {
     ss << "1\nThe xyz file\nHe 0 0 0" << std::endl;
   }
   auto xph = x.input_hash();
-  state.testfile("$TMPDIR/try2.molpro");
-  ASSERT_TRUE(x.copy("$TMPDIR/try2.molpro"));
-  sjef::Project x2("$TMPDIR/try2.molpro");
+  auto try2 = state.testfile("$TMPDIR/try2.molpro");
+  fs::remove_all(try2);
+  ASSERT_TRUE(x.copy(try2));
+  sjef::Project x2(try2);
   ASSERT_EQ(xph, x2.input_hash());
-  state.testfile("$TMPDIR/try3.molpro");
-  x.move("$TMPDIR/try3.molpro");
+  auto try3 = state.testfile("$TMPDIR/try3.molpro");
+  fs::remove_all(try3);
+  x.move(try3);
   ASSERT_EQ(xph, x.input_hash());
 }
 
@@ -490,8 +496,8 @@ TEST(backend, backend_parameter_expand) {
     p.backend_parameter_set(backend, "thing", "its value");
     std::map<std::string, std::string> tests;
     std::vector<std::string> preambles{"stuff ", ""};
-    auto test = [&preambles, &p, &backend](const std::string& run_command, const std::string& expect_resolved,
-                                           const std::string& expect_documentation) {
+    auto test = [&preambles, &p](const std::string& run_command, const std::string& expect_resolved,
+                                 const std::string& expect_documentation) {
       for (const auto& preamble : preambles) {
         p.m_backends[backend].run_command = preamble + run_command + " more stuff";
         //        std::cout << "run_command set to "<<p.m_backends[backend].run_command<<std::endl;
@@ -565,10 +571,14 @@ TEST(project, dummy_backend) {
 }
 
 TEST(project, project_name_embedded_space) {
-  savestate state("molpro");
-  sjef::Project p(state.testfile("completely new.molpro"));
+  std::string suffix{"project_name_embedded_space"};
+  savestate state(suffix);
+  ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{"~/.sjef/"} + suffix)));
+  std::ofstream(sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml"))
+      << "<?xml version=\"1.0\"?> <backends> <backend name=\"light\" run_command=\"sh "
+      << (fs::current_path() / "light.sh").string() << "\"/></backends>";
+  sjef::Project p(state.testfile(std::string{"completely new."} + suffix));
   std::ofstream(p.filename("inp")) << "geometry={He};rhf\n";
-  p.add_backend("light", {{"run_command", std::string{"sh "} + (fs::current_path() / "light.sh").string()}});
   std::ofstream("light.sh") << "while [ ${1#-} != ${1} ]; do shift; done; "
                                "echo dummy > \"${1%.*}.out\";echo '<?xml "
                                "version=\"1.0\"?>\n<root/>' > \"${1%.*}.xml\";";
@@ -582,18 +592,22 @@ TEST(project, project_name_embedded_space) {
 }
 
 TEST(project, project_dir_embedded_space) {
-  savestate state("molpro");
+  const std::string suffix{"project_dir_embedded_space"};
+  savestate state(suffix);
   auto dir = fs::absolute("has some spaces");
   fs::remove_all(dir);
   std::cout << dir << std::endl;
   ASSERT_TRUE(fs::create_directories(dir));
+  ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{"~/.sjef/"} + suffix)));
+  std::ofstream(sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml"))
+      << "<?xml version=\"1.0\"?> <backends> <backend name=\"light\" run_command=\"sh "
+      << (fs::current_path() / "light.sh").string() << "\"/></backends>";
+  std::ofstream("light.sh") << "while [ ${1#-} != ${1} ]; do shift; done; "
+                               "echo dummy > \"${1%.*}.out\";echo '<?xml "
+                               "version=\"1.0\"?>\n<root/>' > \"${1%.*}.xml\";";
   {
-    sjef::Project p(state.testfile((dir / "run_directory.molpro").string()));
+    sjef::Project p(state.testfile((dir / (std::string{"run_directory."} + suffix)).string()));
     std::ofstream(p.filename("inp")) << "geometry={He};rhf\n";
-    p.add_backend("light", {{"run_command", std::string{"sh "} + (fs::current_path() / "light.sh").string()}});
-    std::ofstream("light.sh") << "while [ ${1#-} != ${1} ]; do shift; done; "
-                                 "echo dummy > \"${1%.*}.out\";echo '<?xml "
-                                 "version=\"1.0\"?>\n<root/>' > \"${1%.*}.xml\";";
     p.run("light", 0, true, false);
     p.wait();
     //    timespec delay;
@@ -641,4 +655,49 @@ TEST(project, run_directory) {
   EXPECT_EQ(2, p.run_verify(0));
   EXPECT_EQ(p.run_list(), sjef::Project::run_list_t{2});
   //  system((std::string("ls -lR ")+p.filename()).c_str());
+}
+
+TEST(project, sync_backend) {
+  std::string suffix{"sync_backend"};
+  savestate state(suffix);
+  ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{"~/.sjef/"} + suffix)));
+  const auto cache = state.testfile(fs::current_path() / "test-remote-cache");
+  if (not fs::create_directories(cache))
+    throw std::runtime_error("cannot create " + cache);
+  const auto run_script = state.testfile("light.sh");
+  std::ofstream(sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml"))
+      << "<?xml version=\"1.0\"?>\n<backends>\n <backend name=\"test-remote\" run_command=\"sh " << run_script
+      << "\" host=\"127.0.0.1\" cache=\"" << cache << "\"/>\n</backends>";
+  std::ofstream(run_script) << "while [ ${1#-} != ${1} ]; do shift; done; "
+                               "echo dummy > \"${1%.*}.out\";echo '<?xml "
+                               "version=\"1.0\"?>\n<root/>' > \"${1%.*}.xml\";";
+  auto start_time = std::chrono::steady_clock::now();
+  auto p = sjef::Project(state.testfile(std::string{"test_sync_backend."} + suffix));
+  std::cout
+      << "time to end of Project() "
+      << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
+      << "ms" << std::endl;
+  std::ofstream(p.filename("inp")) << "some input";
+  //  std::cerr << "input file created " << p.filename("inp") << std::endl;
+
+  p.run("test-remote", 0, true, false);
+  std::cout
+      << "time to end of run() "
+      << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
+      << "ms" << std::endl;
+  p.wait();
+  std::cout
+      << "time to end of wait() "
+      << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
+      << "ms" << std::endl;
+  ASSERT_EQ(p.file_contents("out"), "dummy");
+  ASSERT_EQ(p.file_contents("xml"), "<?xml version=\"1.0\"?>\n<root/>");
+  //  std::cout << "output: " << p.file_contents("out");
+  //  std::cout << "xml: " << p.file_contents("xml");
+  //      std::cout << "sleeping"<<std::endl;
+  //      sleep(3);
+  std::cout
+      << "time to end "
+      << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
+      << "ms" << std::endl;
 }

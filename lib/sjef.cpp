@@ -298,22 +298,23 @@ bool Project::export_file(std::string file, bool overwrite) {
 
 std::mutex synchronize_mutex;
 bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
+//    verbosity += 2;
+  if (verbosity > 0)
+    std::cerr << "Project::synchronize(" << verbosity << ", " << nostatus << ", " << force << ") "
+              << (m_master_of_slave ? "master" : "slave") << std::endl;
   //  const std::lock_guard lock(m_synchronize_mutex);
   auto backend_name = property_get("backend");
   auto backend_changed = m_backend != backend_name;
   if (backend_changed)
     const_cast<Project*>(this)->change_backend(backend_name);
   const std::lock_guard lock(synchronize_mutex);
-  //  std::cerr << "backend_name in synchronise() " << backend_name << std::endl;
-  //  for (const auto& keyval : m_backends)
-  //    std::cerr << "m_backends[" << keyval.first << "]=" << keyval.second.name << std::endl;
   auto& backend = m_backends.at(backend_name);
-  if (verbosity > 1)
+  if (verbosity > 2)
     std::cerr << "synchronize with " << backend.name << " (" << backend.host << ") master=" << m_master_of_slave
               << std::endl;
   if (backend.host == "localhost")
     return true;
-  if (verbosity > 1)
+  if (verbosity > 2)
     std::cerr << "synchronize backend_inactive=" << property_get("_private_sjef_project_backend_inactive")
               << " backend_inactive_synced=" << property_get("_private_sjef_project_backend_inactive_synced")
               << std::endl;
@@ -345,42 +346,103 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
   //   ensure_remote_server();
   //  absolutely send reserved files
   std::string rsync = "rsync";
-  std::string rsyncopt = "--timeout=5";
-  rsyncopt += " --exclude=backup";
-  rsyncopt += " --exclude=*.out_*";
-  rsyncopt += " --exclude=*.xml_*";
-  rsyncopt += " --exclude=*.log_*";
-  rsyncopt += " --exclude=*.d";
-  if (not this->m_control_path_option.empty())
-    rsyncopt += " -e 'ssh " + m_control_path_option + "'";
-  if (verbosity > 2)
-    std::cerr << "rsyncopt: " << rsyncopt << std::endl;
-  auto cmd = std::string{bp::search_path(rsync).native()} + " " + rsyncopt + " " +
-             "--exclude=*.out --exclude=*.xml --exclude=*.log " + "-L -a --update " + " " +
-             (verbosity > 0 ? std::string{"-v "} : std::string{""}) + m_filename + "/ " + backend.host + ":" +
-             (fs::path{backend.cache} / m_filename).native();
+  auto rsync_command = bp::search_path("rsync");
+  std::vector<std::string> rsync_options{
+      "--timeout=5",       "--exclude=backup", "--exclude=*.out_*",    "--exclude=*.xml_*",
+      "--exclude=*.log_*", "--exclude=*.d",    "--exclude=Info.plist", "--exclude=.Info.plist.writing_object",
+      "--inplace"};
+  if (true) {
+    rsync_options.push_back("-e");
+    rsync_options.push_back(
+        "ssh -o ControlPath=~/.ssh/sjef-control-%h-%p-%r -o ControlMaster=auto -o ControlPersist=yes");
+  }
+  if (verbosity > 0)
+    rsync_options.push_back("-v");
+  //  std::string rsyncopt = "--timeout=5";
+  //  rsyncopt += " --exclude=backup";
+  //  rsyncopt += " --exclude=*.out_*";
+  //  rsyncopt += " --exclude=*.xml_*";
+  //  rsyncopt += " --exclude=*.log_*";
+  //  rsyncopt += " --exclude=*.d";
+  //  rsyncopt += " --inplace";
+  auto rsync_options_first = rsync_options;
+  auto rsync_options_second = rsync_options;
+  //  std::istringstream iss(rsyncopt);
+  //  std::vector<std::string> args{std::istream_iterator<std::string>{iss},std::istream_iterator<std::string>{}};
+  //  m_control_path_option="-o ServerAliveInterval=60";
+  //  m_control_path_option = "-o ControlPath=~/.ssh/sjef-control-%h-%p-%r -o ControlMaster=auto -o ControlPersist=yes";
+  //  if (not this->m_control_path_option.empty())
+  //    rsyncopt += " -e 'ssh " + m_control_path_option + "'";
+  //  if (verbosity > -2)
+  //    std::cerr << "rsyncopt: " << rsyncopt << std::endl;
+  rsync_options_first.push_back("--inplace");
+  rsync_options_first.push_back("--exclude=*.out");
+  rsync_options_first.push_back("--exclude=*.xml");
+  rsync_options_first.push_back("--exclude=*.log");
+  rsync_options_first.push_back("-L");
+  rsync_options_first.push_back("-a");
+  rsync_options_first.push_back("--update");
+  //  rsync_options_first.push_back("--mkpath"); // needs rsync >= 3.2.3
+  rsync_options_first.push_back(m_filename + "/");
+  rsync_options_first.push_back(backend.host + ":" + (fs::path{backend.cache} / m_filename).native());
+  //  auto cmd = std::string{bp::search_path(rsync).native()} + " " + rsyncopt + " " +
+  //             "--inplace --exclude=*.out --exclude=*.xml --exclude=*.log " + "-L -a --update " + " " +
+  //             (verbosity > 0 ? std::string{"-v "} : std::string{""}) + m_filename + "/ " + backend.host + ":" +
+  //             (fs::path{backend.cache} / m_filename).native();
+  //  if (verbosity > -1)
+  //    std::cerr << "First rsync: " << cmd << std::endl;
+  if (verbosity > 0) {
+    std::cerr << "Push rsync: " << rsync_command;
+    for (const auto& o : rsync_options_first)
+      std::cerr << " '" << o << "'";
+    std::cerr << std::endl;
+  }
+  auto start_time = std::chrono::steady_clock::now();
+  //  bp::child(cmd).wait();
+  bp::child(bp::search_path(rsync), rsync_options_first).wait();
   if (verbosity > 1)
-    std::cerr << "First rsync: " << cmd << std::endl;
-  bp::child(cmd).wait();
+    std::cerr
+        << "time for first rsync "
+        << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
+        << "ms" << std::endl;
   // fetch all newer files from backend
   if (std::stoi(property_get("_private_sjef_project_backend_inactive_synced")) > 2) {
     // std::cerr << "second rsync not taken" << std::endl;
     return true;
   }
   {
-    auto cmd = std::string{bp::search_path(rsync).native()} + " " + rsyncopt + " -a --update " +
-               (verbosity > 0 ? std::string{"-v "} : std::string{""});
+    rsync_options_second.push_back("-a");
+    rsync_options_second.push_back("--update");
+    //    auto cmd = std::string{bp::search_path(rsync).native()} + " " + rsyncopt + " -a --update " +
+    //        (verbosity > 0 ? std::string{"-v "} : std::string{""});
     for (const auto& rf : m_reserved_files) {
       //    std::cerr << "reserved file pattern " << rf << std::endl;
       auto f = regex_replace(fs::path{rf}.filename().native(), std::regex(R"--(%)--"), name());
       //    std::cerr << "reserved file resolved " << f << std::endl;
+      //      if (fs::exists(f))
+      //        cmd += "--exclude=" + f + " ";
       if (fs::exists(f))
-        cmd += "--exclude=" + f + " ";
+        rsync_options_second.push_back("--exclude=" + f);
     }
-    cmd += backend.host + ":" + (fs::path{backend.cache} / m_filename).native() + "/ " + m_filename;
+    rsync_options_second.push_back(backend.host + ":" + (fs::path{backend.cache} / m_filename).native() + "/");
+    rsync_options_second.push_back(m_filename);
+    //    cmd += backend.host + ":" + (fs::path{backend.cache} / m_filename).native() + "/ " + m_filename;
+    //    if (verbosity > 1)
+    //      std::cerr << "second rsync " << cmd << std::endl;
+    if (verbosity > 0) {
+      std::cerr << "Pull rsync: " << rsync_command;
+      for (const auto& o : rsync_options_second)
+        std::cerr << " '" << o << "'";
+      std::cerr << std::endl;
+    }
+    auto start_time = std::chrono::steady_clock::now();
+    //    bp::child(cmd).wait();
+    bp::child(rsync_command, rsync_options_second).wait();
     if (verbosity > 1)
-      std::cerr << "second rsync " << cmd << std::endl;
-    bp::child(cmd).wait();
+      std::cerr << "time for second rsync "
+                << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time)
+                       .count()
+                << "ms" << std::endl;
   }
   if (not nostatus) // to avoid infinite loop with call from status()
     status(0);      // to get backend_inactive
@@ -1783,7 +1845,7 @@ void sjef::Project::backend_watcher(sjef::Project& project_, const std::string& 
       //      std::cerr << "iter " << iter ;
       //      std::cerr << "; going to sleep for " << backend_watcher_wait_milliseconds << "ms" << std::endl;
       //      std::this_thread::sleep_for(std::chrono::milliseconds(backend_watcher_wait_milliseconds));
-//      std::cout << "repeats: "<<backend_watcher_wait_milliseconds / poll_milliseconds<<std::endl;
+      //      std::cout << "repeats: "<<backend_watcher_wait_milliseconds / poll_milliseconds<<std::endl;
       for (int repeat = 0; repeat < backend_watcher_wait_milliseconds / poll_milliseconds; ++repeat) {
         if (shutdown_flag.test_and_set())
           goto finished;
@@ -1810,7 +1872,7 @@ void sjef::Project::backend_watcher(sjef::Project& project_, const std::string& 
       //      std::cerr << "... watcher for project "<<&project<<" back from status"<<std::endl;
       //      std::cerr << "sjef::Project::backend_watcher() status " << project.cached_status() << std::endl;
     }
-    finished:;
+  finished:;
   } catch (...) {
   }
   //  std::cerr << "Project::backend_watcher stopping for " << project_.m_filename << " on thread "

@@ -298,7 +298,7 @@ bool Project::export_file(std::string file, bool overwrite) {
 
 std::mutex synchronize_mutex;
 bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
-    verbosity += 2;
+//    verbosity += 2;
   if (verbosity > 0)
     std::cerr << "Project::synchronize(" << verbosity << ", " << nostatus << ", " << force << ") "
               << (m_master_of_slave ? "master" : "slave") << std::endl;

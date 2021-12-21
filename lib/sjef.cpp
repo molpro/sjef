@@ -299,11 +299,11 @@ bool Project::export_file(std::string file, bool overwrite) {
 std::mutex synchronize_mutex;
 bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
   //  const std::lock_guard lock(m_synchronize_mutex);
-  const std::lock_guard lock(synchronize_mutex);
   auto backend_name = property_get("backend");
   auto backend_changed = m_backend != backend_name;
   if (backend_changed)
     const_cast<Project*>(this)->change_backend(backend_name);
+  const std::lock_guard lock(synchronize_mutex);
   //  std::cerr << "backend_name in synchronise() " << backend_name << std::endl;
   //  for (const auto& keyval : m_backends)
   //    std::cerr << "m_backends[" << keyval.first << "]=" << keyval.second.name << std::endl;

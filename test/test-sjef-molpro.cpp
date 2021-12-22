@@ -82,11 +82,11 @@ TEST(project, molpro_workflow) {
         //      std::cout << p.file_contents("xml") << std::endl;
         xmldoc.load_string(p.file_contents("xml").c_str());
         auto results = xmldoc.select_nodes("//jobstep//property[@name='Energy']");
-        if (results.empty()) {
-          std::cerr << getpid() << std::endl;
-          kill(getpid(), SIGSTOP);
-          goto end;
-        }
+//        if (results.empty()) {
+//          std::cerr << getpid() << std::endl;
+//          kill(getpid(), SIGSTOP);
+//          goto end;
+//        }
         ASSERT_GE(results.size(), 1);
         //  for (const auto& result:results)
         //    std::cout << result.node().attribute("value").value() <<std::endl;
@@ -99,5 +99,5 @@ TEST(project, molpro_workflow) {
         energies[pp.first] = energy;
       }
     }
-  end:;
+//  end:;
 }

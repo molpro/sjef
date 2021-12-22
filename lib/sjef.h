@@ -47,7 +47,6 @@ private:
     std::string last_err;
   };
   mutable std::shared_ptr<remote_server> m_remote_server;
-  mutable std::string m_control_path_option;
   mutable std::chrono::milliseconds m_status_lifetime;
   mutable std::chrono::time_point<std::chrono::steady_clock> m_status_last;
   mutable std::thread m_backend_watcher;

@@ -14,7 +14,6 @@
 
 #include "test-sjef.h"
 
-
 TEST(project, filename) {
   savestate state("sjef");
   std::string slash{boost::filesystem::path::preferred_separator};
@@ -281,21 +280,24 @@ TEST(project, recent_files) {
 }
 
 TEST(project, project_hash) {
-  savestate state("sjef");
-  sjef::Project x(state.testfile("$TMPDIR/try.sjef"));
-  auto xph = x.project_hash();
-  state.testfile("$TMPDIR/try2.sjef"); // remove any previous contents
-  ASSERT_TRUE(x.copy("$TMPDIR/try2.sjef"));
-  sjef::Project x2("$TMPDIR/try2.sjef");
-  ASSERT_NE(xph, x2.project_hash());
-  state.testfile("$TMPDIR/try3.sjef"); // remove any previous contents
-  x.move("$TMPDIR/try3.sjef");
-  ASSERT_EQ(xph, x.project_hash());
+  for (int repeat = 0; repeat < 10; ++repeat) {
+//    std::cerr<<"repeat "<<repeat<<std::endl;
+    savestate state("sjef");
+    sjef::Project x(state.testfile("project_hash_try.sjef"));
+    auto xph = x.project_hash();
+    state.testfile("project_hash_try2.sjef"); // remove any previous contents
+    ASSERT_TRUE(x.copy("project_hash_try2.sjef"));
+    sjef::Project x2("project_hash_try2.sjef");
+    ASSERT_NE(xph, x2.project_hash());
+    state.testfile("project_hash_try3.sjef"); // remove any previous contents
+    x.move("project_hash_try3.sjef");
+    ASSERT_EQ(xph, x.project_hash());
+  }
 }
 
 TEST(project, input_hash_molpro) {
   savestate state("molpro");
-  sjef::Project x(state.testfile("$TMPDIR/try.molpro"));
+  sjef::Project x(state.testfile("project_hash_try.molpro"));
   {
     std::ofstream ss(x.filename("inp"));
     ss << "one\ngeometry=try.xyz\ntwo" << std::endl;
@@ -305,12 +307,12 @@ TEST(project, input_hash_molpro) {
     ss << "1\nThe xyz file\nHe 0 0 0" << std::endl;
   }
   auto xph = x.input_hash();
-  auto try2 = state.testfile("$TMPDIR/try2.molpro");
+  auto try2 = state.testfile("project_hash_try2.molpro");
   fs::remove_all(try2);
   ASSERT_TRUE(x.copy(try2));
   sjef::Project x2(try2);
   ASSERT_EQ(xph, x2.input_hash());
-  auto try3 = state.testfile("$TMPDIR/try3.molpro");
+  auto try3 = state.testfile("project_hash_try3.molpro");
   fs::remove_all(try3);
   x.move(try3);
   ASSERT_EQ(xph, x.input_hash());

@@ -44,6 +44,37 @@ inline fs::path executable(fs::path command) {
     return bp::search_path(command);
 }
 
+///> @private
+bool copyDir(fs::path const& source, fs::path const& destination, bool delete_source = false, bool recursive = true) {
+  // Check whether the function call is valid
+  if (!fs::exists(source) || !fs::is_directory(source))
+    throw std::runtime_error("Source directory " + source.string() + " does not exist or is not a directory.");
+  sjef::FileLock source_lock((source / ".lock").native(), false, true);
+  if (fs::exists(destination))
+    throw std::runtime_error("Destination directory " + destination.string() + " already exists.");
+  // Create the destination directory
+  if (!fs::create_directory(destination))
+    throw std::runtime_error("Unable to create destination directory " + destination.string());
+  sjef::FileLock destination_lock((destination / ".lock").native(), true, true);
+  // Iterate through the source directory
+  for (fs::directory_iterator file(source); file != fs::directory_iterator(); ++file) {
+    fs::path current(file->path());
+    if (fs::is_directory(current)) {
+      // Found directory: Recursion
+      if (recursive) {
+        if (!copyDir(current, destination / current.filename(), delete_source)) {
+          return false;
+        }
+      }
+    } else {
+      // Found file: Copy
+      if (current.filename() != ".lock")
+        fs::copy_file(current, destination / current.filename());
+    }
+  }
+  return true;
+}
+
 namespace sjef {
 inline std::string getattribute(pugi::xpath_node node, std::string name) {
   return node.node().attribute(name.c_str()).value();
@@ -78,19 +109,19 @@ Project::Project(const std::string& filename, bool construct, const std::string&
   if (!fs::is_directory(m_filename))
     throw std::runtime_error("project should be a directory: " + m_filename);
 
-//  std::cerr << "constructor m_filename=" << m_filename << " construct=" << construct << "<< address=" << this
-//            << ", master=" << m_master_instance << std::endl;
+  //  std::cerr << "constructor m_filename=" << m_filename << " construct=" << construct << "<< address=" << this
+  //            << ", master=" << m_master_instance << std::endl;
   if (!construct)
     return;
   if (!fs::exists(propertyFile())) {
-//    std::cerr << "propertyFile doesn't exist, so saving to it" << std::endl;
+    //    std::cerr << "propertyFile doesn't exist, so saving to it" << std::endl;
     save_property_file();
     property_set("_private_sjef_project_backend_inactive", "1");
   } else {
-//    std::cerr << "propertyFile already exists " << fs::file_size(propertyFile()) << std::endl;
+    //    std::cerr << "propertyFile already exists " << fs::file_size(propertyFile()) << std::endl;
   }
   property_set("_private_sjef_project_backend_inactive_synced", "0");
-//  std::cerr << "after property_set" << std::endl;
+  //  std::cerr << "after property_set" << std::endl;
   cached_status(unevaluated);
   custom_initialisation();
 
@@ -450,7 +481,9 @@ bool Project::move(const std::string& destination_filename, bool force) {
   auto filenamesave = m_filename;
   shutdown_backend_watcher();
   try {
-    fs::copy(fs::path(m_filename), dest, fs::copy_options::recursive);
+    //    fs::copy(fs::path(m_filename), dest, fs::copy_options::recursive);
+    if (not copyDir(fs::path(m_filename), dest, true))
+      throw std::runtime_error("Failed to copy current project directory");
     m_filename = dest.string();
     force_file_names(namesave);
     recent_edit(m_filename, filenamesave);
@@ -473,9 +506,12 @@ bool Project::copy(const std::string& destination_filename, bool force, bool kee
       synchronize();
   } catch (...) {
   }
-   {
+  {
     auto lock = FileLock(propertyFile());
-    fs::copy(fs::path(m_filename), dest, (slave ? fs::copy_options::none : fs::copy_options::recursive));
+    //    fs::copy(fs::path(m_filename), dest, (slave ? fs::copy_options::none : fs::copy_options::recursive));
+    if (not copyDir(fs::path(m_filename), dest, false, not slave))
+      //      throw std::runtime_error("Failed to copy current project directory");
+      return false;
   }
   Project dp(dest.string());
   dp.force_file_names(name());

@@ -12,54 +12,8 @@
 #include <regex>
 #include <unistd.h>
 
-namespace fs = boost::filesystem;
+#include "test-sjef.h"
 
-class savestate {
-  std::string rf;
-  std::vector<std::string> testfiles;
-  std::vector<std::string> m_suffixes;
-  std::set<std::string> m_not_preexisting;
-
-public:
-  explicit savestate(const std::vector<std::string> suffixes = {"sjef", "molpro", "someprogram"})
-      : m_suffixes(suffixes) {
-    fs::create_directories(sjef::expand_path(std::string{"~/.sjef"}));
-    for (const auto& suffix : m_suffixes) {
-      auto path = sjef::expand_path(std::string{"~/.sjef/"} + suffix);
-      if (not fs::exists(path))
-        m_not_preexisting.insert(path);
-      if (fs::exists(path) and not fs::exists(path + ".save"))
-        fs::rename(path, path + ".save");
-      if (not fs::exists(path)) {
-        if (not fs::create_directories(path))
-          throw std::runtime_error(std::string{"Creating directory "} + path + " has failed");
-      }
-    }
-  }
-  explicit savestate(std::string suffix) : savestate(std::vector<std::string>{{suffix}}) {}
-  ~savestate() {
-    for (const auto& file : testfiles)
-      fs::remove_all(file);
-    for (const auto& suffix : m_suffixes) {
-      auto path = sjef::expand_path(std::string{"~/.sjef/"} + suffix);
-      if (m_not_preexisting.count(path) != 0) {
-        //        std::cout << "removing " << path << std::endl;
-        fs::remove_all(path);
-      } else if (fs::exists(path + ".save")) {
-        //        std::cout << "restoring " << path << std::endl;
-        fs::remove_all(path);
-        fs::rename(path + ".save", path);
-      }
-    }
-  }
-  std::string testfile(const char* file) { return testfile(std::string{file}); }
-  std::string testfile(const fs::path& file) { return testfile(file.string()); }
-  std::string testfile(const std::string& file) {
-    testfiles.push_back(sjef::expand_path(file));
-    fs::remove_all(testfiles.back());
-    return testfiles.back();
-  }
-};
 TEST(project, filename) {
   savestate state("sjef");
   std::string slash{boost::filesystem::path::preferred_separator};
@@ -326,21 +280,24 @@ TEST(project, recent_files) {
 }
 
 TEST(project, project_hash) {
-  savestate state("sjef");
-  sjef::Project x(state.testfile("$TMPDIR/try.sjef"));
-  auto xph = x.project_hash();
-  state.testfile("$TMPDIR/try2.sjef"); // remove any previous contents
-  ASSERT_TRUE(x.copy("$TMPDIR/try2.sjef"));
-  sjef::Project x2("$TMPDIR/try2.sjef");
-  ASSERT_NE(xph, x2.project_hash());
-  state.testfile("$TMPDIR/try3.sjef"); // remove any previous contents
-  x.move("$TMPDIR/try3.sjef");
-  ASSERT_EQ(xph, x.project_hash());
+  for (int repeat = 0; repeat < 10; ++repeat) {
+//    std::cerr<<"repeat "<<repeat<<std::endl;
+    savestate state("sjef");
+    sjef::Project x(state.testfile("project_hash_try.sjef"));
+    auto xph = x.project_hash();
+    state.testfile("project_hash_try2.sjef"); // remove any previous contents
+    ASSERT_TRUE(x.copy("project_hash_try2.sjef"));
+    sjef::Project x2("project_hash_try2.sjef");
+    ASSERT_NE(xph, x2.project_hash());
+    state.testfile("project_hash_try3.sjef"); // remove any previous contents
+    x.move("project_hash_try3.sjef");
+    ASSERT_EQ(xph, x.project_hash());
+  }
 }
 
 TEST(project, input_hash_molpro) {
   savestate state("molpro");
-  sjef::Project x(state.testfile("$TMPDIR/try.molpro"));
+  sjef::Project x(state.testfile("project_hash_try.molpro"));
   {
     std::ofstream ss(x.filename("inp"));
     ss << "one\ngeometry=try.xyz\ntwo" << std::endl;
@@ -350,12 +307,12 @@ TEST(project, input_hash_molpro) {
     ss << "1\nThe xyz file\nHe 0 0 0" << std::endl;
   }
   auto xph = x.input_hash();
-  auto try2 = state.testfile("$TMPDIR/try2.molpro");
+  auto try2 = state.testfile("project_hash_try2.molpro");
   fs::remove_all(try2);
   ASSERT_TRUE(x.copy(try2));
   sjef::Project x2(try2);
   ASSERT_EQ(xph, x2.input_hash());
-  auto try3 = state.testfile("$TMPDIR/try3.molpro");
+  auto try3 = state.testfile("project_hash_try3.molpro");
   fs::remove_all(try3);
   x.move(try3);
   ASSERT_EQ(xph, x.input_hash());
@@ -432,19 +389,6 @@ TEST(project, spawn_many_dummy) {
     EXPECT_NE(p.property_get("jobnumber"), "-1");
     EXPECT_EQ(p.status(false), sjef::completed);
   }
-}
-
-TEST(project, spawn_many_molpro) {
-  savestate state("molpro");
-  sjef::Project p(state.testfile("spawn_many.molpro"));
-  { std::ofstream(p.filename("inp")) << ""; }
-  const auto& backend = sjef::Backend::default_name;
-  if (not boost::process::search_path("molpro").empty()) // test the default backend only if it exists
-    for (auto i = 0; i < 5; ++i) {
-      ASSERT_TRUE(p.run(backend, -1, true, true));
-      EXPECT_NE(p.property_get("jobnumber"), "-1");
-      EXPECT_EQ(p.status(false), sjef::completed);
-    }
 }
 
 TEST(project, early_change_backend) {

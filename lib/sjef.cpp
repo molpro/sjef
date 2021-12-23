@@ -109,15 +109,19 @@ Project::Project(const std::string& filename, bool construct, const std::string&
   if (!fs::is_directory(m_filename))
     throw std::runtime_error("project should be a directory: " + m_filename);
 
-  //  std::cerr << "constructor m_filename=" << m_filename
-  //            << " construct=" << construct << "<< address=" << this << ", master=" << m_master_instance << std::endl;
+  //  std::cerr << "constructor m_filename=" << m_filename << " construct=" << construct << "<< address=" << this
+  //            << ", master=" << m_master_instance << std::endl;
   if (!construct)
     return;
   if (!fs::exists(propertyFile())) {
+    //    std::cerr << "propertyFile doesn't exist, so saving to it" << std::endl;
     save_property_file();
     property_set("_private_sjef_project_backend_inactive", "1");
+  } else {
+    //    std::cerr << "propertyFile already exists " << fs::file_size(propertyFile()) << std::endl;
   }
   property_set("_private_sjef_project_backend_inactive_synced", "0");
+  //  std::cerr << "after property_set" << std::endl;
   cached_status(unevaluated);
   custom_initialisation();
 
@@ -136,8 +140,12 @@ Project::Project(const std::string& filename, bool construct, const std::string&
   m_backends[sjef::Backend::dummy_name] = sjef::Backend(
       sjef::Backend::dummy_name, "localhost", "{$PWD}",
       "/bin/sh -c 'echo dummy > ${0%.*}.out; echo \"<?xml version=\\\"1.0\\\"?>\n<root/>\" > ${0%.*}.xml'");
-  if (not sjef::check_backends(m_project_suffix))
+  if (not sjef::check_backends(m_project_suffix)) {
+    auto config_file = expand_path(std::string{"~/.sjef/"} + m_project_suffix + "/backends.xml");
+    std::cerr << "contents of " << config_file<<":"<<std::endl;
+    std::cerr << std::ifstream(config_file).rdbuf()<<std::endl;
     throw std::runtime_error("sjef backend files are invalid");
+  }
   for (const auto& config_dir : std::vector<std::string>{"/usr/local/etc/sjef", "~/.sjef"}) {
     const auto config_file = expand_path(config_dir + "/" + m_project_suffix + "/backends.xml");
     if (fs::exists(config_file)) {
@@ -298,7 +306,7 @@ bool Project::export_file(std::string file, bool overwrite) {
 
 std::mutex synchronize_mutex;
 bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
-//    verbosity += 2;
+  //    verbosity += 2;
   if (verbosity > 0)
     std::cerr << "Project::synchronize(" << verbosity << ", " << nostatus << ", " << force << ") "
               << (m_master_of_slave ? "master" : "slave") << std::endl;
@@ -358,23 +366,8 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
   }
   if (verbosity > 0)
     rsync_options.push_back("-v");
-  //  std::string rsyncopt = "--timeout=5";
-  //  rsyncopt += " --exclude=backup";
-  //  rsyncopt += " --exclude=*.out_*";
-  //  rsyncopt += " --exclude=*.xml_*";
-  //  rsyncopt += " --exclude=*.log_*";
-  //  rsyncopt += " --exclude=*.d";
-  //  rsyncopt += " --inplace";
   auto rsync_options_first = rsync_options;
   auto rsync_options_second = rsync_options;
-  //  std::istringstream iss(rsyncopt);
-  //  std::vector<std::string> args{std::istream_iterator<std::string>{iss},std::istream_iterator<std::string>{}};
-  //  m_control_path_option="-o ServerAliveInterval=60";
-  //  m_control_path_option = "-o ControlPath=~/.ssh/sjef-control-%h-%p-%r -o ControlMaster=auto -o ControlPersist=yes";
-  //  if (not this->m_control_path_option.empty())
-  //    rsyncopt += " -e 'ssh " + m_control_path_option + "'";
-  //  if (verbosity > -2)
-  //    std::cerr << "rsyncopt: " << rsyncopt << std::endl;
   rsync_options_first.push_back("--inplace");
   rsync_options_first.push_back("--exclude=*.out");
   rsync_options_first.push_back("--exclude=*.xml");
@@ -385,12 +378,6 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
   //  rsync_options_first.push_back("--mkpath"); // needs rsync >= 3.2.3
   rsync_options_first.push_back(m_filename + "/");
   rsync_options_first.push_back(backend.host + ":" + (fs::path{backend.cache} / m_filename).native());
-  //  auto cmd = std::string{bp::search_path(rsync).native()} + " " + rsyncopt + " " +
-  //             "--inplace --exclude=*.out --exclude=*.xml --exclude=*.log " + "-L -a --update " + " " +
-  //             (verbosity > 0 ? std::string{"-v "} : std::string{""}) + m_filename + "/ " + backend.host + ":" +
-  //             (fs::path{backend.cache} / m_filename).native();
-  //  if (verbosity > -1)
-  //    std::cerr << "First rsync: " << cmd << std::endl;
   if (verbosity > 0) {
     std::cerr << "Push rsync: " << rsync_command;
     for (const auto& o : rsync_options_first)
@@ -410,11 +397,11 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
     // std::cerr << "second rsync not taken" << std::endl;
     return true;
   }
+  const auto backend_inactive = property_get("_private_sjef_project_backend_inactive");
+  //  std::cerr << "backend_inactive="<<backend_inactive<<status_message()<<std::endl;
   {
     rsync_options_second.push_back("-a");
-    rsync_options_second.push_back("--update");
-    //    auto cmd = std::string{bp::search_path(rsync).native()} + " " + rsyncopt + " -a --update " +
-    //        (verbosity > 0 ? std::string{"-v "} : std::string{""});
+    //    rsync_options_second.push_back("--update");
     for (const auto& rf : m_reserved_files) {
       //    std::cerr << "reserved file pattern " << rf << std::endl;
       auto f = regex_replace(fs::path{rf}.filename().native(), std::regex(R"--(%)--"), name());
@@ -426,9 +413,6 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
     }
     rsync_options_second.push_back(backend.host + ":" + (fs::path{backend.cache} / m_filename).native() + "/");
     rsync_options_second.push_back(m_filename);
-    //    cmd += backend.host + ":" + (fs::path{backend.cache} / m_filename).native() + "/ " + m_filename;
-    //    if (verbosity > 1)
-    //      std::cerr << "second rsync " << cmd << std::endl;
     if (verbosity > 0) {
       std::cerr << "Pull rsync: " << rsync_command;
       for (const auto& o : rsync_options_second)
@@ -436,7 +420,6 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
       std::cerr << std::endl;
     }
     auto start_time = std::chrono::steady_clock::now();
-    //    bp::child(cmd).wait();
     bp::child(rsync_command, rsync_options_second).wait();
     if (verbosity > 1)
       std::cerr << "time for second rsync "
@@ -448,10 +431,15 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
     status(0);      // to get backend_inactive
   // std::cerr << "synchronize backend_inactive=" << property_get("_private_sjef_project_backend_inactive") <<
   // std::endl;
-  if (property_get("_private_sjef_project_backend_inactive") != "0") {
+  if (backend_inactive != "0") {
+    const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", backend_inactive);
     auto n = std::stoi(property_get("_private_sjef_project_backend_inactive_synced"));
     const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced", std::to_string(n + 1));
-    //    std::cerr << "advancing count to " << n + 1 << std::endl;
+    //        std::cerr << "advancing count to " << n + 1 << std::endl;
+  }
+  else {
+    const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", "0");
+    const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced", "0");
   }
   //  std::cerr << "synchronize backend_inactive_synced=" <<
   //  property_get("_private_sjef_project_backend_inactive_synced") << std::endl;
@@ -501,22 +489,21 @@ bool Project::move(const std::string& destination_filename, bool force) {
   auto namesave = name();
   auto filenamesave = m_filename;
   shutdown_backend_watcher();
-  //  std::cerr << "move about to copyDir " << m_filename << " : " << dest << std::endl;
-  bool success = false;
-  if (copyDir(fs::path(m_filename), dest, true)) {
-    //    std::cerr << "move succeeded to copyDir " << m_filename << " : " << dest << std::endl;
+  try {
+    //    fs::copy(fs::path(m_filename), dest, fs::copy_options::recursive);
+    if (not copyDir(fs::path(m_filename), dest, true))
+      throw std::runtime_error("Failed to copy current project directory");
     m_filename = dest.string();
     force_file_names(namesave);
     recent_edit(m_filename, filenamesave);
-    //    std::cerr << "move about to remove all " << filenamesave << std::endl;
-    success = fs::remove_all(filenamesave) > 0;
+    if (not fs::remove_all(filenamesave))
+      throw std::runtime_error("failed to delete current project directory");
+    return true;
+  } catch (...) {
+    std::cerr << "move failed to copy " << m_filename << " : " << dest << std::endl;
   }
-  if (not success)
-    std::cerr << "move failed to copyDir " << m_filename << " : " << dest << std::endl;
-  //  std::cerr << "move about to call change_backend " << success << std::endl;
   change_backend(property_get("backend"));
-  //  std::cerr << "move returns " << success << std::endl;
-  return success;
+  return false;
 }
 
 bool Project::copy(const std::string& destination_filename, bool force, bool keep_hash, bool slave) {
@@ -528,7 +515,13 @@ bool Project::copy(const std::string& destination_filename, bool force, bool kee
       synchronize();
   } catch (...) {
   }
-  copyDir(fs::path(m_filename), dest, false, not slave);
+  {
+    auto lock = FileLock(propertyFile());
+    //    fs::copy(fs::path(m_filename), dest, (slave ? fs::copy_options::none : fs::copy_options::recursive));
+    if (not copyDir(fs::path(m_filename), dest, false, not slave))
+      //      throw std::runtime_error("Failed to copy current project directory");
+      return false;
+  }
   Project dp(dest.string());
   dp.force_file_names(name());
   if (not slave)
@@ -1032,8 +1025,9 @@ status Project::status(int verbosity, bool cached) const {
   //  std::cerr << "did not return unknown for empty pid "<<pid << std::endl;
   const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", "0");
   if (property_get("_private_sjef_project_completed_job") == be.host + ":" + pid and cached_status() != unevaluated) {
-    //    std::cerr << "status return completed/killed because _private_sjef_project_completed_job is valid" <<
-    //    std::endl;
+    //        std::cerr << "status return completed/killed because _private_sjef_project_completed_job is valid" <<
+    //        "; changing backend_inactive from "<<property_get("_private_sjef_project_backend_inactive")<<" to 1"<<
+    //        std::endl;
     const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", "1");
     return ((be.host + ":" + pid) == property_get("_private_sjef_project_killed_job") ? killed : completed);
   }
@@ -1167,9 +1161,9 @@ void Project::wait(unsigned int maximum_microseconds) const {
   //  std::cout << "wait enters with status " << status() << std::endl;
   while (true) {
     auto stat = status();
+    //    std::cout << "stat=" << stat << std::endl;
     if (stat == completed or stat == killed)
       break;
-    //    std::cout << "stat=" << stat << std::endl;
     std::this_thread::sleep_for(std::chrono::microseconds(microseconds));
     if (microseconds < maximum_microseconds)
       microseconds *= 2;

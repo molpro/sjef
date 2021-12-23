@@ -140,8 +140,12 @@ Project::Project(const std::string& filename, bool construct, const std::string&
   m_backends[sjef::Backend::dummy_name] = sjef::Backend(
       sjef::Backend::dummy_name, "localhost", "{$PWD}",
       "/bin/sh -c 'echo dummy > ${0%.*}.out; echo \"<?xml version=\\\"1.0\\\"?>\n<root/>\" > ${0%.*}.xml'");
-  if (not sjef::check_backends(m_project_suffix))
+  if (not sjef::check_backends(m_project_suffix)) {
+    auto config_file = expand_path(std::string{"~/.sjef/"} + m_project_suffix + "/backends.xml");
+    std::cerr << "contents of " << config_file<<":"<<std::endl;
+    std::cerr << std::ifstream(config_file).rdbuf()<<std::endl;
     throw std::runtime_error("sjef backend files are invalid");
+  }
   for (const auto& config_dir : std::vector<std::string>{"/usr/local/etc/sjef", "~/.sjef"}) {
     const auto config_file = expand_path(config_dir + "/" + m_project_suffix + "/backends.xml");
     if (fs::exists(config_file)) {
@@ -428,9 +432,14 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
   // std::cerr << "synchronize backend_inactive=" << property_get("_private_sjef_project_backend_inactive") <<
   // std::endl;
   if (backend_inactive != "0") {
+    const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", backend_inactive);
     auto n = std::stoi(property_get("_private_sjef_project_backend_inactive_synced"));
     const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced", std::to_string(n + 1));
     //        std::cerr << "advancing count to " << n + 1 << std::endl;
+  }
+  else {
+    const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", "0");
+    const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced", "0");
   }
   //  std::cerr << "synchronize backend_inactive_synced=" <<
   //  property_get("_private_sjef_project_backend_inactive_synced") << std::endl;

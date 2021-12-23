@@ -12,6 +12,7 @@
 #include <regex>
 #include <unistd.h>
 
+#include "FileLock.h"
 #include "test-sjef.h"
 
 TEST(project, filename) {
@@ -518,9 +519,11 @@ TEST(project, project_name_embedded_space) {
   std::string suffix{"project_name_embedded_space"};
   savestate state(suffix);
   ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{"~/.sjef/"} + suffix)));
-  std::ofstream(sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml"))
-      << "<?xml version=\"1.0\"?> <backends> <backend name=\"light\" run_command=\"sh "
-      << (fs::current_path() / "light.sh").string() << "\"/></backends>";
+  {
+    const std::string& path = sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml");
+    std::ofstream(path) << "<?xml version=\"1.0\"?> <backends> <backend name=\"light\" run_command=\"sh "
+                        << (fs::current_path() / "light.sh").string() << "\"/></backends>";
+  }
   sjef::Project p(state.testfile(std::string{"completely new."} + suffix));
   std::ofstream(p.filename("inp")) << "geometry={He};rhf\n";
   std::ofstream("light.sh") << "while [ ${1#-} != ${1} ]; do shift; done; "
@@ -543,9 +546,11 @@ TEST(project, project_dir_embedded_space) {
   std::cout << dir << std::endl;
   ASSERT_TRUE(fs::create_directories(dir));
   ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{"~/.sjef/"} + suffix)));
-  std::ofstream(sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml"))
-      << "<?xml version=\"1.0\"?> <backends> <backend name=\"light\" run_command=\"sh "
-      << (fs::current_path() / "light.sh").string() << "\"/></backends>";
+  const std::string& path = sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml");
+  {
+    std::ofstream(path) << "<?xml version=\"1.0\"?> <backends> <backend name=\"light\" run_command=\"sh "
+                        << (fs::current_path() / "light.sh").string() << "\"/></backends>";
+  }
   std::ofstream("light.sh") << "while [ ${1#-} != ${1} ]; do shift; done; "
                                "echo dummy > \"${1%.*}.out\";echo '<?xml "
                                "version=\"1.0\"?>\n<root/>' > \"${1%.*}.xml\";";

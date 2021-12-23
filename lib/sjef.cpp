@@ -142,8 +142,8 @@ Project::Project(const std::string& filename, bool construct, const std::string&
       "/bin/sh -c 'echo dummy > ${0%.*}.out; echo \"<?xml version=\\\"1.0\\\"?>\n<root/>\" > ${0%.*}.xml'");
   if (not sjef::check_backends(m_project_suffix)) {
     auto config_file = expand_path(std::string{"~/.sjef/"} + m_project_suffix + "/backends.xml");
-    std::cerr << "contents of " << config_file<<":"<<std::endl;
-    std::cerr << std::ifstream(config_file).rdbuf()<<std::endl;
+    std::cerr << "contents of " << config_file << ":" << std::endl;
+    std::cerr << std::ifstream(config_file).rdbuf() << std::endl;
     throw std::runtime_error("sjef backend files are invalid");
   }
   for (const auto& config_dir : std::vector<std::string>{"/usr/local/etc/sjef", "~/.sjef"}) {
@@ -285,8 +285,11 @@ void Project::throw_if_backend_invalid(std::string backend) const {
     backend = property_get("backend");
   if (backend.empty())
     throw std::runtime_error("No backend specified");
-  if (m_backends.count(backend) == 0)
-    throw std::runtime_error("Backend " + backend + " is not registered");
+  if (m_backends.count(backend) > 0)
+    return;
+  const std::string& path = expand_path(std::string{"~/.sjef/"} + m_project_suffix + "/backends.xml");
+  std::cerr << "Contents of " << path << ":\n" << std::ifstream(path).rdbuf() << std::endl;
+  throw std::runtime_error("Backend " + backend + " is not registered");
 }
 
 bool Project::export_file(std::string file, bool overwrite) {
@@ -436,8 +439,7 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
     auto n = std::stoi(property_get("_private_sjef_project_backend_inactive_synced"));
     const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced", std::to_string(n + 1));
     //        std::cerr << "advancing count to " << n + 1 << std::endl;
-  }
-  else {
+  } else {
     const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", "0");
     const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced", "0");
   }
@@ -1943,8 +1945,6 @@ void Project::add_backend(const std::string& name, const std::map<std::string, s
     m_backends[name].kill_command = fields.at("kill_command");
 }
 
-const std::string version() noexcept {
-  return SJEF_VERSION;
-}
+const std::string version() noexcept { return SJEF_VERSION; }
 
 } // namespace sjef

@@ -16,7 +16,7 @@ FetchContent_GetProperties(tclap)
 if (NOT tclap_POPULATED)
     FetchContent_Populate(tclap)
 endif ()
-target_compile_definitions(${LIB_NAME} PRIVATE "-DSJEF_VERSION=\"${SJEF_VERSION}\"")
+target_compile_definitions(${LIB_NAME} PRIVATE SJEF_VERSION=\"${SJEF_VERSION}\")
 target_include_directories(${LIB_NAME} PRIVATE ${tclap_SOURCE_DIR}/include)
 
 

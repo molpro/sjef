@@ -1943,4 +1943,8 @@ void Project::add_backend(const std::string& name, const std::map<std::string, s
     m_backends[name].kill_command = fields.at("kill_command");
 }
 
+const std::string version() noexcept {
+  return SJEF_VERSION;
+}
+
 } // namespace sjef

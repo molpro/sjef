@@ -607,6 +607,12 @@ std::string expand_path(const std::string& path, const std::string& suffix = "")
  */
 std::string xmlRepair(const std::string& source, const std::map<std::string, std::string>& injections = {});
 
+/*!
+ * @brief Report the software version
+ * @return
+ */
+const std::string version() noexcept;
+
 } // namespace sjef
 
 #endif // SJEF_SJEF_H

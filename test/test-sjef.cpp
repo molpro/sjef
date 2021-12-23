@@ -281,7 +281,7 @@ TEST(project, recent_files) {
 
 TEST(project, project_hash) {
   for (int repeat = 0; repeat < 10; ++repeat) {
-//    std::cerr<<"repeat "<<repeat<<std::endl;
+    //    std::cerr<<"repeat "<<repeat<<std::endl;
     savestate state("sjef");
     sjef::Project x(state.testfile("project_hash_try.sjef"));
     auto xph = x.project_hash();
@@ -644,4 +644,9 @@ TEST(project, sync_backend) {
       << "time to end "
       << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
       << "ms" << std::endl;
+}
+
+TEST(sjef, version) {
+  std::cerr << "version: " << sjef::version() << std::endl;
+  EXPECT_EQ(sjef::version(), SJEF_VERSION);
 }

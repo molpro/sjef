@@ -1947,4 +1947,25 @@ void Project::add_backend(const std::string& name, const std::map<std::string, s
 
 const std::string version() noexcept { return SJEF_VERSION; }
 
+
+pugi::xpath_node_set Project::select_nodes(const std::string& xpath_query, int run ) const {
+  auto xml = pugi::xml_document();
+  xml.load_file(filename("xml", "", run).c_str());
+//  pugi::xpath_query q{xpath_query.c_str()};
+  return xml.select_nodes(xpath_query.c_str());
+}
+
+std::vector<std::string> Project::xpath_search(const std::string& xpath_query, const std::string& attribute, int run) const {
+  auto node_set = select_nodes(xpath_query, run);
+  std::vector<std::string> result;
+  for (const auto& node : node_set) {
+    if (attribute.empty())
+      result.push_back(node.node().child_value());
+    else
+      result.push_back(node.node().attribute(attribute.c_str()).value());
+  }
+  return result;
+}
+
+
 } // namespace sjef

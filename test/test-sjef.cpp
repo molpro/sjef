@@ -655,3 +655,128 @@ TEST(sjef, version) {
   std::cerr << "version: " << sjef::version() << std::endl;
   EXPECT_EQ(sjef::version(), SJEF_VERSION);
 }
+
+TEST(sjef, xpath_search) {
+  std::string suffix{"xpath_search"};
+  savestate state(suffix);
+  auto p = sjef::Project(state.testfile("xpath_search.xpath_search"));
+  std::ofstream(p.filename("xml"))
+      << "<?xml version=\"1.0\"?>\n<root><try att1=\"value1\">content1</try><try>content2<subtry/> </try></root>";
+  EXPECT_EQ(p.select_nodes("/try").size(), 0);
+  ASSERT_EQ(p.select_nodes("//try").size(), 2);
+  auto node_set = p.select_nodes("//try");
+  EXPECT_EQ(std::string{node_set[0].node().attribute("att1").value()}, "value1");
+  EXPECT_EQ(std::string{node_set[1].node().attribute("att1").value()}, "");
+  EXPECT_EQ(std::string{node_set[0].node().child_value()}, "content1");
+  //  for (const auto& node : node_set) {
+  //    std::cout << node.node().attribute("att1").value() <<std::endl;
+  //    std::cout << node.node().child_value() <<std::endl;
+  //  }
+  EXPECT_EQ(p.xpath_search("/try").size(), 0);
+  EXPECT_EQ(p.xpath_search("//try").size(), 2);
+  //  for (const auto& s : p.xpath_search("//try"))
+  //    std::cout << s << std::endl;
+  EXPECT_EQ(p.xpath_search("//try", "att1").size(), 2);
+  //  for (const auto& s : p.xpath_search("//try", "att1"))
+  //    std::cout << s << std::endl;
+  ASSERT_EQ(p.xpath_search("//try[@att1='value1']").size(), 1);
+  EXPECT_EQ(p.xpath_search("//try[@att1='value1']").front(), "content1");
+  EXPECT_EQ(p.xpath_search("//try[@att1='value1']", "att1").front(), "value1");
+}
+
+TEST(sjef, molpro_xpath_search) {
+  std::string suffix{"molpro"};
+  savestate state(suffix);
+  auto p = sjef::Project(state.testfile("xpath_search.molpro"));
+  std::ofstream(p.filename("xml"))
+      << "<?xml version=\"1.0\"?>\n"
+         "<molpro xmlns=\"http://www.molpro.net/schema/molpro-output\"\n"
+         "  xmlns:xsd=\"http://www.w3.org/1999/XMLSchema\"\n"
+         "  xmlns:cml=\"http://www.xml-cml.org/schema\"\n"
+         "  xmlns:stm=\"http://www.xml-cml.org/schema\"\n"
+         "  xmlns:xhtml=\"http://www.w3.org/1999/xhtml\">\n"
+         " <job>\n"
+         "  <jobstep command=\"RHF-SCF\" commandset=\"SCFPRO\">\n"
+         "   <cml:molecule>\n"
+         "    <cml:symmetry pointGroup=\"D2h\">\n"
+         "     <cml:transform3 title=\"generator\" id=\"X\">\n"
+         "      -1  0  0  0  0  1  0  0  0  0  1  0  0  0  0  1\n"
+         "     </cml:transform3>\n"
+         "     <cml:transform3 title=\"generator\" id=\"Y\">\n"
+         "       1  0  0  0  0 -1  0  0  0  0  1  0  0  0  0  1\n"
+         "     </cml:transform3>\n"
+         "     <cml:transform3 title=\"generator\" id=\"Z\">\n"
+         "       1  0  0  0  0  1  0  0  0  0 -1  0  0  0  0  1\n"
+         "     </cml:transform3>\n"
+         "    </cml:symmetry>\n"
+         "    <cml:atomArray>\n"
+         "     <cml:atom id=\"a1\" elementType=\"He\" x3=\"0.0\" y3=\"0.0\" z3=\"0.0\"/>\n"
+         "    </cml:atomArray>\n"
+         "    <cml:bondArray>\n"
+         "    </cml:bondArray>\n"
+         "   </cml:molecule>\n"
+         "   <property name=\"Energy\" method=\"RHF\" principal=\"true\" stateSymmetry=\"1\" stateNumber=\"1\"\n"
+         "     value=\"-2.85516047724273\"/>\n"
+         "   <property name=\"One-electron energy\" method=\"RHF\" value=\"-3.88202510260424\"/>\n"
+         "   <property name=\"Two-electron energy\" method=\"RHF\" value=\"1.0268646253615\"/>\n"
+         "   <property name=\"Kinetic energy\" method=\"RHF\" value=\"2.85517613807823\"/>\n"
+         "   <property name=\"Nuclear energy\" method=\"RHF\" value=\"0.0\"/>\n"
+         "   <property name=\"Virial quotient\" method=\"RHF\" value=\"-0.999994514931921\"/>\n"
+         "   <property name=\"Dipole moment\" method=\"RHF\" principal=\"true\" stateSymmetry=\"1\"\n"
+         "     stateNumber=\"1\" value=\"0.0 0.0 0.0\"/>\n"
+         "   <time start=\"18:15:58\" end=\"18:15:59\" cpu=\"0.41\" system=\"0.33\" real=\"0.92\"/>\n"
+         "   <storage units=\"megabyte\" memory=\"0.0\" sf=\"0.0\" df=\"33.05\" eaf=\"0.0\"/>\n"
+         "   <summary overall_method=\"RHF/cc-pVDZ\"/>\n"
+         "  </jobstep>\n"
+         "  <jobstep command=\"RKS-SCF\" commandset=\"SCFPRO\">\n"
+         "   <property name=\"Energy\" method=\"RKS\" principal=\"true\" stateSymmetry=\"1\" stateNumber=\"1\"\n"
+         "     value=\"-2.82670655414156\"/>\n"
+         "   <property name=\"One-electron energy\" method=\"RKS\" value=\"-3.86358808216988\"/>\n"
+         "   <property name=\"Two-electron energy\" method=\"RKS\" value=\"2.01853015705295\"/>\n"
+         "   <property name=\"Kinetic energy\" method=\"RKS\" value=\"2.76263255051467\"/>\n"
+         "   <property name=\"Nuclear energy\" method=\"RKS\" value=\"0.0\"/>\n"
+         "   <property name=\"Virial quotient\" method=\"RKS\" value=\"-1.02319309660453\"/>\n"
+         "   <property name=\"Dipole moment\" method=\"RKS\" principal=\"true\" stateSymmetry=\"1\"\n"
+         "     stateNumber=\"1\" value=\"0.0 0.0 0.0\"/>\n"
+         "   <time start=\"18:15:59\" end=\"18:15:59\" cpu=\"0.04\" system=\"0.04\" real=\"0.1\"/>\n"
+         "   <storage units=\"megabyte\" memory=\"0.0\" sf=\"0.0\" df=\"33.05\" eaf=\"0.0\"/>\n"
+         "   <summary overall_method=\"RLDA/cc-pVDZ\"/>\n"
+         "  </jobstep>\n"
+         "  <stm:metadataList>\n"
+         "   <stm:metadata name=\"dc:date\" content=\"2021-12-26T18:15:59+00:00\"/>\n"
+         "   <stm:metadata name=\"dc:creator\" content=\"peterk\"/>\n"
+         "   <stm:metadata name=\"cmlm:insilico\" content=\"Molpro\"/>\n"
+         "  </stm:metadataList>\n"
+         "  <platform>\n"
+         "   <version major=\"2021\" minor=\"4\" SHA=\"af59ab9ef6c61f0e96a8904ef31545f4b3889395\"\n"
+         "     integer_bits=\"64\" parallelism=\"serial\">\n"
+         "    2021.4\n"
+         "    <date year=\"2021\" month=\"12\" day=\"26\" hour=\"18\" minute=\"15\" second=\"58\">\n"
+         "     2021-12-26T18:15:58\n"
+         "    </date>\n"
+         "   </version>\n"
+         "   <licence id=\"peterk\"/>\n"
+         "   <parallel processes=\"1\" nodes=\"1\" all_processes=\"1\" openmp=\"1\"/>\n"
+         "   <dimensions natom=\"400\" nvalence=\"500\" nvalence_pno=\"1000\" nbasis=\"12000\" nstate=\"100\"\n"
+         "     nsymm=\"16\" nrec=\"512\" nprim=\"2\" ncol=\"100\"/>\n"
+         "  </platform>\n"
+         "  <input>\n"
+         "   <p>geometry={He};rhf;rks</p>\n"
+         "  </input>\n"
+         "  <diagnostics warnings=\"0\"/>\n"
+         " </job>\n"
+         "</molpro>"
+      << std::endl;
+  EXPECT_EQ(p.xpath_search("/property[@name='Energy']").size(), 0);
+  const std::vector<std::string>& energies = p.xpath_search("//property[@name='Energy']", "value");
+  ASSERT_EQ(energies.size(), 2);
+  EXPECT_NEAR(std::stod(energies[0]), -2.85516047724273, 1e-15);
+  EXPECT_NEAR(std::stod(energies[1]), -2.82670655414156, 1e-15);
+  //  for (const auto& s : energies)
+  //    std::cout << s << std::endl;
+  const std::vector<std::string>& input = p.xpath_search("//input/p");
+  ASSERT_EQ(input.size(), 1);
+  EXPECT_EQ(input.front(), "geometry={He};rhf;rks");
+  //  for (const auto& s : input)
+  //    std::cout << s << std::endl;
+}

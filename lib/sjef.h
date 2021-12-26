@@ -11,6 +11,9 @@
 #include <thread>
 #include <vector>
 
+namespace pugi {
+struct xpath_node_set; ///< @private
+}
 namespace sjef {
 class Backend;           ///< @private
 class FileLock;          ///< @private
@@ -569,6 +572,23 @@ public:
    * @return The run directory, or zero if there is no run directory yet.
    */
   unsigned int current_run() const;
+
+  /*!
+   * @brief General XPath search on the xml document. Needs the pugixml library to parse the result
+   * @param xpath_query
+   * @param run
+   * @return
+   */
+  pugi::xpath_node_set select_nodes(const std::string& xpath_query, int run = 0) const;
+  /*!
+   * @brief Simple XPath search on the xml document. For each matching node found, return a string that
+   * contains the value of a specified attribute, or if the attribute is omitted, the node contents.
+   * @param xpath_query
+   * @param attribute
+   * @param run
+   * @return
+   */
+  std::vector<std::string> xpath_search(const std::string& xpath_query, const std::string& attribute="", int run=0) const;
 };
 
 /*!

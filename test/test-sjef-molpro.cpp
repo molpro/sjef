@@ -41,17 +41,21 @@ TEST(project, molpro_workflow) {
   for (int repeat = 0; repeat < 5; ++repeat)
     for (const auto& backend : std::vector<std::string>{"local", "test-remote"}) {
       std::map<std::string, std::unique_ptr<sjef::Project>> projects;
-      for (const auto& id : std::map<std::string, std::string>{{"H", "angstrom; geometry={h};rhf"},
+      fs::remove_all(cache);
+      for (const auto& id : std::map<std::string, std::string>{
+//               {"H", "angstrom; geometry={h};rhf"},
                                                                {"H2", "angstrom; geometry={h;h,h,0.7};rhf"}}) {
         std::cout << "backend: " << backend << ", molecule: " << id.first << ", input: " << id.second << std::endl;
         auto file = id.first + "_" + backend + ".molpro";
+        //        fs::remove_all(file);
         projects.insert({id.first, std::make_unique<sjef::Project>(fs::exists(file) ? file : state.testfile(file))});
         std::ofstream(projects[id.first]->filename("inp")) << id.second;
         projects[id.first]->change_backend(backend);
       }
       auto start_time = std::chrono::steady_clock::now();
+      //      std::cout << "before run loop"<<std::endl;
       for (auto& pp : projects)
-        pp.second->run();
+        pp.second->run(0, true, false);
       std::cout << "run time "
                 << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time)
                        .count()
@@ -72,22 +76,25 @@ TEST(project, molpro_workflow) {
         //            _private_sjef_project_backend_inactive_synced
         //            "<<p.property_get("_private_sjef_project_backend_inactive_synced")<<std::endl;
         p.synchronize();
+        //        std::cout <<"after synchronize():\n"<<p.xml()<<std::endl;
         //            std::cout << "_private_sjef_project_backend_inactive
         //            "<<p.property_get("_private_sjef_project_backend_inactive") << ",
         //            _private_sjef_project_backend_inactive_synced
         //            "<<p.property_get("_private_sjef_project_backend_inactive_synced")<<std::endl;
-        std::cout << p.status_message() << std::endl;
+        //        std::cout << p.status_message() << std::endl;
         pugi::xml_document xmldoc;
-        //    std::cout << p.second->file_contents("inp") << std::endl;
-        //      std::cout << p.file_contents("xml") << std::endl;
-        xmldoc.load_string(p.file_contents("xml").c_str());
+        //      std::cout << p.xml() << std::endl;
+        xmldoc.load_string(p.xml().c_str());
         auto results = xmldoc.select_nodes("//jobstep//property[@name='Energy']");
-//        if (results.empty()) {
-//          std::cerr << getpid() << std::endl;
-//          kill(getpid(), SIGSTOP);
-//          goto end;
-//        }
-        ASSERT_GE(results.size(), 1);
+        if (results.empty()) {
+          std::cerr << getpid() << std::endl;
+          EXPECT_EQ(system((std::string{"ls -lR "} + cache).c_str()), 0);
+          EXPECT_EQ(system((std::string{"ls -lR "} + p.filename()).c_str()), 0);
+          kill(getpid(), SIGSTOP);
+          //                  goto end;
+        }
+        ASSERT_GE(results.size(), 1) << "\n xml()=" << p.xml() << "\nxml file contents: " << p.file_contents("xml")
+                                     << std::endl;
         //  for (const auto& result:results)
         //    std::cout << result.node().attribute("value").value() <<std::endl;
         //  std::cout << (results.end()-1)->node().attribute("value").value()<<std::endl;
@@ -99,5 +106,5 @@ TEST(project, molpro_workflow) {
         energies[pp.first] = energy;
       }
     }
-//  end:;
+  //  end:;
 }

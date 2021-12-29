@@ -90,8 +90,7 @@ Project::Project(const std::string& filename, bool construct, const std::string&
       m_status_last(std::chrono::steady_clock::now()),
       //    m_file_lock(nullptr),
       m_master_instance(masterProject), m_master_of_slave(masterProject == nullptr), m_backend(""),
-      m_property_file_modification_time(0), m_use_control_path(false),
-      m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}) {
+      m_property_file_modification_time(0), m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}) {
   //  std::cerr << "Project constructor filename="<<filename << "address "<< this<<std::endl;
   auto recent_projects_directory = expand_path(std::string{"~/.sjef/"} + m_project_suffix);
   fs::create_directories(recent_projects_directory);
@@ -117,6 +116,7 @@ Project::Project(const std::string& filename, bool construct, const std::string&
     //    std::cerr << "propertyFile doesn't exist, so saving to it" << std::endl;
     save_property_file();
     property_set("_private_sjef_project_backend_inactive", "1");
+//    std::cerr << "@@ backend_inactive set to "<<property_get("_private_sjef_project_backend_inactive");
   } else {
     //    std::cerr << "propertyFile already exists " << fs::file_size(propertyFile()) << std::endl;
   }
@@ -309,7 +309,7 @@ bool Project::export_file(std::string file, bool overwrite) {
 
 std::mutex synchronize_mutex;
 bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
-  //    verbosity += 2;
+//      verbosity += 2;
   if (verbosity > 0)
     std::cerr << "Project::synchronize(" << verbosity << ", " << nostatus << ", " << force << ") "
               << (m_master_of_slave ? "master" : "slave") << std::endl;
@@ -698,10 +698,15 @@ bool Project::run(int verbosity, bool force, bool wait) {
   if (stat == running || stat == waiting) {
     return false;
   }
+
+//  std::cout <<"@@ before locking"<<std::endl;
+//  auto p_status_mutex=std::make_unique<std::lock_guard<std::mutex>>(m_status_mutex);
+//  std::cout <<"@@ after locking"<<std::endl;
   if (verbosity > 0)
     std::cerr << "Project::run() run_needed()=" << run_needed(verbosity) << std::endl;
   if (not force and not run_needed())
     return false;
+//  std::cout <<"@@ after run_needed"<<std::endl;
   cached_status(unevaluated);
   backend_watcher_wait_milliseconds = 0;
   std::string line;
@@ -715,7 +720,11 @@ bool Project::run(int verbosity, bool force, bool wait) {
   auto run_command = backend_parameter_expand(backend.name, backend.run_command);
   //  std::cerr << "run_command after expand "<<run_command<<std::endl;
   custom_run_preface();
+//  std::cout <<"@@ before creating new rundir"<<std::endl;
+//  p_status_mutex.reset();
   auto rundir = run_directory_new();
+  auto p_status_mutex=std::make_unique<std::lock_guard<std::mutex>>(m_status_mutex);
+//  std::cout <<"@@ created new rundir "<<rundir<<std::endl;
   if (backend.host == "localhost") {
     property_set("_private_sjef_project_backend_inactive", "0");
     property_set("_private_sjef_project_backend_inactive_synced", "0");
@@ -759,6 +768,7 @@ bool Project::run(int verbosity, bool force, bool wait) {
       throw std::runtime_error("Spawning run process has failed");
     c.detach();
     property_set("jobnumber", std::to_string(c.id()));
+    p_status_mutex.reset();
     status(0, false); // to force status cache
     if (verbosity > 1)
       std::cerr << "jobnumber " << c.id() << ", running=" << c.running() << std::endl;
@@ -770,7 +780,9 @@ bool Project::run(int verbosity, bool force, bool wait) {
       std::cerr << "run remote job on " << backend.name << std::endl;
     bp::ipstream c_err, c_out;
     //    property_set("_private_sjef_project_backend_inactive_synced", 0);
+//    std::cout << "!! synchronize before submission" << std::endl;
     synchronize(verbosity, false, true);
+//    std::cout << "!! end synchronize before submission" << std::endl;
     cached_status(unknown);
     property_set("_private_sjef_project_backend_inactive", "0");
     property_set("_private_sjef_project_backend_inactive_synced", "0");
@@ -787,10 +799,21 @@ bool Project::run(int verbosity, bool force, bool wait) {
       std::cerr << "backend.run_jobnumber " << backend.run_jobnumber << std::endl;
     if (verbosity > 3)
       std::cerr << "jobstring " << jobstring << std::endl;
-    auto run_output = remote_server_run(jobstring);
     cached_status(unevaluated);
+    std::string run_output;
+    {
+      run_output = remote_server_run(jobstring);
+      cached_status(unevaluated);
+//      std::cout << "cached status after setting to unevaluated: "<<cached_status()<<std::endl;
+    }
+//    std::cout << "just before releasing status mutex, status="<<cached_status()<<std::endl;
+    property_set("_private_job_submission_time",std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count()));
+    p_status_mutex.reset();
+//    std::cout << "status after setting to unevaluated: "<<status()<<std::endl;
+//    std::cout << "run_output "<<run_output<<std::endl;
     synchronize(verbosity, false, true);
     status(0, false);
+//    std::cout << "status after forcing evaluation: "<<status()<<std::endl;
     if (verbosity > 3)
       std::cerr << "run_output " << run_output << std::endl;
     std::smatch match;
@@ -800,6 +823,7 @@ bool Project::run(int verbosity, bool force, bool wait) {
       if (verbosity > 1)
         status(verbosity - 2);
       property_set("jobnumber", match[1]);
+//      std::cout << " set property jobnumber = "<<property_get("jobnumber")<<std::endl;
       if (wait)
         this->wait();
       return true;
@@ -850,13 +874,13 @@ void Project::kill() {
 bool Project::run_needed(int verbosity) const {
   auto start_time = std::chrono::steady_clock::now();
   if (verbosity > 0)
-    std::cerr << "sjef::Project::run_needed, status=" << status() << std::endl;
+//    std::cerr << "sjef::Project::run_needed, status=" << cached_status() << std::endl;
   if (verbosity > 1)
     std::cerr
         << ", time "
         << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
         << std::endl;
-  auto statuss = status();
+  auto statuss = cached_status();
   if (statuss == running or statuss == waiting)
     return false;
   auto inpfile = filename("inp");
@@ -967,8 +991,20 @@ bool Project::run_needed(int verbosity) const {
   return false;
 }
 
+std::string m_xml_cached;
 std::string Project::xml(int run, bool sync) const {
-  return xmlRepair(file_contents(m_suffixes.at("xml"), "", run, sync));
+  constexpr bool use_cache = false;
+  const bool localhost = m_backends.at(property_get("backend")).host == "localhost";
+  if ((not use_cache) or (localhost and cached_status() != completed) or ((not localhost) and std::stoi(property_get("_private_sjef_project_backend_inactive_synced")) <= 2)) {
+//    std::cout << "not creating xml cache, status="<<cached_status() << std::endl;
+    return xmlRepair(file_contents(m_suffixes.at("xml"), "", run, sync));
+  }
+  if (m_xml_cached.empty())
+//    std::cout << "creating xml cache" << std::endl;
+  if (m_xml_cached.empty())
+    m_xml_cached = xmlRepair(file_contents(m_suffixes.at("xml"), "", run, sync));
+//  std::cout << "using xml cache" << std::endl;
+  return m_xml_cached;
 }
 
 std::string Project::file_contents(const std::string& suffix, const std::string& name, int run, bool sync) const {
@@ -998,6 +1034,7 @@ status Project::status(int verbosity, bool cached) const {
   // if (not m_master_of_slave) std::cerr << "slave enters status() "<<std::endl;
   if (cached and cached_status() != unevaluated and m_master_of_slave)
     return cached_status();
+  const std::lock_guard lock(m_status_mutex);
   if (property_get("backend").empty())
     return unknown;
   //  if (not m_master_of_slave) std::cerr << "slave still in status() "<<std::endl;
@@ -1009,6 +1046,24 @@ status Project::status(int verbosity, bool cached) const {
   auto be = m_backends.at(bes);
   if (verbosity > 1)
     std::cerr << "status() backend:\n====" << be.str() << "\n====" << std::endl;
+
+  {
+    const std::string& job_submission_time = property_get("_private_job_submission_time");
+    if (not job_submission_time.empty()) {
+      std::stringstream ss;
+      ss << job_submission_time;
+      std::chrono::milliseconds::rep iob_submission_time;
+      ss >> iob_submission_time;
+//      std::cout << "job_submission_time: " << iob_submission_time << std::endl;
+      auto now =
+          std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
+              .count();
+//      std::cout << "now: " << now <<" -> "<<now-iob_submission_time<< std::endl;
+      if ( now - iob_submission_time < 1000)
+        return unknown; // don't do any status parsing until this much time has elapsed since job submission started
+    }
+  }
+
   auto pid = property_get("jobnumber");
   if (verbosity > 1)
     std::cerr << "job number " << pid << std::endl;
@@ -1026,13 +1081,15 @@ status Project::status(int verbosity, bool cached) const {
   }
   //  std::cerr << "did not return unknown for empty pid "<<pid << std::endl;
   const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", "0");
+//  std::cerr << "test completed_job "<<property_get("_private_sjef_project_completed_job")<< ", pid="<<pid<<std::endl;
   if (property_get("_private_sjef_project_completed_job") == be.host + ":" + pid and cached_status() != unevaluated) {
-    //        std::cerr << "status return completed/killed because _private_sjef_project_completed_job is valid" <<
-    //        "; changing backend_inactive from "<<property_get("_private_sjef_project_backend_inactive")<<" to 1"<<
-    //        std::endl;
+//            std::cerr << "status return completed/killed because _private_sjef_project_completed_job is valid" <<
+//            "; changing backend_inactive from "<<property_get("_private_sjef_project_backend_inactive")<<" to 1"<<
+//            std::endl;
     const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", "1");
     return ((be.host + ":" + pid) == property_get("_private_sjef_project_killed_job") ? killed : completed);
   }
+  this->m_xml_cached.clear();
   auto result = pid == ""
                     ? unknown
                     : ((be.host + ":" + pid) == property_get("_private_sjef_project_killed_job") ? killed : completed);
@@ -1097,13 +1154,17 @@ status Project::status(int verbosity, bool cached) const {
     //    const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced",
     //    property_get("_private_sjef_project_backend_inactive"));
     const_cast<Project*>(this)->property_set("_private_sjef_project_completed_job", be.host + ":" + pid);
+//    std::cerr << "completed_job set to "<<property_get("_private_sjef_project_completed_job");
   }
   if (result != unknown) {
     //    std::cerr << "result is not unknown, but is " << result << std::endl;
     if (result == running)
       const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced", "0");
+    if (result == running)
+//    std::cerr << "@@@ backend_inactive_synced set to "<<property_get("_private_sjef_project_backend_inactive_synced");
     const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive",
                                              (result == completed || result == killed) ? "1" : "0");
+//    std::cerr << "@@@ backend_inactive set to "<<property_get("_private_sjef_project_backend_inactive");
     goto return_point;
   }
   if (verbosity > 2)
@@ -1112,16 +1173,14 @@ status Project::status(int verbosity, bool cached) const {
   const_cast<Project*>(this)->property_set(
       "_private_sjef_project_backend_inactive",
       ((result != completed && result != killed) or
-       fs::exists(
-           fs::path{filename()} /
-           fs::path{name() + "." +
-                    m_suffixes.at("xml")}) // there may be a race, where the job status is completed, but the output
+       fs::exists(filename("xml","",0)) // there may be a race, where the job status is completed, but the output
                                            // file is not yet there. This is an imperfect test for that .. just whether
                                            // the .xml exists at all. TODO: improve test for complete output file
        )
           ? "1"
           : "0");
-return_point:
+//  std::cerr << "@@@@ backend_inactive set to "<<property_get("_private_sjef_project_backend_inactive");
+  return_point:
   auto time_taken =
       std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time);
   if (time_taken < m_status_lifetime)
@@ -1139,8 +1198,11 @@ sjef::status Project::cached_status() const {
 
 void Project::cached_status(sjef::status status) const {
   auto current_status = property_get("_status");
-  if (current_status.empty() or status != std::stoi(current_status))
+  if (current_status.empty() or status != std::stoi(current_status)) {
+//    std::cout << "force-setting _status to "<<status<<std::endl;
     const_cast<Project*>(this)->property_set("_status", std::to_string(static_cast<int>(status)));
+//    std::cout << "after force-setting _status its value is "<<property_get("_status")<<std::endl;
+  }
 }
 
 std::string sjef::Project::status_message(int verbosity) const {
@@ -1233,10 +1295,12 @@ std::map<std::string, std::string> Project::property_get(const std::vector<std::
   std::map<std::string, std::string> results;
   for (const std::string& property : properties) {
     std::string query{"/plist/dict/key[text()='" + property + "']/following-sibling::string[1]"};
-    std::string result = m_properties->select_node(query.c_str()).node().child_value();
-    result = m_properties->select_node(query.c_str()).node().child_value();
+//    std::string result = m_properties->select_node(query.c_str()).node().child_value();
+//    result = m_properties->select_node(query.c_str()).node().child_value();
     //  std::cout << "property_get " << property << "=" << result << " on thread " << m_master_of_slave << std::endl;
-    std::string value = m_properties->select_node(query.c_str()).node().child_value();
+    auto xpath_node = m_properties->select_node(query.c_str());
+    auto node = xpath_node.node();
+    std::string value = node.child_value();
     if (not value.empty())
       results[property] = value;
   }
@@ -1332,9 +1396,13 @@ int Project::run_directory_new() {
   property_set("run_directories", ss.str());
   auto rundir = fs::path{filename()} / "run";
   auto dir = rundir / (std::to_string(sequence) + "." + m_project_suffix);
+//  std::cout <<"run_directory_new() makes "<<dir<<std::endl;
   if (not fs::exists(rundir) and not fs::create_directories(rundir)) {
     throw std::runtime_error("Cannot create directory " + rundir.native());
   }
+//  std::cerr << "deleted jobnumber property on starting new run directory "<<property_get("jobnumber")<<std::endl;
+  property_delete("jobnumber");
+  property_delete("_private_job_submission_time");
   set_current_run(0);
   //  fs::directory_iterator end;
   //  for (fs::directory_iterator iter(filename("")); iter != end; iter++) {
@@ -1947,15 +2015,15 @@ void Project::add_backend(const std::string& name, const std::map<std::string, s
 
 const std::string version() noexcept { return SJEF_VERSION; }
 
-
-pugi::xpath_node_set Project::select_nodes(const std::string& xpath_query, int run ) const {
+pugi::xpath_node_set Project::select_nodes(const std::string& xpath_query, int run) const {
   auto xml = pugi::xml_document();
-  xml.load_file(filename("xml", "", run).c_str());
-//  pugi::xpath_query q{xpath_query.c_str()};
+  xml.load_string(this->xml(run).c_str());
+  //  xml.load_file(filename("xml", "", run).c_str());
   return xml.select_nodes(xpath_query.c_str());
 }
 
-std::vector<std::string> Project::xpath_search(const std::string& xpath_query, const std::string& attribute, int run) const {
+std::vector<std::string> Project::xpath_search(const std::string& xpath_query, const std::string& attribute,
+                                               int run) const {
   auto node_set = select_nodes(xpath_query, run);
   std::vector<std::string> result;
   for (const auto& node : node_set) {
@@ -1966,6 +2034,5 @@ std::vector<std::string> Project::xpath_search(const std::string& xpath_query, c
   }
   return result;
 }
-
 
 } // namespace sjef

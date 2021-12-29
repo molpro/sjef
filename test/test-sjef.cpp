@@ -659,11 +659,20 @@ TEST(sjef, version) {
 TEST(sjef, xpath_search) {
   std::string suffix{"xpath_search"};
   savestate state(suffix);
-  auto p = sjef::Project(state.testfile("xpath_search.xpath_search"));
-  std::ofstream(p.filename("xml"))
-      << "<?xml version=\"1.0\"?>\n<root><try att1=\"value1\">content1</try><try>content2<subtry/> </try></root>";
-  EXPECT_EQ(p.select_nodes("/try").size(), 0);
-  ASSERT_EQ(p.select_nodes("//try").size(), 2);
+  const std::string& path = sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml");
+  std::ofstream(path) << "<?xml version=\"1.0\"?> <backends> <backend name=\"null\" run_command=\"true\"/></backends>";
+  auto p = sjef::Project(state.testfile(std::string{"xpath_search."}+suffix));
+  std::ofstream(p.filename("inp")) << "test" << std::endl;
+  p.run("null",0,true,true);
+//  std::cout << p.status_message()<<std::endl;
+//  std::cout << p.run_directory()<<std::endl;
+//  std::cout << p.filename("xml","",0)<<std::endl;
+  std::ofstream(p.filename("xml","",0))
+      << "<?xml version=\"1.0\"?>\n<root><try att1=\"value1\">content1</try><try>content2<subtry/> </try></root>"<<std::endl;
+//  EXPECT_EQ(system("ls -Rl xpath_search.xpath_search"),0);
+  EXPECT_EQ(p.status(),sjef::status::completed);
+  EXPECT_EQ(p.select_nodes("/try").size(), 0)<<p.xml()<<std::endl;
+  ASSERT_EQ(p.select_nodes("//try").size(), 2)<<p.xml()<<std::endl;
   auto node_set = p.select_nodes("//try");
   EXPECT_EQ(std::string{node_set[0].node().attribute("att1").value()}, "value1");
   EXPECT_EQ(std::string{node_set[1].node().attribute("att1").value()}, "");
@@ -685,9 +694,9 @@ TEST(sjef, xpath_search) {
 }
 
 TEST(sjef, molpro_xpath_search) {
-  std::string suffix{"molpro"};
+  std::string suffix{"molpro_xpath_search"};
   savestate state(suffix);
-  auto p = sjef::Project(state.testfile("xpath_search.molpro"));
+  auto p = sjef::Project(state.testfile(std::string{"xpath_search."}+suffix));
   std::ofstream(p.filename("xml"))
       << "<?xml version=\"1.0\"?>\n"
          "<molpro xmlns=\"http://www.molpro.net/schema/molpro-output\"\n"

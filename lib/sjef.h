@@ -66,9 +66,11 @@ private:
   std::unique_ptr<Project> m_backend_watcher_instance;
   const Project* m_master_instance;
   bool m_master_of_slave;
+  mutable std::mutex m_status_mutex;
   mutable std::mutex m_remote_server_mutex;
   mutable std::mutex m_synchronize_mutex;
   mutable std::string m_backend; ///< The current backend
+  mutable std::string m_xml_cached;
   std::string remote_server_run(const std::string& command, int verbosity = 0, bool wait = true) const;
   ///> @private
   static const std::string s_propertyFile;
@@ -394,7 +396,6 @@ private:
   static void recent_edit(const std::string& add, const std::string& remove = "");
   mutable time_t m_property_file_modification_time;
   mutable std::map<std::string, time_t> m_input_file_modification_time;
-  const bool m_use_control_path;
   std::set<std::string> m_run_directory_ignore;
   void property_delete_locked(const std::string& property);
   void check_property_file_locked() const;

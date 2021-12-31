@@ -1115,6 +1115,7 @@ status Project::status(int verbosity, bool cached) const {
         result = running;
       }
     }
+    c.wait();
   } else {
     if (verbosity > 1)
       std::cerr << "remote status " << be.host << ":" << be.status_command << ":" << pid << std::endl;

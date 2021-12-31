@@ -996,14 +996,14 @@ std::string Project::xml(int run, bool sync) const {
   constexpr bool use_cache = true;
   const bool localhost = m_backends.at(property_get("backend")).host == "localhost";
   if ((not use_cache) or (localhost and cached_status() != completed) or ((not localhost) and std::stoi(property_get("_private_sjef_project_backend_inactive_synced")) <= 2)) {
-//    std::cout << "not creating xml cache, status="<<cached_status() << std::endl;
+    std::cout << "not creating xml cache, status="<<cached_status() << std::endl;
     return xmlRepair(file_contents(m_suffixes.at("xml"), "", run, sync));
   }
   if (m_xml_cached.empty())
-//    std::cout << "creating xml cache" << std::endl;
+    std::cout << "creating xml cache" << std::endl;
   if (m_xml_cached.empty())
     m_xml_cached = xmlRepair(file_contents(m_suffixes.at("xml"), "", run, sync));
-//  std::cout << "using xml cache" << std::endl;
+  std::cout << "using xml cache" << std::endl;
   return m_xml_cached;
 }
 

@@ -993,6 +993,7 @@ bool Project::run_needed(int verbosity) const {
 
 std::string m_xml_cached;
 std::string Project::xml(int run, bool sync) const {
+  throw std::logic_error("xml()");
   constexpr bool use_cache = true;
   const bool localhost = m_backends.at(property_get("backend")).host == "localhost";
   if ((not use_cache) or (localhost and cached_status() != completed) or ((not localhost) and std::stoi(property_get("_private_sjef_project_backend_inactive_synced")) <= 2)) {

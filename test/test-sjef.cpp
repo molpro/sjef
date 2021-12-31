@@ -789,3 +789,21 @@ TEST(sjef, molpro_xpath_search) {
   //  for (const auto& s : input)
   //    std::cout << s << std::endl;
 }
+
+TEST(project, corrupt_geometry_include) {
+  std::string suffix{"corrupt_geometry_include"};
+  savestate state(suffix);
+  const std::string& path = sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml");
+  std::ofstream(path) << "<?xml version=\"1.0\"?> <backends> <backend name=\"null\" run_command=\"true\"/></backends>";
+  sjef::Project p(state.testfile(std::string{"corrupt_geometry_include."}+suffix));
+  std::ofstream(p.filename("inp")) << "orient,mass;\n"
+                                      "geomtyp=xyz;\n"
+                                      "geometry=\n"
+                                      "nanotube10-0-zigzag.xyz\n"
+                                      "\n"
+                                      "basis=vdz\n"
+                                      "\n"
+                                      "df-hf";
+  p.change_backend("null");
+  p.run(0,true,true);
+}

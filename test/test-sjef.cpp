@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <regex>
 #include <unistd.h>
+#include "test-sjef.h"
 
 namespace fs = std::filesystem;
 

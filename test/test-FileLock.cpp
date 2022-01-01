@@ -21,10 +21,10 @@ TEST(FileLock, simple) {
 }
 
 TEST(FileLock, many_write_threads) {
-  std::string lockfile{"testing-lockfile"};
+  fs::path lockfile{"testing-lockfile"};
   //  if (fs::exists(lockfile))
   //    fs::remove_all(lockfile);
-  { auto toucher = fs::ofstream(lockfile); }
+  { auto toucher = std::ofstream(lockfile); }
   auto l1 = std::make_unique<sjef::FileLock>(lockfile, true);
   ASSERT_TRUE(fs::exists(lockfile));
   int n{1000};

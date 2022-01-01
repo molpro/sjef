@@ -3,6 +3,7 @@
 
 #include "sjef-backend.h"
 #include "sjef-c.h"
+#include "sjef.h"
 #include <map>
 #include <list>
 #include <unistd.h>

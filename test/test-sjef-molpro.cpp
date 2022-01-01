@@ -39,7 +39,11 @@ TEST(project, molpro_workflow) {
   //  ASSERT_EQ(system("cat ~/.sjef/molpro/backends.xml"),0);
   std::map<std::string, double> energies;
   for (int repeat = 0; repeat < 5; ++repeat)
-    for (const auto& backend : std::vector<std::string>{"local", "test-remote"}) {
+    for (const auto& backend : std::vector<std::string>{
+             "local"
+                                                        ,
+             "test-remote"
+         }) {
       std::map<std::string, std::unique_ptr<sjef::Project>> projects;
       fs::remove_all(cache);
       for (const auto& id : std::map<std::string, std::string>{
@@ -48,7 +52,10 @@ TEST(project, molpro_workflow) {
         std::cout << "backend: " << backend << ", molecule: " << id.first << ", input: " << id.second << std::endl;
         auto file = id.first + "_" + backend + ".molpro";
         //        fs::remove_all(file);
+        EXPECT_GE(system((std::string{"ls -laR "}+file).c_str()),-1);
+        EXPECT_GE(system((std::string{"cat "}+file+"/Info.plist").c_str()),-1);
         projects.insert({id.first, std::make_unique<sjef::Project>(fs::exists(file) ? file : state.testfile(file))});
+        std::cout << "created new project, properties "; for (const auto& n : projects[id.first]->property_names()) std::cout << " "<<n; std::cout << std::endl;
         std::ofstream(projects[id.first]->filename("inp")) << id.second;
         projects[id.first]->change_backend(backend);
       }

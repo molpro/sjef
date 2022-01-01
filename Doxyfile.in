@@ -234,7 +234,7 @@ ALIASES                =
 # A mapping has the form "name=value". For example adding "class=itcl::class"
 # will allow you to use the command class in the itcl::class meaning.
 
-TCL_SUBST              =
+# TCL_SUBST              =
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C sources
 # only. Doxygen will then generate output that is more tailored for C. For
@@ -753,8 +753,8 @@ WARN_LOGFILE           =
 # spaces.
 # Note: If this tag is empty the current directory is searched.
 
- INPUT                  = "@CMAKE_CURRENT_SOURCE_DIR@/README.md" "@CMAKE_CURRENT_SOURCE_DIR@/lib/sjef.h" "@CMAKE_CURRENT_SOURCE_DIR@/lib/sjef-c.h" "@CMAKE_CURRENT_SOURCE_DIR@/program/sjef-program.md" "@CMAKE_CURRENT_SOURCE_DIR@/lib/FileLock.h" "@CMAKE_CURRENT_SOURCE_DIR@/lib/backends.md"
-# INPUT                  = "README.md" "lib/sjef.h" "lib/sjef-c.h" "program/sjef-program.md" "lib/backends.md"
+ INPUT                  = "@CMAKE_CURRENT_SOURCE_DIR@/README.md" "@CMAKE_CURRENT_SOURCE_DIR@/lib/sjef.h" "@CMAKE_CURRENT_SOURCE_DIR@/lib/sjef-c.h" "@CMAKE_CURRENT_SOURCE_DIR@/sjef-program.md" "@CMAKE_CURRENT_SOURCE_DIR@/lib/FileLock.h" "@CMAKE_CURRENT_SOURCE_DIR@/lib/backends.md"
+# INPUT                  = "README.md" "lib/sjef.h" "lib/sjef-c.h" "sjef-program.md" "lib/backends.md"
 
 
 # This tag can be used to specify the character encoding of the source files
@@ -995,7 +995,7 @@ ALPHABETICAL_INDEX     = YES
 # Minimum value: 1, maximum value: 20, default value: 5.
 # This tag requires that the tag ALPHABETICAL_INDEX is set to YES.
 
-COLS_IN_ALPHA_INDEX    = 5
+# COLS_IN_ALPHA_INDEX    = 5
 
 # In case all classes in a project start with a common prefix, all classes will
 # be put under the same header in the alphabetical index. The IGNORE_PREFIX tag

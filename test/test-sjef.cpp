@@ -1,6 +1,7 @@
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
+#include "sjef-backend.h"
 #include "sjef.h"
 #include "sjef-backend.h"
 #include <map>
@@ -9,54 +10,10 @@
 #include <libgen.h>
 #include <filesystem>
 #include <regex>
+#include <unistd.h>
 
 namespace fs = std::filesystem;
 
-class savestate {
-  std::string rf;
-  std::vector<std::string> testfiles;
-  std::vector<std::string> m_suffixes;
-  std::set<std::string> m_not_preexisting;
- public:
-  explicit savestate(std::vector<std::string> suffixes = {"sjef", "molpro", "someprogram"})
-      : m_suffixes(suffixes) {
-    fs::create_directories(sjef::expand_path(std::string{"~/.sjef"}));
-    for (const auto& suffix : m_suffixes) {
-      auto path = sjef::expand_path(std::string{"~/.sjef/"} + suffix);
-      if (not fs::exists(path)) {
-//        std::cout << "creating new " << path << std::endl;
-        fs::create_directories(path);
-        m_not_preexisting.insert(path);
-      } else if (not fs::exists(path + ".save")) {
-//        std::cout << "saving " << path << std::endl;
-        fs::rename(path, path + ".save");
-      }
-    }
-  }
-  explicit savestate(std::string suffix) : savestate(std::vector<std::string>{{suffix}}) {
-  }
-  ~savestate() {
-    for (const auto& file : testfiles)
-      sjef::Project::erase(file);
-    for (const auto& suffix : m_suffixes) {
-      auto path = sjef::expand_path(std::string{"~/.sjef/"} + suffix);
-      if (m_not_preexisting.count(path) != 0) {
-//        std::cout << "removing " << path << std::endl;
-        fs::remove_all(path);
-      } else if (fs::exists(path + ".save")) {
-//        std::cout << "restoring " << path << std::endl;
-        fs::remove_all(path);
-        fs::rename(path + ".save", path);
-      }
-    }
-  }
-  std::string testfile(const std::string& file) {
-    testfiles.push_back(sjef::expand_path(file));
-    sjef::Project::erase(testfiles.back());
-    return testfiles.back();
-  }
-
-};
 TEST(project, filename) {
   savestate state("sjef");
   std::string slash{std::filesystem::path::preferred_separator};
@@ -69,7 +26,7 @@ TEST(project, filename) {
   );
   std::string tmpdir{e == nullptr ? "/tmp" : e};
   std::map<std::string, std::string> names;
-//  system((std::string{"ls -la "}+tmpdir).c_str());
+  //  system((std::string{"ls -la "}+tmpdir).c_str());
   names["$TMPDIR/tmp.sjef/"] = tmpdir + slash + "tmp.sjef";
   names["$TMPDIR/tmp"] = tmpdir + slash + "tmp.sjef";
   for (const auto& n : names)
@@ -85,7 +42,7 @@ TEST(project, expand_path) {
 #else
       "HOME"
 #endif
-  )};
+      )};
   std::map<std::string, std::string> names;
   names["/x/y/z"] = slash + "x" + slash + "y" + slash + "z";
   names["\\x/y\\z"] = slash + "x" + slash + "y" + slash + "z";
@@ -122,14 +79,14 @@ TEST(project, move_generic) {
   auto name2 = name + "2";
   auto filename2 = state.testfile("$TMPDIR/" + name2 + ".sjef");
   sjef::Project x2(filename);
-  ASSERT_EQ (x2.name(), name);
+  ASSERT_EQ(x2.name(), name);
   ASSERT_EQ(x2.filename(), filename);
   x2.move(filename2);
   ASSERT_EQ(x2.name(), name2);
   ASSERT_EQ(x2.filename(), filename2);
   ASSERT_FALSE(fs::exists(fs::path(filename)));
   ASSERT_TRUE(fs::exists(fs::path(x2.filename())));
-//  std::cerr << "filename="<<filename<<std::endl;
+  //  std::cerr << "filename="<<filename<<std::endl;
   x2.copy(filename);
   EXPECT_FALSE(fs::exists(sjef::expand_path(filename + "/.lock")));
   EXPECT_FALSE(fs::exists(sjef::expand_path(filename2 + "/.lock")));
@@ -153,22 +110,24 @@ TEST(project, moveMolpro) {
   p.property_set("inpFile", p.name() + ".inp");
   EXPECT_EQ(p.property_get("inpFile"), p.name() + ".inp");
   p.move(filename_new, true);
-//  EXPECT_FALSE(fs::exists(sjef::expand_path(filename_old)));
-//  EXPECT_TRUE(fs::exists(sjef::expand_path(filename_new)));
-//  std::string inp;
-//  std::ifstream(p.filename("inp")) >> inp;
-//  EXPECT_EQ(inp, "geometry=" + p.name() + ".xyz");
-//  EXPECT_EQ(p.property_get("inpFile"), p.name() + ".inp");
-//  exit(0);
+  //  EXPECT_FALSE(fs::exists(sjef::expand_path(filename_old)));
+  //  EXPECT_TRUE(fs::exists(sjef::expand_path(filename_new)));
+  //  std::string inp;
+  //  std::ifstream(p.filename("inp")) >> inp;
+  //  EXPECT_EQ(inp, "geometry=" + p.name() + ".xyz");
+  //  EXPECT_EQ(p.property_get("inpFile"), p.name() + ".inp");
+  //  exit(0);
 }
 
 TEST(project, copyMolpro) {
   savestate state("molpro");
   auto filename_old = state.testfile("copyMolproOld.molpro");
   auto filename_new = state.testfile("copyMolproNew.molpro");
+  std::string input;
   {
     sjef::Project p(filename_old);
-    std::ofstream(p.filename("inp")) << "geometry=" + p.name() + ".xyz" + "\n";
+    input = "geometry=" + p.name() + ".xyz";
+    std::ofstream(p.filename("inp")) << input + "\n";
     std::ofstream(p.filename("xyz")) << "1\n\nHe 0 0 0\n";
     p.copy(filename_new, true);
   }
@@ -178,7 +137,7 @@ TEST(project, copyMolpro) {
   EXPECT_TRUE(fs::exists(sjef::expand_path(filename_new)));
   std::string inp;
   std::ifstream(p.filename("inp")) >> inp;
-  EXPECT_EQ(inp, "geometry=" + p.name() + ".xyz");
+  EXPECT_EQ(inp, input);
 }
 
 TEST(project, erase) {
@@ -228,38 +187,39 @@ TEST(project, properties) {
   savestate state("sjef");
   auto filename = state.testfile("$TMPDIR/try.sjef");
   sjef::Project x(filename);
-//  const auto keys = x.property_names();
-//  std::string key;
-  int ninitial;// = keys.size();
+  //  const auto keys = x.property_names();
+  //  std::string key;
+  int ninitial; // = keys.size();
   std::map<std::string, std::string> data;
   data["first key"] = "first value";
-//  data["second key"] = "second value";
-//  data["third key"] = "third value";
+  //  data["second key"] = "second value";
+  //  data["third key"] = "third value";
   for (const auto& keyval : data)
     x.property_set(keyval.first, keyval.second);
-//  system((std::string{"cat "}+x.propertyFile()).c_str());
-//while(sleep(1));
-//  std::cout<< "\n==================\n"<<std::endl;
+  //  system((std::string{"cat "}+x.propertyFile()).c_str());
+  // while(sleep(1));
+  //  std::cout<< "\n==================\n"<<std::endl;
   for (const auto& keyval : data) {
-//    std::cout << "key "<<keyval.first<<" expect value: "<<keyval.second<<" actual value: "
-//    <<x.property_get(keyval.first)<<std::endl;
+    //    std::cout << "key "<<keyval.first<<" expect value: "<<keyval.second<<" actual value: "
+    //    <<x.property_get(keyval.first)<<std::endl;
     ASSERT_EQ(x.property_get(keyval.first), keyval.second);
   }
   if (false) {
 
     const auto keysnew = x.property_names();
     for (const auto& key : keysnew) {
-//  for (n = 0; (key = x.property_next()) != ""; ++n) {
-//    std::cout << "key "<<key<<std::endl;
-      if (data.count("key") != 0)
+      //  for (n = 0; (key = x.property_next()) != ""; ++n) {
+      //    std::cout << "key "<<key<<std::endl;
+      if (data.count("key") != 0) {
         ASSERT_EQ(x.property_get(key), data[key]);
+      }
     }
-//  std::cout << "data.size() "<<data.size()<<std::endl;
+    //  std::cout << "data.size() "<<data.size()<<std::endl;
     ASSERT_EQ(keysnew.size(), data.size() + ninitial);
     for (const auto& key : x.property_names()) {
-//    system(("echo start deletion loop key="+key+"; cat "+x.filename()+"/Info.plist").c_str());
+      //    system(("echo start deletion loop key="+key+"; cat "+x.filename()+"/Info.plist").c_str());
       x.property_delete(key);
-//    system(("echo end deletion loop key="+key+"; cat "+x.filename()+"/Info.plist").c_str());
+      //    system(("echo end deletion loop key="+key+"; cat "+x.filename()+"/Info.plist").c_str());
     }
     ASSERT_TRUE(x.property_names().empty());
 
@@ -288,17 +248,15 @@ TEST(project, recent_files) {
         p.emplace_back(proj.filename());
       }
       state.testfile(p.back());
-      {
-        sjef::Project proj(p.back());
-      }
+      { sjef::Project proj(p.back()); }
     }
-//  system((std::string{"cat "}+rf).c_str());
-//    for (const auto& pp : p)
-//      std::cerr << "p entry " << pp << std::endl;
+    //  system((std::string{"cat "}+rf).c_str());
+    //    for (const auto& pp : p)
+    //      std::cerr << "p entry " << pp << std::endl;
     size_t i = p.size();
-//    for (const auto& pp : p)
-//      std::cerr << "p entry, recent table " << i << " " << sjef::Project(pp).recent(i--) << std::endl;
-//    i = p.size();
+    //    for (const auto& pp : p)
+    //      std::cerr << "p entry, recent table " << i << " " << sjef::Project(pp).recent(i--) << std::endl;
+    //    i = p.size();
     for (const auto& pp : p)
       ASSERT_EQ(prober.recent(i--), pp);
     i = p.size();
@@ -322,21 +280,24 @@ TEST(project, recent_files) {
 }
 
 TEST(project, project_hash) {
-  savestate state("sjef");
-  sjef::Project x(state.testfile("$TMPDIR/try.sjef"));
-  auto xph = x.project_hash();
-  state.testfile("$TMPDIR/try2.sjef"); // remove any previous contents
-  ASSERT_TRUE(x.copy("$TMPDIR/try2.sjef"));
-  sjef::Project x2("$TMPDIR/try2.sjef");
-  ASSERT_NE(xph, x2.project_hash());
-  state.testfile("$TMPDIR/try3.sjef"); // remove any previous contents
-  x.move("$TMPDIR/try3.sjef");
-  ASSERT_EQ(xph, x.project_hash());
+  for (int repeat = 0; repeat < 10; ++repeat) {
+    //    std::cerr<<"repeat "<<repeat<<std::endl;
+    savestate state("sjef");
+    sjef::Project x(state.testfile("project_hash_try.sjef"));
+    auto xph = x.project_hash();
+    state.testfile("project_hash_try2.sjef"); // remove any previous contents
+    ASSERT_TRUE(x.copy("project_hash_try2.sjef"));
+    sjef::Project x2("project_hash_try2.sjef");
+    ASSERT_NE(xph, x2.project_hash());
+    state.testfile("project_hash_try3.sjef"); // remove any previous contents
+    x.move("project_hash_try3.sjef");
+    ASSERT_EQ(xph, x.project_hash());
+  }
 }
 
 TEST(project, input_hash_molpro) {
   savestate state("molpro");
-  sjef::Project x(state.testfile("$TMPDIR/try.molpro"));
+  sjef::Project x(state.testfile("project_hash_try.molpro"));
   {
     std::ofstream ss(x.filename("inp"));
     ss << "one\ngeometry=try.xyz\ntwo" << std::endl;
@@ -346,12 +307,14 @@ TEST(project, input_hash_molpro) {
     ss << "1\nThe xyz file\nHe 0 0 0" << std::endl;
   }
   auto xph = x.input_hash();
-  state.testfile("$TMPDIR/try2.molpro");
-  ASSERT_TRUE(x.copy("$TMPDIR/try2.molpro"));
-  sjef::Project x2("$TMPDIR/try2.molpro");
+  auto try2 = state.testfile("project_hash_try2.molpro");
+  fs::remove_all(try2);
+  ASSERT_TRUE(x.copy(try2));
+  sjef::Project x2(try2);
   ASSERT_EQ(xph, x2.input_hash());
-  state.testfile("$TMPDIR/try3.molpro");
-  x.move("$TMPDIR/try3.molpro");
+  auto try3 = state.testfile("project_hash_try3.molpro");
+  fs::remove_all(try3);
+  x.move(try3);
   ASSERT_EQ(xph, x.input_hash());
 }
 
@@ -377,7 +340,7 @@ TEST(project, xmlRepair) {
 TEST(project, xmloutput) {
   savestate state(std::vector<std::string>{"molpro", "someprogram"});
   sjef::Project He("He.molpro");
-  EXPECT_EQ(He.file_contents("xml"), He.xml());
+  EXPECT_EQ(sjef::xmlRepair(He.file_contents("xml")), He.xml());
   {
     sjef::Project newProject(state.testfile("test___.someprogram"));
     EXPECT_EQ(newProject.file_contents("xml"), "");
@@ -405,15 +368,15 @@ TEST(project, run_needed) {
   EXPECT_FALSE(He.run_needed());
 }
 
-//TEST(project,input_from_output) {
-//  savestate x;
-//  sjef::Project p("test.sjef", nullptr,true);
-//  std::string tempinp{"/tmp/test.inp"};
-//  std::string inpstring ="one\n\ntwo  \n";
-//  std::ofstream(tempinp) <<  inpstring;
-//  p.import_file(tempinp);
-//  EXPECT_TRUE(inpstring,p.)
-//}
+// TEST(project,input_from_output) {
+//   savestate x;
+//   sjef::Project p("test.sjef", nullptr,true);
+//   std::string tempinp{"/tmp/test.inp"};
+//   std::string inpstring ="one\n\ntwo  \n";
+//   std::ofstream(tempinp) <<  inpstring;
+//   p.import_file(tempinp);
+//   EXPECT_TRUE(inpstring,p.)
+// }
 
 TEST(project, spawn_many_dummy) {
   savestate state("someprogram");
@@ -421,39 +384,11 @@ TEST(project, spawn_many_dummy) {
   { std::ofstream(p.filename("inp")) << ""; }
   const auto& backend = sjef::Backend::dummy_name;
   for (auto i = 0; i < 5; ++i) {
-//    std::cerr << "run number " << i << std::endl;
+    //    std::cerr << "run number " << i << std::endl;
     ASSERT_TRUE(p.run(backend, -1, true, true));
     EXPECT_NE(p.property_get("jobnumber"), "-1");
     EXPECT_EQ(p.status(false), sjef::completed);
   }
-
-}
-inline std::string executable(fs::path command) {
-  if (command.is_absolute())
-    return command.native();
-  else {
-    std::stringstream path{std::string{getenv("PATH")}}; // TODO windows
-    std::string elem;
-    while (std::getline(path,elem,':')) {
-      auto resolved = elem / command;
-      // TODO check that it's executable
-      if (fs::is_regular_file(resolved)) return resolved.native();
-    }
-    return "";
-  }
-}
-TEST(project, spawn_many_molpro) {
-  savestate state("molpro");
-  sjef::Project p(state.testfile("spawn_many.molpro"));
-  { std::ofstream(p.filename("inp")) << ""; }
-  const auto& backend = sjef::Backend::default_name;
-  if (not executable("molpro").empty()) // test the default backend only if it exists
-    for (auto i = 0; i < 5; ++i) {
-      ASSERT_TRUE(p.run(backend, -1, true, true));
-      EXPECT_NE(p.property_get("jobnumber"), "-1");
-      EXPECT_EQ(p.status(false), sjef::completed);
-    }
-
 }
 
 TEST(project, early_change_backend) {
@@ -462,17 +397,17 @@ TEST(project, early_change_backend) {
   auto backenddirectory = sjef::expand_path((fs::path{"~"} / ".sjef" / suffix).native());
   fs::create_directories(backenddirectory);
   auto backendfile = sjef::expand_path((fs::path{backenddirectory} / "backends.xml").native());
-  std::ofstream(backendfile)
-      << "<?xml version=\"1.0\"?>\n<backends><backend name=\"test\" host=\"127.0.0.1\" run_command=\"true\"/></backends>"
-      << std::endl;
+  std::ofstream(backendfile) << "<?xml version=\"1.0\"?>\n<backends><backend name=\"test\" host=\"127.0.0.1\" "
+                                "run_command=\"true\"/></backends>"
+                             << std::endl;
   auto filename = state.testfile(std::string{"early_change_backend."} + suffix);
   sjef::Project(filename).change_backend("test");
   EXPECT_EQ(sjef::Project(filename).filename(), filename);
   EXPECT_EQ(sjef::Project(filename).property_get("backend"), "test");
   EXPECT_THROW(sjef::Project(filename).change_backend("test2"), std::runtime_error);
-  std::ofstream(backendfile)
-      << "<?xml version=\"1.0\"?>\n<backends><backend name=\"test2\" host=\"127.0.0.1\" run_command=\"true\"/></backends>"
-      << std::endl;
+  std::ofstream(backendfile) << "<?xml version=\"1.0\"?>\n<backends><backend name=\"test2\" host=\"127.0.0.1\" "
+                                "run_command=\"true\"/></backends>"
+                             << std::endl;
   EXPECT_EQ(sjef::Project(filename).filename(), filename);
   EXPECT_EQ(sjef::Project(filename).property_get("backend"), "local");
   EXPECT_THROW(sjef::Project(filename).change_backend("test"), std::runtime_error);
@@ -505,14 +440,13 @@ TEST(backend, backend_parameter_expand) {
     p.backend_parameter_set(backend, "thing", "its value");
     std::map<std::string, std::string> tests;
     std::vector<std::string> preambles{"stuff ", ""};
-    auto test = [&preambles, &p, &backend](const std::string& run_command,
-                                           const std::string& expect_resolved,
-                                           const std::string& expect_documentation) {
+    auto test = [&preambles, &p](const std::string& run_command, const std::string& expect_resolved,
+                                 const std::string& expect_documentation) {
       for (const auto& preamble : preambles) {
         p.m_backends[backend].run_command = preamble + run_command + " more stuff";
-//        std::cout << "run_command set to "<<p.m_backends[backend].run_command<<std::endl;
-//        std::cout << "documentation returned "<<p.backend_parameter_documentation(backend,"n")<<std::endl;
-//        std::cout << "documentation expected "<<expect_documentation<<std::endl;
+        //        std::cout << "run_command set to "<<p.m_backends[backend].run_command<<std::endl;
+        //        std::cout << "documentation returned "<<p.backend_parameter_documentation(backend,"n")<<std::endl;
+        //        std::cout << "documentation expected "<<expect_documentation<<std::endl;
         EXPECT_EQ(p.backend_parameter_documentation(backend, "n"), expect_documentation);
         EXPECT_EQ(p.backend_parameter_expand(backend), preamble + expect_resolved + " more stuff");
       }
@@ -526,8 +460,8 @@ TEST(backend, backend_parameter_expand) {
     test("{ -n %thing:99}", " -n its value", "");
     test("{ -n %thing:99! with documentation}", " -n its value", "");
     std::map<std::string, std::string> badtests;
-    badtests["{ -n !%n:99 This is an ill-formed parameter string because the % comes in the comment, so should be detected as absent}"] =
-        "";
+    badtests["{ -n !%n:99 This is an ill-formed parameter string because the % comes in the comment, so should be "
+             "detected as absent}"] = "";
     for (const auto& preamble : preambles)
       for (const auto& test : badtests)
         EXPECT_THROW(p.backend_parameter_expand(backend, preamble + test.first + " more stuff"), std::runtime_error);
@@ -555,9 +489,7 @@ TEST(project, recent) {
     sjef::Project p(state.testfile("completely_new" + std::to_string(i) + ".someprogram"));
     fn = p.filename();
     EXPECT_EQ(p.recent_find(fn), 1);
-    {
-      auto p2 = sjef::Project(fn2);
-    }
+    { auto p2 = sjef::Project(fn2); }
     EXPECT_EQ(p.recent(1), fn2);
     EXPECT_EQ(p.recent_find(fn), 2);
     sjef::Project::erase(fn2);
@@ -572,6 +504,10 @@ TEST(project, dummy_backend) {
   sjef::Project p(state.testfile("completely_new.sjef"));
   p.run(sjef::Backend::dummy_name, 0, true, false);
   p.wait();
+  timespec delay;
+  delay.tv_sec = 0;
+  delay.tv_nsec = 100000000;
+  nanosleep(&delay, NULL);
   EXPECT_EQ(p.file_contents("out"), "dummy");
   EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
   EXPECT_EQ(p.file_contents("out", "", 1), "dummy");
@@ -579,32 +515,85 @@ TEST(project, dummy_backend) {
 }
 
 TEST(project, project_name_embedded_space) {
-  savestate state("molpro");
-  sjef::Project p(state.testfile("completely new.molpro"));
+  std::string suffix{"project_name_embedded_space"};
+  savestate state(suffix);
+  ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{"~/.sjef/"} + suffix)));
+  {
+    const std::string& path = sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml");
+    std::ofstream(path) << "<?xml version=\"1.0\"?> <backends> <backend name=\"light\" run_command=\"sh "
+                        << (fs::current_path() / "light.sh").string() << "\"/></backends>";
+  }
+  sjef::Project p(state.testfile(std::string{"completely new."} + suffix));
   std::ofstream(p.filename("inp")) << "geometry={He};rhf\n";
-  p.run(sjef::Backend::dummy_name, 0, true, false);
+  std::ofstream("light.sh") << "while [ ${1#-} != ${1} ]; do shift; done; "
+                               "echo dummy > \"${1%.*}.out\";echo '<?xml "
+                               "version=\"1.0\"?>\n<root/>' > \"${1%.*}.xml\";";
+  p.run("light", 0, true, false);
   p.wait();
+  //  timespec delay; delay.tv_sec=0; delay.tv_nsec=10000000;
+  //  nanosleep(&delay,NULL);
   EXPECT_EQ(p.file_contents("out"), "dummy");
   EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
+  fs::remove("light.sh");
+}
+
+TEST(project, project_dir_embedded_space) {
+  const std::string suffix{"project_dir_embedded_space"};
+  savestate state(suffix);
+  auto dir = fs::absolute("has some spaces");
+  fs::remove_all(dir);
+  std::cout << dir << std::endl;
+  ASSERT_TRUE(fs::create_directories(dir));
+  ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{"~/.sjef/"} + suffix)));
+  const std::string& path = sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml");
+  {
+    std::ofstream(path) << "<?xml version=\"1.0\"?> <backends> <backend name=\"light\" run_command=\"sh "
+                        << (fs::current_path() / "light.sh").string() << "\"/></backends>";
+  }
+  std::ofstream("light.sh") << "while [ ${1#-} != ${1} ]; do shift; done; "
+                               "echo dummy > \"${1%.*}.out\";echo '<?xml "
+                               "version=\"1.0\"?>\n<root/>' > \"${1%.*}.xml\";";
+  {
+    sjef::Project p(state.testfile((dir / (std::string{"run_directory."} + suffix)).string()));
+    std::ofstream(p.filename("inp")) << "geometry={He};rhf\n";
+    p.run("light", 0, true, false);
+    p.wait();
+    //    timespec delay;
+    //    delay.tv_sec = 0;
+    //    delay.tv_nsec = 10000000000;
+    //    nanosleep(&delay, NULL);
+    //  sleep(10);
+    EXPECT_EQ(p.file_contents("out"), "dummy");
+    EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
+    fs::remove("light.sh");
+  }
+  fs::remove_all(dir);
 }
 
 TEST(project, run_directory) {
   savestate state("molpro");
   auto filename = state.testfile("run_directory.molpro");
   sjef::Project p(filename);
-  std::ofstream(p.filename("inp")) << "geometry=" + p.name() + ".xyz" + "\n";
+  std::string input = "geometry=" + p.name() + ".xyz";
+  std::ofstream(p.filename("inp")) << input + "\n";
+  std::string input2;
+  std::ifstream(p.filename("inp")) >> input2;
+  EXPECT_EQ(input, input2);
   std::ofstream(p.filename("xyz")) << "1\n\nHe 0 0 0\n";
   EXPECT_TRUE(fs::exists(sjef::expand_path(filename)));
   for (int i = 1; i < 4; i++) {
-    auto si = std::to_string(i);
+    auto si = std::to_string(i) + ".molpro";
     auto rundir = p.run_directory_new();
     EXPECT_EQ(rundir, i);
     EXPECT_EQ(rundir, p.run_verify(rundir));
     EXPECT_EQ(rundir, p.run_verify(0));
     EXPECT_EQ(p.run_directory(), p.filename("", "", 0));
     EXPECT_EQ(p.run_directory(0), (fs::path{p.filename()} / "run" / si).native());
-    EXPECT_EQ(p.filename("out", "", 0), (fs::path{p.filename()} / "run" / si / "run_directory.out").native());
+    EXPECT_EQ(p.filename("out", "", 0), (fs::path{p.filename()} / "run" / si / (std::to_string(i) + ".out")).native());
   }
+  p.take_run_files(3, "3.inp", "copied.inp");
+  std::ifstream(p.filename("", "copied.inp")) >> input2;
+  EXPECT_EQ(input, input2);
   int seq = p.run_list().size();
   for (const auto& r : p.run_list())
     EXPECT_EQ(r, seq--); // the run_list goes in reverse order
@@ -613,5 +602,189 @@ TEST(project, run_directory) {
   p.run_delete(1);
   EXPECT_EQ(2, p.run_verify(0));
   EXPECT_EQ(p.run_list(), sjef::Project::run_list_t{2});
-//  system((std::string("ls -lR ")+p.filename()).c_str());
+  //  system((std::string("ls -lR ")+p.filename()).c_str());
+}
+
+TEST(project, sync_backend) {
+  std::string suffix{"sync_backend"};
+  savestate state(suffix);
+  ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{"~/.sjef/"} + suffix)));
+  const auto cache = state.testfile(fs::current_path() / "test-remote-cache");
+  if (not fs::create_directories(cache))
+    throw std::runtime_error("cannot create " + cache);
+  const auto run_script = state.testfile("light.sh");
+  std::ofstream(sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml"))
+      << "<?xml version=\"1.0\"?>\n<backends>\n <backend name=\"test-remote\" run_command=\"sh " << run_script
+      << "\" host=\"127.0.0.1\" cache=\"" << cache << "\"/>\n</backends>";
+  std::ofstream(run_script) << "while [ ${1#-} != ${1} ]; do shift; done; "
+                               "echo dummy > \"${1%.*}.out\";echo '<?xml "
+                               "version=\"1.0\"?>\n<root/>' > \"${1%.*}.xml\";";
+  auto start_time = std::chrono::steady_clock::now();
+  auto p = sjef::Project(state.testfile(std::string{"test_sync_backend."} + suffix));
+  std::cout
+      << "time to end of Project() "
+      << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
+      << "ms" << std::endl;
+  std::ofstream(p.filename("inp")) << "some input";
+  //  std::cerr << "input file created " << p.filename("inp") << std::endl;
+
+  p.run("test-remote", 0, true, false);
+  std::cout
+      << "time to end of run() "
+      << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
+      << "ms" << std::endl;
+  p.wait();
+  std::cout
+      << "time to end of wait() "
+      << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
+      << "ms" << std::endl;
+  ASSERT_EQ(p.file_contents("out"), "dummy");
+  ASSERT_EQ(p.file_contents("xml"), "<?xml version=\"1.0\"?>\n<root/>");
+  //  std::cout << "output: " << p.file_contents("out");
+  //  std::cout << "xml: " << p.file_contents("xml");
+  //      std::cout << "sleeping"<<std::endl;
+  //      sleep(3);
+  std::cout
+      << "time to end "
+      << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
+      << "ms" << std::endl;
+}
+
+TEST(sjef, version) {
+  std::cerr << "version: " << sjef::version() << std::endl;
+  EXPECT_EQ(sjef::version(), SJEF_VERSION);
+}
+
+TEST(sjef, xpath_search) {
+  std::string suffix{"xpath_search"};
+  savestate state(suffix);
+  const std::string& path = sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml");
+  std::ofstream(path) << "<?xml version=\"1.0\"?> <backends> <backend name=\"null\" run_command=\"true\"/></backends>";
+  auto p = sjef::Project(state.testfile(std::string{"xpath_search."}+suffix));
+  std::ofstream(p.filename("inp")) << "test" << std::endl;
+  p.run("null",0,true,true);
+//  std::cout << p.status_message()<<std::endl;
+//  std::cout << p.run_directory()<<std::endl;
+//  std::cout << p.filename("xml","",0)<<std::endl;
+  std::ofstream(p.filename("xml","",0))
+      << "<?xml version=\"1.0\"?>\n<root><try att1=\"value1\">content1</try><try>content2<subtry/> </try></root>"<<std::endl;
+//  EXPECT_EQ(system("ls -Rl xpath_search.xpath_search"),0);
+  EXPECT_EQ(p.status(),sjef::status::completed);
+  EXPECT_EQ(p.select_nodes("/try").size(), 0)<<p.xml()<<std::endl;
+  ASSERT_EQ(p.select_nodes("//try").size(), 2)<<p.xml()<<std::endl;
+  auto node_set = p.select_nodes("//try");
+  EXPECT_EQ(std::string{node_set[0].node().attribute("att1").value()}, "value1");
+  EXPECT_EQ(std::string{node_set[1].node().attribute("att1").value()}, "");
+  EXPECT_EQ(std::string{node_set[0].node().child_value()}, "content1");
+  //  for (const auto& node : node_set) {
+  //    std::cout << node.node().attribute("att1").value() <<std::endl;
+  //    std::cout << node.node().child_value() <<std::endl;
+  //  }
+  EXPECT_EQ(p.xpath_search("/try").size(), 0);
+  EXPECT_EQ(p.xpath_search("//try").size(), 2);
+  //  for (const auto& s : p.xpath_search("//try"))
+  //    std::cout << s << std::endl;
+  EXPECT_EQ(p.xpath_search("//try", "att1").size(), 2);
+  //  for (const auto& s : p.xpath_search("//try", "att1"))
+  //    std::cout << s << std::endl;
+  ASSERT_EQ(p.xpath_search("//try[@att1='value1']").size(), 1);
+  EXPECT_EQ(p.xpath_search("//try[@att1='value1']").front(), "content1");
+  EXPECT_EQ(p.xpath_search("//try[@att1='value1']", "att1").front(), "value1");
+}
+
+TEST(sjef, molpro_xpath_search) {
+  std::string suffix{"molpro_xpath_search"};
+  savestate state(suffix);
+  auto p = sjef::Project(state.testfile(std::string{"xpath_search."}+suffix));
+  std::ofstream(p.filename("xml"))
+      << "<?xml version=\"1.0\"?>\n"
+         "<molpro xmlns=\"http://www.molpro.net/schema/molpro-output\"\n"
+         "  xmlns:xsd=\"http://www.w3.org/1999/XMLSchema\"\n"
+         "  xmlns:cml=\"http://www.xml-cml.org/schema\"\n"
+         "  xmlns:stm=\"http://www.xml-cml.org/schema\"\n"
+         "  xmlns:xhtml=\"http://www.w3.org/1999/xhtml\">\n"
+         " <job>\n"
+         "  <jobstep command=\"RHF-SCF\" commandset=\"SCFPRO\">\n"
+         "   <cml:molecule>\n"
+         "    <cml:symmetry pointGroup=\"D2h\">\n"
+         "     <cml:transform3 title=\"generator\" id=\"X\">\n"
+         "      -1  0  0  0  0  1  0  0  0  0  1  0  0  0  0  1\n"
+         "     </cml:transform3>\n"
+         "     <cml:transform3 title=\"generator\" id=\"Y\">\n"
+         "       1  0  0  0  0 -1  0  0  0  0  1  0  0  0  0  1\n"
+         "     </cml:transform3>\n"
+         "     <cml:transform3 title=\"generator\" id=\"Z\">\n"
+         "       1  0  0  0  0  1  0  0  0  0 -1  0  0  0  0  1\n"
+         "     </cml:transform3>\n"
+         "    </cml:symmetry>\n"
+         "    <cml:atomArray>\n"
+         "     <cml:atom id=\"a1\" elementType=\"He\" x3=\"0.0\" y3=\"0.0\" z3=\"0.0\"/>\n"
+         "    </cml:atomArray>\n"
+         "    <cml:bondArray>\n"
+         "    </cml:bondArray>\n"
+         "   </cml:molecule>\n"
+         "   <property name=\"Energy\" method=\"RHF\" principal=\"true\" stateSymmetry=\"1\" stateNumber=\"1\"\n"
+         "     value=\"-2.85516047724273\"/>\n"
+         "   <property name=\"One-electron energy\" method=\"RHF\" value=\"-3.88202510260424\"/>\n"
+         "   <property name=\"Two-electron energy\" method=\"RHF\" value=\"1.0268646253615\"/>\n"
+         "   <property name=\"Kinetic energy\" method=\"RHF\" value=\"2.85517613807823\"/>\n"
+         "   <property name=\"Nuclear energy\" method=\"RHF\" value=\"0.0\"/>\n"
+         "   <property name=\"Virial quotient\" method=\"RHF\" value=\"-0.999994514931921\"/>\n"
+         "   <property name=\"Dipole moment\" method=\"RHF\" principal=\"true\" stateSymmetry=\"1\"\n"
+         "     stateNumber=\"1\" value=\"0.0 0.0 0.0\"/>\n"
+         "   <time start=\"18:15:58\" end=\"18:15:59\" cpu=\"0.41\" system=\"0.33\" real=\"0.92\"/>\n"
+         "   <storage units=\"megabyte\" memory=\"0.0\" sf=\"0.0\" df=\"33.05\" eaf=\"0.0\"/>\n"
+         "   <summary overall_method=\"RHF/cc-pVDZ\"/>\n"
+         "  </jobstep>\n"
+         "  <jobstep command=\"RKS-SCF\" commandset=\"SCFPRO\">\n"
+         "   <property name=\"Energy\" method=\"RKS\" principal=\"true\" stateSymmetry=\"1\" stateNumber=\"1\"\n"
+         "     value=\"-2.82670655414156\"/>\n"
+         "   <property name=\"One-electron energy\" method=\"RKS\" value=\"-3.86358808216988\"/>\n"
+         "   <property name=\"Two-electron energy\" method=\"RKS\" value=\"2.01853015705295\"/>\n"
+         "   <property name=\"Kinetic energy\" method=\"RKS\" value=\"2.76263255051467\"/>\n"
+         "   <property name=\"Nuclear energy\" method=\"RKS\" value=\"0.0\"/>\n"
+         "   <property name=\"Virial quotient\" method=\"RKS\" value=\"-1.02319309660453\"/>\n"
+         "   <property name=\"Dipole moment\" method=\"RKS\" principal=\"true\" stateSymmetry=\"1\"\n"
+         "     stateNumber=\"1\" value=\"0.0 0.0 0.0\"/>\n"
+         "   <time start=\"18:15:59\" end=\"18:15:59\" cpu=\"0.04\" system=\"0.04\" real=\"0.1\"/>\n"
+         "   <storage units=\"megabyte\" memory=\"0.0\" sf=\"0.0\" df=\"33.05\" eaf=\"0.0\"/>\n"
+         "   <summary overall_method=\"RLDA/cc-pVDZ\"/>\n"
+         "  </jobstep>\n"
+         "  <stm:metadataList>\n"
+         "   <stm:metadata name=\"dc:date\" content=\"2021-12-26T18:15:59+00:00\"/>\n"
+         "   <stm:metadata name=\"dc:creator\" content=\"peterk\"/>\n"
+         "   <stm:metadata name=\"cmlm:insilico\" content=\"Molpro\"/>\n"
+         "  </stm:metadataList>\n"
+         "  <platform>\n"
+         "   <version major=\"2021\" minor=\"4\" SHA=\"af59ab9ef6c61f0e96a8904ef31545f4b3889395\"\n"
+         "     integer_bits=\"64\" parallelism=\"serial\">\n"
+         "    2021.4\n"
+         "    <date year=\"2021\" month=\"12\" day=\"26\" hour=\"18\" minute=\"15\" second=\"58\">\n"
+         "     2021-12-26T18:15:58\n"
+         "    </date>\n"
+         "   </version>\n"
+         "   <licence id=\"peterk\"/>\n"
+         "   <parallel processes=\"1\" nodes=\"1\" all_processes=\"1\" openmp=\"1\"/>\n"
+         "   <dimensions natom=\"400\" nvalence=\"500\" nvalence_pno=\"1000\" nbasis=\"12000\" nstate=\"100\"\n"
+         "     nsymm=\"16\" nrec=\"512\" nprim=\"2\" ncol=\"100\"/>\n"
+         "  </platform>\n"
+         "  <input>\n"
+         "   <p>geometry={He};rhf;rks</p>\n"
+         "  </input>\n"
+         "  <diagnostics warnings=\"0\"/>\n"
+         " </job>\n"
+         "</molpro>"
+      << std::endl;
+  EXPECT_EQ(p.xpath_search("/property[@name='Energy']").size(), 0);
+  const std::vector<std::string>& energies = p.xpath_search("//property[@name='Energy']", "value");
+  ASSERT_EQ(energies.size(), 2);
+  EXPECT_NEAR(std::stod(energies[0]), -2.85516047724273, 1e-15);
+  EXPECT_NEAR(std::stod(energies[1]), -2.82670655414156, 1e-15);
+  //  for (const auto& s : energies)
+  //    std::cout << s << std::endl;
+  const std::vector<std::string>& input = p.xpath_search("//input/p");
+  ASSERT_EQ(input.size(), 1);
+  EXPECT_EQ(input.front(), "geometry={He};rhf;rks");
+  //  for (const auto& s : input)
+  //    std::cout << s << std::endl;
 }

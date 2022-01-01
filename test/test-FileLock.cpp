@@ -22,9 +22,9 @@ TEST(FileLock, simple) {
 
 TEST(FileLock, many_write_threads) {
   std::string lockfile{"testing-lockfile"};
-//  if (fs::exists(lockfile))
-//    fs::remove_all(lockfile);
-  { auto toucher = std::ofstream(lockfile); }
+  //  if (fs::exists(lockfile))
+  //    fs::remove_all(lockfile);
+  { auto toucher = fs::ofstream(lockfile); }
   auto l1 = std::make_unique<sjef::FileLock>(lockfile, true);
   ASSERT_TRUE(fs::exists(lockfile));
   int n{1000};
@@ -50,13 +50,13 @@ TEST(FileLock, many_write_threads) {
     int lines = 0;
     for (auto s = std::ifstream(lockfile); s; ++lines) {
       std::getline(s, line);
-      if (line.empty()) --lines;
-//      else std::cout << "line: " << line <<std::endl;
+      if (line.empty())
+        --lines;
+      //      else std::cout << "line: " << line <<std::endl;
     }
-//    std::cout << lines << " lines" << std::endl;
+    //    std::cout << lines << " lines" << std::endl;
     EXPECT_EQ(lines, threads.size());
   }
   if (fs::exists(lockfile))
     fs::remove_all(lockfile);
 }
-

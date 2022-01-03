@@ -14,14 +14,15 @@
 #include <list>
 #include <map>
 #include <unistd.h>
+#include "test-sjef.h"
 
 namespace fs = std::filesystem;
 
-class savestate {
+class savestate_old {
   std::string rf;
 
 public:
-  savestate() {
+  savestate_old() {
     for (const auto& suffix : std::vector<std::string>{"sjef", "molpro"}) {
       rf = sjef::expand_path(std::string{"~/."} + suffix + "/projects");
       if (!fs::exists(rf))
@@ -32,7 +33,7 @@ public:
       }
     }
   }
-  ~savestate() {
+  ~savestate_old() {
     for (const auto& suffix : std::vector<std::string>{"sjef", "molpro"}) {
       rf = sjef::expand_path(std::string{"~/."} + suffix + "/projects");
       if (!rf.empty() and fs::exists(rf + ".save")) {
@@ -45,15 +46,24 @@ public:
 
 TEST(project, c_binding) {
   savestate x;
-  char projectname[] = "$TMPDIR/test-sjef-project/cproject.sjef";
-  char projectname2[] = "$TMPDIR/test-sjef-project/cproject2.sjef";
-  sjef_project_erase(projectname);
-  sjef_project_erase(projectname2);
+  const char* projectname = strdup(x.testfile("cproject.sjef").c_str());
+  const char* projectname2 = strdup(x.testfile("cproject2.sjef").c_str());
+//  sjef_project_erase(projectname);
+//  sjef_project_erase(projectname2);
   char key[] = "testkey";
   char value[] = "testvalue";
   char value2[] = "testvalue2";
   sjef_project_open(projectname);
+  if (system((std::string{"ls -ltraR "} + projectname).c_str())) {
+  }
+  if (system((std::string{"cat "} + projectname+"/Info.plist").c_str())) {
+  }
+  std::cout << "before sjef_project_property_set"<<std::endl;
   sjef_project_property_set(projectname, key, value);
+//  if (system((std::string{"ls -ltraR "} + projectname).c_str())) {
+//  }
+//  if (system((std::string{"cat "} + projectname+"/Info.plist").c_str())) {
+//  }
   ASSERT_EQ(std::string{value}, std::string{sjef_project_property_get(projectname, key)});
   sjef_project_property_set(projectname, key, value2);
   ASSERT_EQ(std::string{value2}, std::string{sjef_project_property_get(projectname, key)});
@@ -62,6 +72,12 @@ TEST(project, c_binding) {
   ASSERT_EQ(std::string{}, std::string{sjef_project_property_get(projectname, "unknown key")});
   sjef_project_property_set(projectname, key, value);
   sjef_project_copy(projectname, projectname2, 0);
+  std::cout << "after copy, from="<<projectname<<std::endl;
+  if (system((std::string{"ls -ltraR "} + projectname).c_str())) { }
+  if (system((std::string{"cat "} + projectname+"/Info.plist").c_str())) {}
+  std::cout << "after copy, to="<<projectname2<<std::endl;
+  if (system((std::string{"ls -ltraR "} + projectname2).c_str())) { }
+    if (system((std::string{"cat "} + projectname2+"/Info.plist").c_str())) { }
   ASSERT_EQ(std::string{value}, std::string{sjef_project_property_get(projectname, key)});
   sjef_project_open(projectname2);
   ASSERT_EQ(std::string{value}, std::string{sjef_project_property_get(projectname2, key)});

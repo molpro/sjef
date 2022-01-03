@@ -196,6 +196,7 @@ void sjef_project_property_set(const char* project, const char* key, const char*
   try {
     if (projects.count(project) == 0)
       sjef_project_open(project);
+    std::cout << "sjef_project_property_set "<<key<<" = "<<value<<std::endl;
     projects.at(project)->property_set(std::string{key}, std::string{value});
   } catch (std::exception& e) {
     error(e);

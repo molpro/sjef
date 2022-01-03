@@ -100,7 +100,16 @@ Project::Project(const std::string& filename, bool construct, const std::string&
       //    m_file_lock(nullptr),
       m_master_instance(masterProject), m_master_of_slave(masterProject == nullptr), m_backend(""),
       m_property_file_modification_time(), m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}) {
-  //  std::cerr << "Project constructor filename="<<filename << "address "<< this<<std::endl;
+  {
+    if (!fs::exists(m_filename))
+      fs::create_directories(m_filename);
+    FileLock(fs::path{m_filename}/".constructor_lock",true,true);
+  std::cerr << "Project constructor filename=" << filename << "address " << this << " master " << m_master_of_slave
+            << std::endl;
+  if (system((std::string{"ls -ltr "} + filename).c_str())) {
+  }
+  if (system((std::string{"cat "} + propertyFile()).c_str())) {
+  }
   auto recent_projects_directory = expand_path(std::string{"~/.sjef/"} + m_project_suffix);
   fs::create_directories(recent_projects_directory);
   m_recent_projects_file = expand_path(recent_projects_directory + "/projects");
@@ -109,28 +118,35 @@ Project::Project(const std::string& filename, bool construct, const std::string&
       m_suffixes[key] = key;
   if (suffixes.count("inp") > 0)
     m_reserved_files.push_back(this->filename("inp"));
-  if (!fs::exists(m_filename))
-    fs::create_directories(m_filename);
   //  std::cerr << fs::system_complete(m_filename) << std::endl;
   if (!fs::exists(m_filename))
     throw std::runtime_error("project does not exist and could not be created: " + m_filename);
   if (!fs::is_directory(m_filename))
     throw std::runtime_error("project should be a directory: " + m_filename);
 
-  //  std::cerr << "constructor m_filename=" << m_filename << " construct=" << construct << "<< address=" << this
-  //            << ", master=" << m_master_instance << std::endl;
+  std::cerr << "constructor m_filename=" << m_filename << " construct=" << construct << "<< address=" << this
+            << ", m_master_instance=" << m_master_instance << std::endl;
   if (!construct)
     return;
-  if (!fs::exists(propertyFile())) {
-    //    std::cerr << "propertyFile doesn't exist, so saving to it" << std::endl;
+  std::cout << "constructor for" << m_filename << " master=" << m_master_of_slave << std::endl;
+  if (!fs::exists(propertyFile()) and m_master_of_slave) {
+    std::cerr << "propertyFile doesn't exist, so saving to it" << std::endl;
     save_property_file();
+    m_property_file_modification_time = fs::last_write_time(propertyFile());
     property_set("_private_sjef_project_backend_inactive", "1");
     //    std::cerr << "@@ backend_inactive set to "<<property_get("_private_sjef_project_backend_inactive");
   } else {
-    //    std::cerr << "propertyFile already exists " << fs::file_size(propertyFile()) << std::endl;
+            std::cerr << "propertyFile already exists " << fs::file_size(propertyFile()) << std::endl;
+                if (system((std::string{"cat "} + propertyFile()).c_str())) { }
+//            load_property_file_locked();
+//    m_property_file_modification_time = (m_master_instance ? m_master_instance->m_property_file_modification_time : fs::last_write_time(propertyFile()));
+    m_property_file_modification_time =  fs::last_write_time(propertyFile());
+    check_property_file();
   }
+    std::cout << "property testkey="<<property_get("testkey")<<std::endl;
+  std::cerr << "before property_set " << property_get("run_directories") << std::endl;
   property_set("_private_sjef_project_backend_inactive_synced", "0");
-  //  std::cerr << "after property_set" << std::endl;
+  std::cerr << "after property_set " << property_get("run_directories") << std::endl;
   cached_status(unevaluated);
   custom_initialisation();
 
@@ -235,17 +251,23 @@ Project::Project(const std::string& filename, bool construct, const std::string&
   //  for (const auto& be : m_backends) std::cerr << "m_backend "<<be.first<<std::endl;
 
   // std::cerr << "project constructor name()="<<name()<<std::endl;
+  std::cout << "near end of constructor (about to call change_backend) for" <<m_filename<<" master="<<m_master_of_slave<<std::endl;
+  std::cout << "property testkey="<<property_get("testkey")<<std::endl;
+
+  }
   if (not name().empty() and name().front() != '.') {
     auto be = property_get("backend");
     if (m_backends.count(be) == 0)
       be = sjef::Backend::default_name;
     change_backend(be, true);
   }
+    std::cout << "end of constructor for" <<m_filename<<" master="<<m_master_of_slave<<std::endl;
 }
 
 Project::~Project() {
-  //  std::cerr << "enter destructor for project " << name() << " address " << this << ", m_master_instance="
-  //            << m_master_instance << std::endl;
+    std::cerr << "enter destructor for project " << name() << " address " << this << ", m_master_instance="
+              << m_master_instance << std::endl;
+    std::cout <<"in destructor:\n"<< std::ifstream(fs::path{m_filename}/"Info.plist").rdbuf()<<""<<std::endl;
   //  std::cerr << "thread joinable? " << m_backend_watcher.joinable() << std::endl;
   //  if (m_master_of_slave)
   //    std::cerr << "shutdown_backend_watcher() about to be called from destructor for " << this << std::endl;
@@ -257,7 +279,7 @@ Project::~Project() {
   if (m_remote_server != nullptr and m_remote_server->process.running())
     m_remote_server->process.terminate();
   //  std::cerr << "shutdown_backend_watcher() returned to destructor for " << this << std::endl;
-  //  std::cerr << "leaving destructor for project " << name() << " address " << this << std::endl;
+    std::cerr << "leaving destructor for project " << name() << " address " << this << std::endl;
 }
 
 std::string Project::get_project_suffix(const std::string& filename, const std::string& default_suffix) const {
@@ -534,6 +556,16 @@ bool Project::copy(const std::string& destination_filename, bool force, bool kee
       return false;
   }
   Project dp(dest.string());
+  //  std::cout << "copy() source properties:";
+  //  for (const auto& n : property_names())
+  //    std::cout << " " << n;
+  //  std::cout << std::endl;
+  //  if (system((std::string{"cat "}+propertyFile()).c_str()));
+  //  std::cout << "copy() dest properties:";
+  //  for (const auto& n : dp.property_names())
+  //    std::cout << " " << n;
+  //  std::cout << std::endl;
+  //  if (system((std::string{"cat "}+dp.propertyFile()).c_str()));
   dp.force_file_names(name());
   if (not slave)
     recent_edit(dp.m_filename);
@@ -1280,11 +1312,12 @@ void Project::property_delete_locked(const std::string& property) {
 
 void Project::property_set(const std::map<std::string, std::string>& properties) {
   FileLock pl(propertyFile(), true, false);
+    std::cout << "property_set "<<properties.begin()->first<<" about to call check_property_file_locked "<<m_master_of_slave<<std::endl;
   check_property_file_locked();
   for (const auto& keyval : properties) {
     const auto& property = keyval.first;
     const auto& value = keyval.second;
-    //    std::cout << "property_set " << property << " = " << value << " on thread " << m_master_of_slave << std::endl;
+        std::cout << "property_set " << property << " = " << value << " on thread " << m_master_of_slave << std::endl;
 
     property_delete_locked(property);
     std::lock_guard guard(m_unmovables.m_property_set_mutex);
@@ -1306,6 +1339,8 @@ std::string Project::property_get(const std::string& property) const {
   return property_get(std::vector<std::string>{property})[property];
 }
 std::map<std::string, std::string> Project::property_get(const std::vector<std::string>& properties) const {
+  //  std::cout << "property_get "<<properties.front()<<" about to call check_property_file_locked
+  //  "<<m_master_of_slave<<std::endl;
   check_property_file();
   std::map<std::string, std::string> results;
   for (const std::string& property : properties) {
@@ -1323,6 +1358,7 @@ std::map<std::string, std::string> Project::property_get(const std::vector<std::
 }
 
 std::vector<std::string> Project::property_names() const {
+  //  std::cout << "property_names "<<" about to call check_property_file_locked "<<m_master_of_slave<<std::endl;
   check_property_file();
   std::vector<std::string> result;
   for (const auto& node : m_properties->select_nodes(((std::string){"/plist/dict/key"}).c_str()))
@@ -1402,6 +1438,13 @@ std::string Project::run_directory(int run) const {
   return dir.native();
 }
 int Project::run_directory_new() {
+  FileLock(filename("", ".run_directory_new_lock", -1), true, true);
+  std::cout << "enter run_directory_new() " << m_master_of_slave << std::endl;
+  std::cout << "run_directories: " << property_get("run_directories") << std::endl;
+  if (system((std::string{"ls -ltraR "} + filename()).c_str())) {
+  }
+  if (system((std::string{"cat "} + propertyFile()).c_str())) {
+  }
   auto dirlist = run_list();
   auto sequence = run_directory_next();
   dirlist.insert(sequence);
@@ -1443,7 +1486,14 @@ int Project::run_directory_new() {
   //  newproj.property_delete("jobnumber");
   //  newproj.property_delete("run_directories");
   //  newproj.property_delete("private_project_sjef_project_completed_job");
+  std::cout << "run_directory_new() before copy" << std::endl;
+  std::cout << "run_directories: " << property_get("run_directories") << std::endl;
+  if (system((std::string{"ls -ltraR "} + filename()).c_str())) {
+  }
+  if (system((std::string{"cat "} + propertyFile()).c_str())) {
+  }
   copy(dir.native(), false, false, true);
+  std::cout << "exit  run_directory_new() " << m_master_of_slave << std::endl;
   return sequence;
 }
 
@@ -1474,12 +1524,22 @@ int Project::run_verify(int run) const {
 }
 
 Project::run_list_t Project::run_list() const {
-  auto ss = std::stringstream(property_get("run_directories"));
+  constexpr bool old_algorithm = false;
   run_list_t rundirs;
-  int value;
-  while (ss >> value && !ss.eof())
-    if (fs::exists(fs::path{m_filename} / "run" / (std::to_string(value) + "." + m_project_suffix)))
-      rundirs.insert(value);
+  if (old_algorithm) {
+    auto ss = std::stringstream(property_get("run_directories"));
+//    std::cout << "Project::run_list() gets run_directories=" << property_get("run_directories") << std::endl;
+    int value;
+    while (ss >> value && !ss.eof())
+      if (fs::exists(fs::path{m_filename} / "run" / (std::to_string(value) + "." + m_project_suffix)))
+        rundirs.insert(value);
+  } else {
+    const std::filesystem::path& rundir = fs::path{m_filename} / "run";
+    if (fs::exists(rundir))
+      for (auto& f : fs::directory_iterator(rundir))
+        if (f.path().extension() == std::string{"."}+m_project_suffix)
+          rundirs.insert(std::stoi(f.path().stem()));
+  }
   return rundirs;
 }
 
@@ -1545,10 +1605,13 @@ void Project::load_property_file_locked() const {
   m_property_file_modification_time = fs::last_write_time(propertyFile());
 }
 
-bool Project::properties_last_written_by_me(bool removeFile) const {
+bool Project::properties_last_written_by_me(bool removeFile, bool already_locked) const {
   auto path = fs::path{m_filename} / fs::path{writing_object_file};
   //  std::cout << "enter properties_last_written_by_me on thread " << m_master_of_slave << std::endl;
-  FileLock lock(path.string(), false);
+   std::unique_ptr<FileLock> lock_;
+  if (not already_locked)
+    lock_.reset(new FileLock(path.string(), false));
+//  FileLock lock(path.string(), false);
   std::ifstream i{path.string(), std::ios_base::in};
   if (not i.is_open())
     return false;
@@ -1563,17 +1626,28 @@ bool Project::properties_last_written_by_me(bool removeFile) const {
   return writer == me;
 }
 void Project::check_property_file() const {
-  FileLock fileLock(propertyFile(), false, false);
+  FileLock fileLock(propertyFile(), true, false);
+  std::cerr << "check_property_file acquired lock "<<this<<" : "<<m_master_of_slave<<std::endl;
+  std::cout <<""<< std::ifstream(fs::path{m_filename}/"Info.plist").rdbuf()<<""<<std::endl;
+
   check_property_file_locked();
+  std::cerr << "check_property_file releasing lock "<<this<<" : "<<m_master_of_slave<<std::endl;
+  std::cout <<""<< std::ifstream(fs::path{m_filename}/"Info.plist").rdbuf()<<""<<std::endl;
 }
 void Project::check_property_file_locked() const {
+    std::cout << "check_property_file_locked(), master="<<m_master_of_slave<<std::endl;
   auto lastwrite = fs::last_write_time(propertyFile());
+//    std::cout << "lastwrite="<lastwrite.time_since_epoch().count()<<std::endl;
+//    std::cout <<
+//    "m_property_file_modification_time="<<m_property_file_modification_time.time_since_epoch().count()<<std::endl;
   if (m_property_file_modification_time == lastwrite) { // tie-breaker
-    if (not properties_last_written_by_me(false))
+        std::cout << "tie breaker "<<properties_last_written_by_me(false, true)<<std::endl;
+    if (not properties_last_written_by_me(false, true))
       m_property_file_modification_time -=
           std::chrono::milliseconds(1); // to mark this object's cached properties as out of date
   }
   if (m_property_file_modification_time < lastwrite) {
+    std::cout << "my modification time < lastwrite"<<std::endl;
     { load_property_file_locked(); }
     m_property_file_modification_time = lastwrite;
   }
@@ -1597,11 +1671,11 @@ void Project::save_property_file_locked() const {
     m_properties->save_file(propertyFile().c_str());
   //  std::cerr << "2 exists(propertyFile()) ? " << fs::exists(propertyFile()) << std::endl;
   //  std::cout << "save_property_file master=" << m_master_of_slave << std::endl;
-  //  system((std::string{"cat "} + propertyFile()).c_str());
+  //  if (system((std::string{"cat "} + propertyFile()).c_str()));
   //  std::cout << "end save_property_file master=" << m_master_of_slave << std::endl;
-  m_property_file_modification_time = fs::last_write_time(propertyFile());
+  //  m_property_file_modification_time = fs::last_write_time(propertyFile());
   auto path = (fs::path{m_filename} / fs::path{writing_object_file});
-  FileLock lock(path.string(), true, false);
+//  FileLock lock(path.string(), true, false);
   std::ofstream o{path.string()};
   std::hash<const Project*> hasher;
   o << hasher(this);
@@ -1638,7 +1712,7 @@ size_t sjef::Project::project_hash() {
     std::istringstream iss(p);
     iss >> result;
   }
-  //  std::cout << "result "<<result<<std::endl;
+  std::cout << "result " << result << std::endl;
   return result;
 }
 

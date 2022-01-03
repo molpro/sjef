@@ -407,7 +407,7 @@ private:
   void save_property_file_locked() const;
   void save_property_file() const;
   void load_property_file_locked() const;
-  bool properties_last_written_by_me(bool removeFile = false) const;
+  bool properties_last_written_by_me(bool removeFile = false, bool already_locked = false) const;
 
 public:
   std::string propertyFile() const;

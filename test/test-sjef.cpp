@@ -472,14 +472,24 @@ TEST(backend, backend_parameter_expand) {
 TEST(sjef, atomic) {
   savestate state("someprogram");
   auto filename = state.testfile("He.someprogram");
-  sjef::Project object1(filename);
-  sjef::Project object2(filename);
   std::string testval = "testval";
-  object1.property_set("testprop", testval);
-  auto testval2 = object2.property_get("testprop");
-  ASSERT_EQ(object2.property_get("testprop"), testval);
-  object1.property_delete("testprop");
-  ASSERT_EQ(object2.property_get("testprop"), "");
+  for (int repeat=0; repeat<100; ++repeat) {
+    {
+
+    sjef::Project object1(filename);
+    sjef::Project object2(filename);
+    std::cout << "@@@ constructors done"<<std::endl;
+    object1.property_set("testprop", testval);
+    std::cout << "@@@ set done"<<std::endl;
+    }
+    std::cout << std::ifstream(fs::path{filename}/"Info.plist").rdbuf()<<"\n@@@@@@@@@@@@@@@@@@@@"<<std::endl;
+    ASSERT_EQ(sjef::Project(filename).property_get("testprop"), testval);
+//    auto testval2 = object2.property_get("testprop");
+//    std::cout << "@@@ get done"<<std::endl;
+//    ASSERT_EQ(object2.property_get("testprop"), testval);
+//    object1.property_delete("testprop");
+//    ASSERT_EQ(object2.property_get("testprop"), "");
+  }
 }
 
 TEST(project, recent) {

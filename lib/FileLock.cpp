@@ -1,3 +1,4 @@
+#include <iostream>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/interprocess/sync/file_lock.hpp>
@@ -12,6 +13,7 @@ namespace fs = std::filesystem;
 
 #include "FileLock.h"
 static std::string s_lockfile(const std::string& path) {
+//  std::cerr << "s_lockfile(" << path << ") exists=" << fs::exists(path) << std::endl;
   if (!fs::exists(path))
     auto x = std::ofstream(path);
   return path;
@@ -40,30 +42,37 @@ std::map<std::string, std::shared_ptr<sjef::FileLock::Unique_FileLock>> s_Unique
 std::mutex s_Unique_FileLocks_mutex;
 
 sjef::FileLock::FileLock(const std::string& path, bool exclusive, bool erase_if_created) : m_exclusive(exclusive) {
-  {
+//  std::lock_guard<std::mutex> s_Unique_FileLocks_guard(s_Unique_FileLocks_mutex);
+//  {
     std::lock_guard<std::mutex> s_Unique_FileLocks_guard(s_Unique_FileLocks_mutex);
+    auto p = fs::path{path};
+    if (not fs::exists(p.parent_path())) throw std::runtime_error("FileLock("+path+") cannot construct because "+p.parent_path().string()+" does not exist");
+//    std::cerr << "FileLock("<<path<<"): file exists? "<<fs::exists(path)<<std::endl;
     if (s_Unique_FileLocks.count(path) <= 0)
       s_Unique_FileLocks[path] = std::make_shared<Unique_FileLock>(path, erase_if_created);
     m_unique = s_Unique_FileLocks[path];
-  }
+//  }
 
   if (m_exclusive) {
     m_lock_guard.reset(new std::lock_guard(m_unique->m_mutex));
     m_unique->m_file_lock->lock();
   } else {
-    m_shared_lock.reset(new std::shared_lock(m_unique->m_mutex));
+    m_lock_guard.reset(new std::lock_guard(m_unique->m_mutex));
+//    m_shared_lock.reset(new std::shared_lock(m_unique->m_mutex));
     m_unique->m_file_lock->lock_sharable();
   }
   m_unique->m_entry_count++;
 }
 
 sjef::FileLock::~FileLock() {
+//  std::lock_guard<std::mutex> s_Unique_FileLocks_guard(s_Unique_FileLocks_mutex);
   m_unique->m_entry_count--;
   if (m_unique->m_entry_count == 0) {
     if (m_exclusive)
       m_unique->m_file_lock->unlock();
     else
       m_unique->m_file_lock->unlock_sharable();
+    m_lock_guard.reset(nullptr);
   }
 
   {

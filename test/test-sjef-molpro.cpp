@@ -54,6 +54,7 @@ TEST(project, molpro_workflow) {
         //        fs::remove_all(file);
         EXPECT_GE(system((std::string{"ls -laR "}+file).c_str()),-1);
         EXPECT_GE(system((std::string{"cat "}+file+"/Info.plist").c_str()),-1);
+        std::cout << "exists("<<file<<")="<<fs::exists(file)<<std::endl;
         projects.insert({id.first, std::make_unique<sjef::Project>(fs::exists(file) ? file : state.testfile(file))});
         std::cout << "created new project, properties "; for (const auto& n : projects[id.first]->property_names()) std::cout << " "<<n; std::cout << std::endl;
         std::ofstream(projects[id.first]->filename("inp")) << id.second;

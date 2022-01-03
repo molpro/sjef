@@ -2,7 +2,7 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15.0" CACHE STRING "Minimum OS X deployment 
 add_library(${LIB_NAME}
         sjef-backend.cpp
         sjef.cpp
-        sjef-customization.cpp sjef-c.cpp sjef-c.h FileLock.cpp FileLock.h
+        sjef-customization.cpp sjef-c.cpp sjef-c.h FileLock.cpp FileLock.h Lock.h Lock.cpp
         sjef-program.cpp
         )
 target_compile_features(${LIB_NAME} PUBLIC cxx_std_17)

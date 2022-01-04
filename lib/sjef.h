@@ -1,8 +1,6 @@
 #ifndef SJEF_SJEF_H
 #define SJEF_SJEF_H
-#include <boost/filesystem/path.hpp>
-#include <boost/process/child.hpp>
-#include <boost/process/pipe.hpp>
+#include <filesystem>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -10,14 +8,21 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include <filesystem>
+#include <boost/process/pipe.hpp>
 
+//namespace boost::process {
+//template <class CharT,
+//          class Traits = std::char_traits<CharT>>
+//class basic_ipstream; ///< @private
+//using ipstream = basic_ipstream<char>;
+//}
 namespace pugi {
 struct xpath_node_set; ///< @private
 }
 namespace sjef {
-class Backend;           ///< @private
-class FileLock;          ///< @private
+class Backend;            ///< @private
+class FileLock;           ///< @private
+struct remote_server;     ///< @private
 struct pugi_xml_document; ///< @private
 static constexpr int recentMax = 128;
 enum status : int { unknown = 0, running = 1, waiting = 2, completed = 3, unevaluated = 4, killed = 5 };
@@ -41,15 +46,6 @@ public:
 private:
   std::unique_ptr<pugi_xml_document> m_backend_doc;
   mutable std::unique_ptr<boost::process::ipstream> m_status_stream;
-  struct remote_server {
-    boost::process::child process;
-    boost::process::opstream in;
-    boost::process::ipstream out;
-    boost::process::ipstream err;
-    std::string host;
-    std::string last_out;
-    std::string last_err;
-  };
   mutable std::shared_ptr<remote_server> m_remote_server;
   mutable std::chrono::milliseconds m_status_lifetime;
   mutable std::chrono::time_point<std::chrono::steady_clock> m_status_last;
@@ -397,9 +393,9 @@ private:
   static void recent_edit(const std::string& add, const std::string& remove = "");
   mutable std::filesystem::file_time_type m_property_file_modification_time;
   mutable std::map<std::string, std::filesystem::file_time_type> m_input_file_modification_time;
-//  const bool m_use_control_path;
-//  mutable time_t m_property_file_modification_time;
-//  mutable std::map<std::string, time_t> m_input_file_modification_time;
+  //  const bool m_use_control_path;
+  //  mutable time_t m_property_file_modification_time;
+  //  mutable std::map<std::string, time_t> m_input_file_modification_time;
   std::set<std::string> m_run_directory_ignore;
   void property_delete_locked(const std::string& property);
   void check_property_file_locked() const;
@@ -416,7 +412,7 @@ private:
   std::string cache(const Backend& backend) const;
   void force_file_names(const std::string& oldname);
   static void backend_watcher(sjef::Project& project, const std::string& backend, int minimum_wait_milliseconds,
-                              int maximum_wait_milliseconds = 0, int poll_milliseconds=1) noexcept;
+                              int maximum_wait_milliseconds = 0, int poll_milliseconds = 1) noexcept;
   void shutdown_backend_watcher();
   /*!
    * @brief Take a line from a program input file, and figure out whether it
@@ -593,7 +589,8 @@ public:
    * @param run
    * @return
    */
-  std::vector<std::string> xpath_search(const std::string& xpath_query, const std::string& attribute="", int run=0) const;
+  std::vector<std::string> xpath_search(const std::string& xpath_query, const std::string& attribute = "",
+                                        int run = 0) const;
 };
 
 /*!

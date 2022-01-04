@@ -5,6 +5,7 @@
 #include <pugixml.hpp>
 #include <filesystem>
 #include <regex>
+#include <fstream>
 namespace fs = std::filesystem;
 ///> @private
 struct sjef::pugi_xml_document : public pugi::xml_document {};

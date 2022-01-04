@@ -3,14 +3,12 @@
 #include "sjef-backend.h"
 #include <array>
 #include <boost/algorithm/string.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/process/args.hpp>
 #include <boost/process/child.hpp>
 #include <boost/process/io.hpp>
 #include <boost/process/search_path.hpp>
 #include <boost/process/spawn.hpp>
 #include <chrono>
-#include <ctype.h>
 #include <functional>
 #include <iostream>
 #include <map>
@@ -85,6 +83,16 @@ bool copyDir(fs::path const& source, fs::path const& destination, bool delete_so
 }
 
 namespace sjef {
+struct remote_server {
+  boost::process::child process;
+  boost::process::opstream in;
+  boost::process::ipstream out;
+  boost::process::ipstream err;
+  std::string host;
+  std::string last_out;
+  std::string last_err;
+};
+
 inline std::string getattribute(pugi::xpath_node node, std::string name) {
   return node.node().attribute(name.c_str()).value();
 }

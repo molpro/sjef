@@ -96,24 +96,25 @@ Project::Project(const std::string& filename, bool construct, const std::string&
       m_reserved_files(std::vector<std::string>{sjef::Project::s_propertyFile}),
       m_properties(std::make_unique<pugi_xml_document>()), m_suffixes(suffixes),
       m_backend_doc(std::make_unique<pugi_xml_document>()), m_status_lifetime(0),
-      m_status_last(std::chrono::steady_clock::now()),
-      m_master_instance(masterProject), m_master_of_slave(masterProject == nullptr), m_backend(""),
-      m_property_file_modification_time(), m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}) {
+      m_status_last(std::chrono::steady_clock::now()), m_master_instance(masterProject),
+      m_master_of_slave(masterProject == nullptr), m_backend(""), m_property_file_modification_time(),
+      m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}) {
   {
     if (fs::exists(propertyFile())) {
-      std::cout << "old project " << m_filename << std::endl;
-          if (system((std::string{"ls -ltra "} + m_filename).c_str())) {}
-          if (system((std::string{"cat "} + propertyFile()).c_str())) {}
+      //      std::cout << "old project " << m_filename << std::endl;
+      //          if (system((std::string{"ls -ltra "} + m_filename).c_str())) {}
+      //          if (system((std::string{"cat "} + propertyFile()).c_str())) {}
       Lock lock(m_filename);
       load_property_file_locked();
     } else {
-      std::cout << "new project " << m_filename << std::endl;
+      //      std::cout << "new project " << m_filename << std::endl;
       if (not fs::exists(m_filename))
         fs::create_directories(m_filename);
-//      save_property_file();
-//      property_set("backend","local");
+      //      save_property_file();
+      //      property_set("backend","local");
       std::ofstream(propertyFile()) << "<?xml version=\"1.0\"?>\n"
-                                       "<plist> <dict/> </plist>"<<std::endl;
+                                       "<plist> <dict/> </plist>"
+                                    << std::endl;
     }
     //    std::cerr << "Project constructor filename=" << filename << "address " << this << " master " <<
     //    m_master_of_slave

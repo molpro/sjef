@@ -1,4 +1,4 @@
-set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15.0" CACHE STRING "Minimum OS X deployment version" FORCE)
+#set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15.0" CACHE STRING "Minimum OS X deployment version" FORCE)
 add_library(${LIB_NAME}
         sjef-backend.cpp
         sjef.cpp
@@ -21,8 +21,7 @@ target_include_directories(${LIB_NAME} PRIVATE ${tclap_SOURCE_DIR}/include)
 
 
 find_package(Boost 1.71.0 COMPONENTS filesystem REQUIRED)
-target_link_libraries(${LIB_NAME} PUBLIC Boost::headers)
-target_link_libraries(${LIB_NAME} PRIVATE pthread Boost::filesystem)
+target_link_libraries(${LIB_NAME} PRIVATE Boost::headers pthread Boost::filesystem)
 
 if (NOT TARGET pugixml)
     find_package(pugixml QUIET)

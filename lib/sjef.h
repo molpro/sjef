@@ -8,7 +8,6 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include <boost/process/pipe.hpp>
 
 //namespace boost::process {
 //template <class CharT,
@@ -45,7 +44,6 @@ public:
 
 private:
   std::unique_ptr<pugi_xml_document> m_backend_doc;
-  mutable std::unique_ptr<boost::process::ipstream> m_status_stream;
   mutable std::shared_ptr<remote_server> m_remote_server;
   mutable std::chrono::milliseconds m_status_lifetime;
   mutable std::chrono::time_point<std::chrono::steady_clock> m_status_last;

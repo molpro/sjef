@@ -28,7 +28,7 @@ std::string sjef::Project::input_from_output(bool sync) const {
 std::string sjef::Project::referenced_file_contents(const std::string& line) const {
   // TODO full robust implementation for Molpro geometry= and include
   auto pos = line.find("geometry=");
-  if ((pos != std::string::npos) && (line[pos + 9] != '{')) {
+  if ((pos != std::string::npos) && (line[pos + 9] != '{') && (line.find_last_not_of(" \n\r\t") > 8)) {
     auto fn = filename("", line.substr(pos + 9));
     std::ifstream s2(fn);
     auto g = std::string(std::istreambuf_iterator<char>(s2), std::istreambuf_iterator<char>());

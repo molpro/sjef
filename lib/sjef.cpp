@@ -180,8 +180,8 @@ Project::Project(const std::string& filename, bool construct, const std::string&
         "/bin/sh -c 'echo dummy > ${0%.*}.out; echo \"<?xml version=\\\"1.0\\\"?>\n<root/>\" > ${0%.*}.xml'");
     if (not sjef::check_backends(m_project_suffix)) {
       auto config_file = expand_path(std::string{"~/.sjef/"} + m_project_suffix + "/backends.xml");
-      //      std::cerr << "contents of " << config_file << ":" << std::endl;
-      //      std::cerr << std::ifstream(config_file).rdbuf() << std::endl;
+      std::cerr << "contents of " << config_file << ":" << std::endl;
+      std::cerr << std::ifstream(config_file).rdbuf() << std::endl;
       throw std::runtime_error("sjef backend files are invalid");
     }
     for (const auto& config_dir : std::vector<std::string>{"/usr/local/etc/sjef", "~/.sjef"}) {

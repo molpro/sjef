@@ -3,7 +3,6 @@
 #include <string>
 #include <vector>
 #include <set>
-#include <boost/filesystem.hpp>
 #include <sjef.h>
  namespace fs = std::filesystem;
 

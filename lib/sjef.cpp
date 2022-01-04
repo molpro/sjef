@@ -101,13 +101,19 @@ Project::Project(const std::string& filename, bool construct, const std::string&
       m_property_file_modification_time(), m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}) {
   {
     if (fs::exists(propertyFile())) {
+      std::cout << "old project " << m_filename << std::endl;
+          if (system((std::string{"ls -ltra "} + m_filename).c_str())) {}
+          if (system((std::string{"cat "} + propertyFile()).c_str())) {}
       Lock lock(m_filename);
       load_property_file_locked();
     } else {
+      std::cout << "new project " << m_filename << std::endl;
       if (not fs::exists(m_filename))
         fs::create_directories(m_filename);
-      save_property_file();
-      property_set("backend","local");
+//      save_property_file();
+//      property_set("backend","local");
+      std::ofstream(propertyFile()) << "<?xml version=\"1.0\"?>\n"
+                                       "<plist> <dict/> </plist>"<<std::endl;
     }
     //    std::cerr << "Project constructor filename=" << filename << "address " << this << " master " <<
     //    m_master_of_slave
@@ -120,7 +126,6 @@ Project::Project(const std::string& filename, bool construct, const std::string&
         m_suffixes[key] = key;
     if (suffixes.count("inp") > 0)
       m_reserved_files.push_back(this->filename("inp"));
-    //  std::cerr << fs::system_complete(m_filename) << std::endl;
     if (!fs::exists(m_filename))
       throw std::runtime_error("project does not exist and could not be created: " + m_filename);
     if (!fs::is_directory(m_filename))

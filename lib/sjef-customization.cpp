@@ -1,13 +1,12 @@
-#include <pugixml.hpp>
-#include <fstream>
-#include <boost/algorithm/string.hpp>
-#include <iostream>
-#include <boost/filesystem.hpp>
-#include "sjef.h"
+#include "Lock.h"
 #include "sjef-backend.h"
-#include "FileLock.h"
+#include "sjef.h"
+#include <iostream>
+#include <pugixml.hpp>
+#include <filesystem>
 #include <regex>
-namespace fs = boost::filesystem;
+#include <fstream>
+namespace fs = std::filesystem;
 ///> @private
 struct sjef::pugi_xml_document : public pugi::xml_document {};
 
@@ -28,13 +27,12 @@ std::string sjef::Project::input_from_output(bool sync) const {
 }
 
 std::string sjef::Project::referenced_file_contents(const std::string& line) const {
-  //TODO full robust implementation for Molpro geometry= and include
+  // TODO full robust implementation for Molpro geometry= and include
   auto pos = line.find("geometry=");
-  if ((pos != std::string::npos) && (line[pos + 9] != '{')) {
+  if ((pos != std::string::npos) && (line[pos + 9] != '{') && (line.find_last_not_of(" \n\r\t") > 8)) {
     auto fn = filename("", line.substr(pos + 9));
     std::ifstream s2(fn);
-    auto g = std::string(std::istreambuf_iterator<char>(s2),
-                         std::istreambuf_iterator<char>());
+    auto g = std::string(std::istreambuf_iterator<char>(s2), std::istreambuf_iterator<char>());
     if (not g.empty()) {
       g.erase(g.end() - 1, g.end());
       return g;
@@ -43,14 +41,13 @@ std::string sjef::Project::referenced_file_contents(const std::string& line) con
   return line;
 }
 
-void sjef::Project::rewrite_input_file(const std::string& input_file_name, const std::string& old_name) {
-}
+void sjef::Project::rewrite_input_file(const std::string& input_file_name, const std::string& old_name) {}
 void sjef::Project::custom_initialisation() {
   if (m_project_suffix == "molpro") {
     auto molprorc = filename("rc", "molpro");
     auto lockfile = std::regex_replace(molprorc, std::regex{"molpro.rc"}, ".molpro.rc.lock");
-    sjef::FileLock source_lock(lockfile, true, true);
-    if (not boost::filesystem::exists(molprorc)) {
+    sjef::Lock source_lock(lockfile);
+    if (not std::filesystem::exists(molprorc)) {
       std::ofstream s(molprorc);
       s << "--xml-output --no-backup" << std::endl;
     }
@@ -59,17 +56,14 @@ void sjef::Project::custom_initialisation() {
 
 void sjef::Project::custom_run_preface() {
   if (m_project_suffix == "molpro") {
-    m_run_directory_ignore.insert(name()+".pqb");
+    m_run_directory_ignore.insert(name() + ".pqb");
   }
 }
 
 sjef::Backend sjef::Project::default_backend() {
   if (m_project_suffix == "molpro") {
-    return Backend("local",
-                   "localhost",
-                   "${PWD}",
-                   "molpro {-n %n!MPI size} {-M %M!Total memory} {-m %m!Process memory} {-G %G!GA memory}"
-    );
+    return Backend("local", "localhost", "${PWD}",
+                   "molpro {-n %n!MPI size} {-M %M!Total memory} {-m %m!Process memory} {-G %G!GA memory}");
   } else
     return Backend("local");
 }

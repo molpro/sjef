@@ -1,7 +1,7 @@
 sjef
 ====
 
-A command-line interface to the [sjef library](../README.md), allowing the manipulation of  project bundles.
+The sjef program is a command-line interface to the [sjef library](README.md), allowing the manipulation of  project bundles.
   A bundle is a directory that represents one instance of running the target program, and contains all input and output files, plus a registry of properties.
   The general syntax is
 
@@ -27,9 +27,9 @@ using `${VISUAL}` (default `${EDITOR}`, default `vi`).
 
 `browse`: Browse the output file, whose name is the project base name with extension from the `--suffix-out` flag, using `${PAGER}` (default `less`).
 
-`run`: Launch a job either on the local machine or on a preconfigured [backend](../lib/backends.md). Valid flags that can then be specified are
+`run`: Launch a job either on the local machine or on a preconfigured [backend](lib/backends.md). Valid flags that can then be specified are
 - `-b` | `--backend` *backend*: specify the name of the backend to be used (default is last used, or `local`)
-- `-p` | `--parameter` *key*=*value*: specify a parameter value for substitution in the template for `run_command` defined in the [backend](../lib/backends.md)
+- `-p` | `--parameter` *key*=*value*: specify a parameter value for substitution in the template for `run_command` defined in the [backend](lib/backends.md)
 - `-w` | `--wait`
 - `-f` | `--force`
 
@@ -47,7 +47,7 @@ using `${VISUAL}` (default `${EDITOR}`, default `vi`).
 
 `export`: Copy files out of the project bundle. For each additional argument, its base name specifies which file in the project, and full name gives the destination to be copied to.
 
-Backends are defined in per-user and per-system configuration files; see [further details](../lib/backends.md).
+Backends are defined in per-user and per-system configuration files; see [further details](lib/backends.md).
 
 `sjef` can be localised onto a single software package using the options described above with the help of a shell alias, for example
 ````

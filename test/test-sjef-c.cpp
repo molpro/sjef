@@ -5,7 +5,6 @@
 #include "sjef-c.h"
 #include "sjef.h"
 #include "test-sjef.h"
-#include <boost/process/search_path.hpp>
 #include <filesystem>
 #include <libgen.h>
 #include <list>

@@ -2,7 +2,6 @@
 #include "Lock.h"
 #include "sjef-backend.h"
 #include <array>
-#include <boost/algorithm/string.hpp>
 #include <boost/process/args.hpp>
 #include <boost/process/child.hpp>
 #include <boost/process/io.hpp>
@@ -84,10 +83,10 @@ bool copyDir(fs::path const& source, fs::path const& destination, bool delete_so
 
 namespace sjef {
 struct remote_server {
-  boost::process::child process;
-  boost::process::opstream in;
-  boost::process::ipstream out;
-  boost::process::ipstream err;
+  bp::child process;
+  bp::opstream in;
+  bp::ipstream out;
+  bp::ipstream err;
   std::string host;
   std::string last_out;
   std::string last_err;

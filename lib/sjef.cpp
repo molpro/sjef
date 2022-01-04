@@ -15,6 +15,7 @@
 #include <regex>
 #include <string>
 #include <thread>
+#include <fstream>
 #include <unistd.h>
 #if defined(__linux__) || defined(__APPLE__)
 #include <sys/types.h>
@@ -36,7 +37,7 @@ const std::string writing_object_file = ".Info.plist.writing_object";
 ///> @private
 inline std::string executable(fs::path command) {
   if (command.is_absolute())
-    return command.native();
+    return command.string();
   else {
     std::stringstream path{std::string{getenv("PATH")}}; // TODO windows
     std::string elem;
@@ -44,7 +45,7 @@ inline std::string executable(fs::path command) {
       auto resolved = elem / command;
       // TODO check that it's executable
       if (fs::is_regular_file(resolved))
-        return resolved.native();
+        return resolved.string();
     }
     return "";
   }
@@ -178,7 +179,7 @@ Project::Project(const std::string& filename, bool construct, const std::string&
       m_reserved_files.push_back(property_get(std::string{"IMPORT"} + std::to_string(i)));
     }
     // If this is a run-directory project, do not add to recent list
-    if (fs::path{m_filename}.parent_path().filename().native() != "run" and
+    if (fs::path{m_filename}.parent_path().filename().string() != "run" and
         not fs::exists(fs::path{m_filename}.parent_path().parent_path() / "Info.plist"))
       recent_edit(m_filename);
 
@@ -432,7 +433,7 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
   rsync_options_first.push_back("--update");
   //  rsync_options_first.push_back("--mkpath"); // needs rsync >= 3.2.3
   rsync_options_first.push_back(m_filename + "/");
-  rsync_options_first.push_back(backend.host + ":" + (fs::path{backend.cache} / m_filename).native());
+  rsync_options_first.push_back(backend.host + ":" + (fs::path{backend.cache} / m_filename).string());
   if (verbosity > 0) {
     std::cerr << "Push rsync: " << rsync_command;
     for (const auto& o : rsync_options_first)
@@ -459,14 +460,14 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
     //    rsync_options_second.push_back("--update");
     for (const auto& rf : m_reserved_files) {
       //    std::cerr << "reserved file pattern " << rf << std::endl;
-      auto f = regex_replace(fs::path{rf}.filename().native(), std::regex(R"--(%)--"), name());
+      auto f = regex_replace(fs::path{rf}.filename().string(), std::regex(R"--(%)--"), name());
       //    std::cerr << "reserved file resolved " << f << std::endl;
       //      if (fs::exists(f))
       //        cmd += "--exclude=" + f + " ";
       if (fs::exists(f))
         rsync_options_second.push_back("--exclude=" + f);
     }
-    rsync_options_second.push_back(backend.host + ":" + (fs::path{backend.cache} / m_filename).native() + "/");
+    rsync_options_second.push_back(backend.host + ":" + (fs::path{backend.cache} / m_filename).string() + "/");
     rsync_options_second.push_back(m_filename);
     if (verbosity > 0) {
       std::cerr << "Pull rsync: " << rsync_command;
@@ -506,7 +507,7 @@ void Project::force_file_names(const std::string& oldname) {
   for (fs::directory_iterator dir_itr(m_filename); dir_itr != end_iter; ++dir_itr) {
     auto path = dir_itr->path();
     try {
-      auto ext = path.extension().native();
+      auto ext = path.extension().string();
       if (path.stem() == oldname and not ext.empty() and m_suffixes.count(ext.substr(1)) > 0) {
         auto newpath = path.parent_path();
         newpath /= name();
@@ -518,8 +519,8 @@ void Project::force_file_names(const std::string& oldname) {
           rewrite_input_file(newpath.string(), oldname);
         for (const auto& key : property_names()) {
           auto value = property_get(key);
-          if (value == path.filename().native())
-            property_set(key, newpath.filename().native());
+          if (value == path.filename().string())
+            property_set(key, newpath.filename().string());
         }
       }
     } catch (const std::exception& ex) {
@@ -853,8 +854,8 @@ bool Project::run(int verbosity, bool force, bool wait) {
                    ","
                    ",rundir) "
                 << fs::path{backend.cache} / filename("", "", rundir) << std::endl;
-    auto jobstring = std::string{"cd "} + (fs::path{backend.cache} / filename("", "", rundir)).native() + "; nohup " +
-                     run_command + " " + optionstring + fs::path{filename("inp", "", rundir)}.filename().native();
+    auto jobstring = std::string{"cd "} + (fs::path{backend.cache} / filename("", "", rundir)).string() + "; nohup " +
+                     run_command + " " + optionstring + fs::path{filename("inp", "", rundir)}.filename().string();
     if (backend.run_jobnumber == "([0-9]+)")
       jobstring += "& echo $! "; // go asynchronous if a straight launch
     if (verbosity > 3)
@@ -1398,7 +1399,7 @@ std::vector<std::string> Project::property_names() const {
 
 void Project::recent_edit(const std::string& add, const std::string& remove) {
   auto project_suffix =
-      add.empty() ? fs::path(remove).extension().native().substr(1) : fs::path(add).extension().native().substr(1);
+      add.empty() ? fs::path(remove).extension().string().substr(1) : fs::path(add).extension().string().substr(1);
   auto recent_projects_file = expand_path(std::string{"~/.sjef/"} + project_suffix + "/projects");
   bool changed = false;
   {
@@ -1444,7 +1445,7 @@ std::string Project::filename(std::string suffix, const std::string& name, int r
     result /= name + "." + suffix;
   else if (name != "")
     result /= name;
-  return result.native();
+  return result.string();
 }
 std::string Project::name() const { return fs::path(m_filename).stem().string(); }
 
@@ -1464,8 +1465,8 @@ std::string Project::run_directory(int run) const {
     return filename(); // covers the case of old projects without run directories
   auto dir = fs::path{filename()} / "run" / (std::to_string(sequence) + "." + m_project_suffix);
   if (not fs::is_directory(dir))
-    throw std::runtime_error("Cannot find directory " + dir.native());
-  return dir.native();
+    throw std::runtime_error("Cannot find directory " + dir.string());
+  return dir.string();
 }
 int Project::run_directory_new() {
   //  auto lock = std::make_unique<Lock>(m_filename);
@@ -1486,7 +1487,7 @@ int Project::run_directory_new() {
   auto dir = rundir / (std::to_string(sequence) + "." + m_project_suffix);
   //  std::cout <<"run_directory_new() makes "<<dir<<std::endl;
   if (not fs::exists(rundir) and not fs::create_directories(rundir)) {
-    throw std::runtime_error("Cannot create directory " + rundir.native());
+    throw std::runtime_error("Cannot create directory " + rundir.string());
   }
   //  std::cerr << "deleted jobnumber property on starting new run directory "<<property_get("jobnumber")<<std::endl;
   property_delete("jobnumber");
@@ -1494,7 +1495,7 @@ int Project::run_directory_new() {
   set_current_run(0);
   //  fs::directory_iterator end;
   //  for (fs::directory_iterator iter(filename("")); iter != end; iter++) {
-  //    auto file = iter->path().filename().native();
+  //    auto file = iter->path().filename().string();
   //    bool include = true;
   //    for (const auto& exclude : m_run_directory_ignore)
   //      include = include and not std::regex_search(file, std::regex{exclude});
@@ -1503,7 +1504,7 @@ int Project::run_directory_new() {
   //      fs::copy(filename("", file), filename("", file, sequence));
   //    }
   //  }
-  //  Project newproj{dir.native()};
+  //  Project newproj{dir.string()};
   //  for (const auto& key : newproj.property_names()) {
   //    auto value = newproj.property_get(key);
   //    boost::replace_first(value, name() + ".", newproj.name() + ".");
@@ -1523,7 +1524,7 @@ int Project::run_directory_new() {
   //  if (system((std::string{"cat "} + propertyFile()).c_str())) {
   //  }
   //  lock.reset(nullptr);
-  copy(dir.native(), false, false, true);
+  copy(dir.string(), false, false, true);
   //  std::cout << "exit  run_directory_new() " << m_master_of_slave << std::endl;
   return sequence;
 }
@@ -1806,7 +1807,7 @@ std::string expand_path(const std::string& path, const std::string& suffix) {
     text.pop_back();
   // add suffix
   //  std::cerr << "before suffix add: " << text << std::endl;
-  if (fs::path{text}.extension().native() != std::string{"."} + suffix and !suffix.empty())
+  if (fs::path{text}.extension().string() != std::string{"."} + suffix and !suffix.empty())
     text += "." + suffix;
   //  std::cerr << "after suffix add: " << text << std::endl;
   return text;
@@ -2000,7 +2001,7 @@ void sjef::Project::change_backend(std::string backend, bool force) {
         //        std::cout << "change_backend remote_server_run " << std::endl;
         try {
           remote_server_run(
-              std::string{"mkdir -p "} + (fs::path{this->m_backends.at(backend).cache} / m_filename).native(), 0);
+              std::string{"mkdir -p "} + (fs::path{this->m_backends.at(backend).cache} / m_filename).string(), 0);
           //          std::cout << "change_backend remote_server_run has returned " << std::endl;
         } catch (...) {
         }

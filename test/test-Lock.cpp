@@ -55,7 +55,7 @@ TEST(Lock, many_write_threads) {
   //  { auto toucher = std::ofstream(lockfile); }
   auto l1 = std::make_unique<sjef::Lock>(lockfile);
   ASSERT_TRUE(fs::exists(lockfile));
-  int n{1000};
+  int n{100};
   std::vector<std::string> messages;
   messages.reserve(n);
   for (auto i = 0; i < n; ++i)

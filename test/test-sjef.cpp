@@ -287,7 +287,7 @@ TEST(project, project_hash) {
     auto xph = x.project_hash();
     ASSERT_NE(xph, 0);
     state.testfile("project_hash_try2.sjef"); // remove any previous contents
-//    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                                              //    std::this_thread::sleep_for(std::chrono::milliseconds(5));
     ASSERT_TRUE(x.copy("project_hash_try2.sjef"));
     sjef::Project x2("project_hash_try2.sjef");
     ASSERT_GT(fs::file_size(x2.propertyFile()), 0);
@@ -796,4 +796,39 @@ TEST(sjef, molpro_xpath_search) {
   EXPECT_EQ(input.front(), "geometry={He};rhf;rks");
   //  for (const auto& s : input)
   //    std::cout << s << std::endl;
+}
+
+TEST(project, reopen) {
+  savestate x;
+  auto projectname = x.testfile("cproject.sjef");
+  auto projectname2 = x.testfile("cproject2.sjef");
+  std::string key = "testkey";
+  std::string value = "testvalue";
+  std::string value2 = "testvalue2";
+  sjef::Project project(projectname);
+  project.property_set(key, value);
+  ASSERT_EQ(std::string{value}, std::string{project.property_get(key)});
+  project.property_set(key, value2);
+  ASSERT_EQ(std::string{value2}, std::string{project.property_get(key)});
+  project.property_delete(key);
+  ASSERT_EQ(std::string{}, std::string{project.property_get(key)});
+  ASSERT_EQ(std::string{}, std::string{project.property_get("unknown key")});
+  project.property_set(key, value);
+  project.copy(projectname2, 0);
+  ASSERT_EQ(std::string{value}, std::string{project.property_get(key)});
+  {
+    sjef::Project project2(projectname2);
+    ASSERT_EQ(std::string{value}, std::string{project2.property_get(key)});
+  }
+  fs::remove_all(projectname2);
+  ASSERT_EQ(project.move(projectname2), 1);
+  sjef::Project project2(projectname2);
+  sjef::Project project_reopened(projectname);
+  //  sjef_project_open(projectname);
+  //  std::cout << "project properties:\n" << std::ifstream(fs::path{projectname} / "Info.plist").rdbuf() << std::endl;
+  //  std::cout << "project2 properties:\n" << std::ifstream(fs::path{projectname2} / "Info.plist").rdbuf() <<
+  //  std::endl;
+  ASSERT_EQ(std::string{}, std::string{project_reopened.property_get(key)});
+  //  sjef_project_close(projectname);
+  ASSERT_EQ(std::string{value}, std::string{project2.property_get(key)});
 }

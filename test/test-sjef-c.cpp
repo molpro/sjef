@@ -4,17 +4,13 @@
 #include "sjef-backend.h"
 #include "sjef-c.h"
 #include "sjef.h"
-#include <map>
-#include <list>
-#include <unistd.h>
-#include <libgen.h>
-#include <filesystem>
-#include <boost/process/search_path.hpp>
-#include <libgen.h>
-#include <list>
-#include <map>
-#include <unistd.h>
 #include "test-sjef.h"
+#include <boost/process/search_path.hpp>
+#include <filesystem>
+#include <libgen.h>
+#include <list>
+#include <map>
+#include <unistd.h>
 
 namespace fs = std::filesystem;
 
@@ -48,22 +44,22 @@ TEST(project, c_binding) {
   savestate x;
   const char* projectname = strdup(x.testfile("cproject.sjef").c_str());
   const char* projectname2 = strdup(x.testfile("cproject2.sjef").c_str());
-//  sjef_project_erase(projectname);
-//  sjef_project_erase(projectname2);
+  //  sjef_project_erase(projectname);
+  //  sjef_project_erase(projectname2);
   char key[] = "testkey";
   char value[] = "testvalue";
   char value2[] = "testvalue2";
   sjef_project_open(projectname);
-  if (system((std::string{"ls -ltraR "} + projectname).c_str())) {
-  }
-  if (system((std::string{"cat "} + projectname+"/Info.plist").c_str())) {
-  }
-  std::cout << "before sjef_project_property_set"<<std::endl;
+  //  if (system((std::string{"ls -ltraR "} + projectname).c_str())) {
+  //  }
+  //  if (system((std::string{"cat "} + projectname+"/Info.plist").c_str())) {
+  //  }
+  //  std::cout << "before sjef_project_property_set"<<std::endl;
   sjef_project_property_set(projectname, key, value);
-//  if (system((std::string{"ls -ltraR "} + projectname).c_str())) {
-//  }
-//  if (system((std::string{"cat "} + projectname+"/Info.plist").c_str())) {
-//  }
+  //  if (system((std::string{"ls -ltraR "} + projectname).c_str())) {
+  //  }
+  //  if (system((std::string{"cat "} + projectname+"/Info.plist").c_str())) {
+  //  }
   ASSERT_EQ(std::string{value}, std::string{sjef_project_property_get(projectname, key)});
   sjef_project_property_set(projectname, key, value2);
   ASSERT_EQ(std::string{value2}, std::string{sjef_project_property_get(projectname, key)});
@@ -72,18 +68,22 @@ TEST(project, c_binding) {
   ASSERT_EQ(std::string{}, std::string{sjef_project_property_get(projectname, "unknown key")});
   sjef_project_property_set(projectname, key, value);
   sjef_project_copy(projectname, projectname2, 0);
-  std::cout << "after copy, from="<<projectname<<std::endl;
-  if (system((std::string{"ls -ltraR "} + projectname).c_str())) { }
-  if (system((std::string{"cat "} + projectname+"/Info.plist").c_str())) {}
-  std::cout << "after copy, to="<<projectname2<<std::endl;
-  if (system((std::string{"ls -ltraR "} + projectname2).c_str())) { }
-    if (system((std::string{"cat "} + projectname2+"/Info.plist").c_str())) { }
+  //  std::cout << "after copy, from="<<projectname<<std::endl;
+  //  if (system((std::string{"ls -ltraR "} + projectname).c_str())) { }
+  //  if (system((std::string{"cat "} + projectname+"/Info.plist").c_str())) {}
+  //  std::cout << "after copy, to="<<projectname2<<std::endl;
+  //  if (system((std::string{"ls -ltraR "} + projectname2).c_str())) { }
+  //    if (system((std::string{"cat "} + projectname2+"/Info.plist").c_str())) { }
   ASSERT_EQ(std::string{value}, std::string{sjef_project_property_get(projectname, key)});
+  //  if (system((std::string{"cat "} + projectname2+"/Info.plist").c_str())) { }
   sjef_project_open(projectname2);
-  sleep(1);
+  //  std::cout << "after open"<<std::endl;
+  //  if (system((std::string{"cat "} + projectname2+"/Info.plist").c_str())) { }
+  //  sleep(1);
   ASSERT_EQ(std::string{value}, std::string{sjef_project_property_get(projectname2, key)});
   sjef_project_close(projectname2);
   sjef_project_erase(projectname2);
+  sjef_project_close(projectname);
   ASSERT_EQ(sjef_project_move(projectname, projectname2), 1);
   sjef_project_open(projectname);
   ASSERT_EQ(std::string{}, std::string{sjef_project_property_get(projectname, key)});

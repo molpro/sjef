@@ -5,7 +5,7 @@
 #include <set>
 #include <boost/filesystem.hpp>
 #include <sjef.h>
-namespace fs = boost::filesystem;
+ namespace fs = std::filesystem;
 
 class savestate {
   std::string rf;

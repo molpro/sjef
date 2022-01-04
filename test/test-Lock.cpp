@@ -8,20 +8,35 @@
 namespace fs = std::filesystem;
 
 TEST(Lock, simple) {
-  std::string lockfile{"testing-lockfile"};
+  fs::path lockfile{"testing-lockfile"};
   if (fs::exists(lockfile))
     fs::remove_all(lockfile);
   {
     sjef::Lock l1(lockfile);
     EXPECT_TRUE(fs::exists(lockfile));
   }
-  EXPECT_FALSE(fs::exists(lockfile));
+  EXPECT_TRUE(fs::exists(lockfile));
+  EXPECT_EQ(fs::file_size(lockfile), 0);
   if (fs::exists(lockfile))
     fs::remove_all(lockfile);
 }
 
+TEST(Lock, directory) {
+  fs::path lockfile{"testing-lockfile-directory"};
+  if (fs::exists(lockfile))
+    fs::remove_all(lockfile);
+  fs::create_directories(lockfile);
+  {
+    sjef::Lock l1(lockfile);
+    EXPECT_TRUE(fs::exists(lockfile / sjef::Lock::directory_lock_file));
+  }
+  EXPECT_TRUE(fs::exists(lockfile / sjef::Lock::directory_lock_file));
+  EXPECT_EQ(fs::file_size(lockfile / sjef::Lock::directory_lock_file), 0);
+  fs::remove_all(lockfile);
+}
+
 TEST(Lock, no_permission) {
-  std::string lockfile{"/testing-lockfile"};
+  fs::path lockfile{"/unlikely-directory/testing-lockfile"};
   std::ofstream(lockfile) << "hello";
   EXPECT_ANY_THROW(sjef::Lock l1(lockfile));
   EXPECT_THROW(sjef::Lock l1(lockfile), std::runtime_error);
@@ -57,7 +72,7 @@ TEST(Lock, many_write_threads) {
   for (auto& thread : threads)
     thread.join();
   ASSERT_TRUE(fs::exists(datafile));
-//  std::cerr << std::ifstream(datafile).rdbuf()<<std::endl;
+  //  std::cerr << std::ifstream(datafile).rdbuf()<<std::endl;
   for (auto i = 0; i < n; ++i) {
     auto l = sjef::Lock(lockfile);
     std::string line;
@@ -71,9 +86,8 @@ TEST(Lock, many_write_threads) {
     //    std::cout << lines << " lines" << std::endl;
     EXPECT_EQ(lines, threads.size());
   }
-  EXPECT_FALSE(fs::exists(lockfile));
-  if (fs::exists(lockfile))
-    fs::remove_all(lockfile);
+  EXPECT_TRUE(fs::exists(lockfile));
+  fs::remove_all(lockfile);
   fs::remove_all(datafile);
 }
 

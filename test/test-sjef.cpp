@@ -3,15 +3,13 @@
 
 #include "sjef-backend.h"
 #include "sjef.h"
-#include "sjef-backend.h"
-#include <map>
-#include <list>
-#include <unistd.h>
-#include <libgen.h>
+#include "test-sjef.h"
 #include <filesystem>
+#include <libgen.h>
+#include <list>
+#include <map>
 #include <regex>
 #include <unistd.h>
-#include "test-sjef.h"
 
 namespace fs = std::filesystem;
 
@@ -89,15 +87,15 @@ TEST(project, move_generic) {
   ASSERT_TRUE(fs::exists(fs::path(x2.filename())));
   //  std::cerr << "filename="<<filename<<std::endl;
   x2.copy(filename);
-  EXPECT_FALSE(fs::exists(sjef::expand_path(filename + "/.lock")));
-  EXPECT_FALSE(fs::exists(sjef::expand_path(filename2 + "/.lock")));
+  EXPECT_TRUE(fs::exists(sjef::expand_path(filename + "/.lock")));
+  EXPECT_TRUE(fs::exists(sjef::expand_path(filename2 + "/.lock")));
   ASSERT_TRUE(fs::exists(fs::path(x2.filename())));
   ASSERT_TRUE(fs::exists(sjef::expand_path(filename2)));
   ASSERT_TRUE(fs::exists(sjef::expand_path(filename)));
   x2.move(filename, true);
   EXPECT_FALSE(fs::exists(sjef::expand_path(filename2)));
   EXPECT_TRUE(fs::exists(sjef::expand_path(filename)));
-  EXPECT_FALSE(fs::exists(sjef::expand_path(filename + "/.lock")));
+  EXPECT_TRUE(fs::exists(sjef::expand_path(filename + "/.lock")));
   EXPECT_FALSE(fs::exists(sjef::expand_path(filename2 + "/.lock")));
 }
 
@@ -285,10 +283,14 @@ TEST(project, project_hash) {
     //    std::cerr<<"repeat "<<repeat<<std::endl;
     savestate state("sjef");
     sjef::Project x(state.testfile("project_hash_try.sjef"));
+    ASSERT_GT(fs::file_size(x.propertyFile()), 0);
     auto xph = x.project_hash();
+    ASSERT_NE(xph, 0);
     state.testfile("project_hash_try2.sjef"); // remove any previous contents
+//    std::this_thread::sleep_for(std::chrono::milliseconds(5));
     ASSERT_TRUE(x.copy("project_hash_try2.sjef"));
     sjef::Project x2("project_hash_try2.sjef");
+    ASSERT_GT(fs::file_size(x2.propertyFile()), 0);
     ASSERT_NE(xph, x2.project_hash());
     state.testfile("project_hash_try3.sjef"); // remove any previous contents
     x.move("project_hash_try3.sjef");
@@ -473,23 +475,18 @@ TEST(sjef, atomic) {
   savestate state("someprogram");
   auto filename = state.testfile("He.someprogram");
   std::string testval = "testval";
-  for (int repeat=0; repeat<100; ++repeat) {
-    {
-
-    sjef::Project object1(filename);
-    sjef::Project object2(filename);
-    std::cout << "@@@ constructors done"<<std::endl;
-    object1.property_set("testprop", testval);
-    std::cout << "@@@ set done"<<std::endl;
-    }
-    std::cout << std::ifstream(fs::path{filename}/"Info.plist").rdbuf()<<"\n@@@@@@@@@@@@@@@@@@@@"<<std::endl;
-    ASSERT_EQ(sjef::Project(filename).property_get("testprop"), testval);
-//    auto testval2 = object2.property_get("testprop");
-//    std::cout << "@@@ get done"<<std::endl;
-//    ASSERT_EQ(object2.property_get("testprop"), testval);
-//    object1.property_delete("testprop");
-//    ASSERT_EQ(object2.property_get("testprop"), "");
-  }
+  sjef::Project object1(filename);
+  sjef::Project object2(filename);
+  //    std::cout << "@@@ constructors done"<<std::endl;
+  object1.property_set("testprop", testval);
+  //    std::cout << "@@@ set done"<<std::endl;
+  std::cout << std::ifstream(fs::path{filename} / "Info.plist").rdbuf() << "\n@@@@@@@@@@@@@@@@@@@@" << std::endl;
+  ASSERT_EQ(sjef::Project(filename).property_get("testprop"), testval);
+  auto testval2 = object2.property_get("testprop");
+  //    std::cout << "@@@ get done"<<std::endl;
+  ASSERT_EQ(object2.property_get("testprop"), testval);
+  object1.property_delete("testprop");
+  ASSERT_EQ(object2.property_get("testprop"), "");
 }
 
 TEST(project, recent) {
@@ -671,18 +668,19 @@ TEST(sjef, xpath_search) {
   savestate state(suffix);
   const std::string& path = sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml");
   std::ofstream(path) << "<?xml version=\"1.0\"?> <backends> <backend name=\"null\" run_command=\"true\"/></backends>";
-  auto p = sjef::Project(state.testfile(std::string{"xpath_search."}+suffix));
+  auto p = sjef::Project(state.testfile(std::string{"xpath_search."} + suffix));
   std::ofstream(p.filename("inp")) << "test" << std::endl;
-  p.run("null",0,true,true);
-//  std::cout << p.status_message()<<std::endl;
-//  std::cout << p.run_directory()<<std::endl;
-//  std::cout << p.filename("xml","",0)<<std::endl;
-  std::ofstream(p.filename("xml","",0))
-      << "<?xml version=\"1.0\"?>\n<root><try att1=\"value1\">content1</try><try>content2<subtry/> </try></root>"<<std::endl;
-//  EXPECT_EQ(system("ls -Rl xpath_search.xpath_search"),0);
-  EXPECT_EQ(p.status(),sjef::status::completed);
-  EXPECT_EQ(p.select_nodes("/try").size(), 0)<<p.xml()<<std::endl;
-  ASSERT_EQ(p.select_nodes("//try").size(), 2)<<p.xml()<<std::endl;
+  p.run("null", 0, true, true);
+  //  std::cout << p.status_message()<<std::endl;
+  //  std::cout << p.run_directory()<<std::endl;
+  //  std::cout << p.filename("xml","",0)<<std::endl;
+  std::ofstream(p.filename("xml", "", 0))
+      << "<?xml version=\"1.0\"?>\n<root><try att1=\"value1\">content1</try><try>content2<subtry/> </try></root>"
+      << std::endl;
+  //  EXPECT_EQ(system("ls -Rl xpath_search.xpath_search"),0);
+  EXPECT_EQ(p.status(), sjef::status::completed);
+  EXPECT_EQ(p.select_nodes("/try").size(), 0) << p.xml() << std::endl;
+  ASSERT_EQ(p.select_nodes("//try").size(), 2) << p.xml() << std::endl;
   auto node_set = p.select_nodes("//try");
   EXPECT_EQ(std::string{node_set[0].node().attribute("att1").value()}, "value1");
   EXPECT_EQ(std::string{node_set[1].node().attribute("att1").value()}, "");
@@ -706,7 +704,7 @@ TEST(sjef, xpath_search) {
 TEST(sjef, molpro_xpath_search) {
   std::string suffix{"molpro_xpath_search"};
   savestate state(suffix);
-  auto p = sjef::Project(state.testfile(std::string{"xpath_search."}+suffix));
+  auto p = sjef::Project(state.testfile(std::string{"xpath_search."} + suffix));
   std::ofstream(p.filename("xml"))
       << "<?xml version=\"1.0\"?>\n"
          "<molpro xmlns=\"http://www.molpro.net/schema/molpro-output\"\n"

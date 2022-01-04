@@ -1,5 +1,5 @@
 #include "sjef.h"
-#include "FileLock.h"
+#include "Lock.h"
 #include "sjef-backend.h"
 #include <array>
 #include <boost/algorithm/string.hpp>
@@ -58,13 +58,13 @@ bool copyDir(fs::path const& source, fs::path const& destination, bool delete_so
   // Check whether the function call is valid
   if (!fs::exists(source) || !fs::is_directory(source))
     throw std::runtime_error("Source directory " + source.string() + " does not exist or is not a directory.");
-  sjef::FileLock source_lock((source / ".lock").native(), false, true);
+  sjef::Lock source_lock((source));
   if (fs::exists(destination))
     throw std::runtime_error("Destination directory " + destination.string() + " already exists.");
   // Create the destination directory
   if (!fs::create_directory(destination))
     throw std::runtime_error("Unable to create destination directory " + destination.string());
-  sjef::FileLock destination_lock((destination / ".lock").native(), true, true);
+  sjef::Lock destination_lock((destination));
   // Iterate through the source directory
   for (fs::directory_iterator file(source); file != fs::directory_iterator(); ++file) {
     fs::path current(file->path());
@@ -103,157 +103,162 @@ Project::Project(const std::string& filename, bool construct, const std::string&
   {
     if (!fs::exists(m_filename))
       fs::create_directories(m_filename);
-    FileLock(fs::path{m_filename}/".constructor_lock",true,true);
-  std::cerr << "Project constructor filename=" << filename << "address " << this << " master " << m_master_of_slave
-            << std::endl;
-  if (system((std::string{"ls -ltr "} + filename).c_str())) {
-  }
-  if (system((std::string{"cat "} + propertyFile()).c_str())) {
-  }
-  auto recent_projects_directory = expand_path(std::string{"~/.sjef/"} + m_project_suffix);
-  fs::create_directories(recent_projects_directory);
-  m_recent_projects_file = expand_path(recent_projects_directory + "/projects");
-  for (const auto& key : suffix_keys)
-    if (m_suffixes.count(key) < 1)
-      m_suffixes[key] = key;
-  if (suffixes.count("inp") > 0)
-    m_reserved_files.push_back(this->filename("inp"));
-  //  std::cerr << fs::system_complete(m_filename) << std::endl;
-  if (!fs::exists(m_filename))
-    throw std::runtime_error("project does not exist and could not be created: " + m_filename);
-  if (!fs::is_directory(m_filename))
-    throw std::runtime_error("project should be a directory: " + m_filename);
+//    Lock lock(fs::path{m_filename});
+//    std::cerr << "Project constructor filename=" << filename << "address " << this << " master " << m_master_of_slave
+//              << std::endl;
+//    if (system((std::string{"ls -ltr "} + filename).c_str())) {
+//    }
+//    if (system((std::string{"cat "} + propertyFile()).c_str())) {
+//    }
+    auto recent_projects_directory = expand_path(std::string{"~/.sjef/"} + m_project_suffix);
+    fs::create_directories(recent_projects_directory);
+    m_recent_projects_file = expand_path(recent_projects_directory + "/projects");
+    for (const auto& key : suffix_keys)
+      if (m_suffixes.count(key) < 1)
+        m_suffixes[key] = key;
+    if (suffixes.count("inp") > 0)
+      m_reserved_files.push_back(this->filename("inp"));
+    //  std::cerr << fs::system_complete(m_filename) << std::endl;
+    if (!fs::exists(m_filename))
+      throw std::runtime_error("project does not exist and could not be created: " + m_filename);
+    if (!fs::is_directory(m_filename))
+      throw std::runtime_error("project should be a directory: " + m_filename);
 
-  std::cerr << "constructor m_filename=" << m_filename << " construct=" << construct << "<< address=" << this
-            << ", m_master_instance=" << m_master_instance << std::endl;
-  if (!construct)
-    return;
-  std::cout << "constructor for" << m_filename << " master=" << m_master_of_slave << std::endl;
-  if (!fs::exists(propertyFile()) and m_master_of_slave) {
-    std::cerr << "propertyFile doesn't exist, so saving to it" << std::endl;
-    save_property_file();
-    m_property_file_modification_time = fs::last_write_time(propertyFile());
-    property_set("_private_sjef_project_backend_inactive", "1");
-    //    std::cerr << "@@ backend_inactive set to "<<property_get("_private_sjef_project_backend_inactive");
-  } else {
-            std::cerr << "propertyFile already exists " << fs::file_size(propertyFile()) << std::endl;
-                if (system((std::string{"cat "} + propertyFile()).c_str())) { }
-//            load_property_file_locked();
-//    m_property_file_modification_time = (m_master_instance ? m_master_instance->m_property_file_modification_time : fs::last_write_time(propertyFile()));
-    m_property_file_modification_time =  fs::last_write_time(propertyFile());
-    check_property_file();
-  }
-    std::cout << "property testkey="<<property_get("testkey")<<std::endl;
-  std::cerr << "before property_set " << property_get("run_directories") << std::endl;
-  property_set("_private_sjef_project_backend_inactive_synced", "0");
-  std::cerr << "after property_set " << property_get("run_directories") << std::endl;
-  cached_status(unevaluated);
-  custom_initialisation();
-
-  auto nimport = property_get("IMPORTED").empty() ? 0 : std::stoi(property_get("IMPORTED"));
-  //    std::cerr << "nimport "<<nimport<<std::endl;
-  for (int i = 0; i < nimport; i++) {
-    //      std::cerr << "key "<<std::string{"IMPORT"}+std::to_string(i)<<", value
-    //      "<<property_get(std::string{"IMPORT"}+std::to_string(i))<<std::endl;
-    m_reserved_files.push_back(property_get(std::string{"IMPORT"} + std::to_string(i)));
-  }
-  // If this is a run-directory project, do not add to recent list
-  if (fs::path{m_filename}.parent_path().filename().native() != "run" and
-      not fs::exists(fs::path{m_filename}.parent_path().parent_path() / "Info.plist"))
-    recent_edit(m_filename);
-
-  m_backends[sjef::Backend::dummy_name] = sjef::Backend(
-      sjef::Backend::dummy_name, "localhost", "{$PWD}",
-      "/bin/sh -c 'echo dummy > ${0%.*}.out; echo \"<?xml version=\\\"1.0\\\"?>\n<root/>\" > ${0%.*}.xml'");
-  if (not sjef::check_backends(m_project_suffix)) {
-    auto config_file = expand_path(std::string{"~/.sjef/"} + m_project_suffix + "/backends.xml");
-    std::cerr << "contents of " << config_file << ":" << std::endl;
-    std::cerr << std::ifstream(config_file).rdbuf() << std::endl;
-    throw std::runtime_error("sjef backend files are invalid");
-  }
-  for (const auto& config_dir : std::vector<std::string>{"/usr/local/etc/sjef", "~/.sjef"}) {
-    const auto config_file = expand_path(config_dir + "/" + m_project_suffix + "/backends.xml");
-    if (fs::exists(config_file)) {
-      m_backend_doc->load_file(config_file.c_str());
-      auto backends = m_backend_doc->select_nodes("/backends/backend");
-      for (const auto& be : backends) {
-        auto kName = getattribute(be, "name");
-        m_backends[kName] = Backend(kName);
-        std::string kVal;
-        if ((kVal = getattribute(be, "template")) != "") {
-          m_backends[kName].host = m_backends[kVal].host;
-          m_backends[kName].cache = m_backends[kVal].cache;
-          m_backends[kName].run_command = m_backends[kVal].run_command;
-          m_backends[kName].run_jobnumber = m_backends[kVal].run_jobnumber;
-          m_backends[kName].status_command = m_backends[kVal].status_command;
-          m_backends[kName].status_running = m_backends[kVal].status_running;
-          m_backends[kName].status_waiting = m_backends[kVal].status_waiting;
-          m_backends[kName].kill_command = m_backends[kVal].kill_command;
-        }
-        if ((kVal = getattribute(be, "host")) != "")
-          m_backends[kName].host = kVal;
-        if ((kVal = getattribute(be, "cache")) != "")
-          m_backends[kName].cache = kVal;
-        if ((kVal = getattribute(be, "run_command")) != "")
-          m_backends[kName].run_command = kVal;
-        if ((kVal = getattribute(be, "run_jobnumber")) != "")
-          m_backends[kName].run_jobnumber = kVal;
-        if ((kVal = getattribute(be, "status_command")) != "")
-          m_backends[kName].status_command = kVal;
-        if ((kVal = getattribute(be, "status_running")) != "")
-          m_backends[kName].status_running = kVal;
-        if ((kVal = getattribute(be, "status_waiting")) != "")
-          m_backends[kName].status_waiting = kVal;
-        if ((kVal = getattribute(be, "kill_command")) != "")
-          m_backends[kName].kill_command = kVal;
-        if (not check_backend(kName))
-          throw std::runtime_error(std::string{"sjef backend "} + kName + " is invalid");
-      }
+//    std::cerr << "constructor m_filename=" << m_filename << " construct=" << construct << "<< address=" << this
+//              << ", m_master_instance=" << m_master_instance << std::endl;
+    if (!construct)
+      return;
+//    std::cout << "constructor for" << m_filename << " master=" << m_master_of_slave << std::endl;
+    const std::string& pf = propertyFile();
+    if (!fs::exists(pf) and m_master_of_slave) {
+//      std::cerr << "propertyFile doesn't exist, so saving to it" << std::endl;
+      save_property_file();
+      m_property_file_modification_time = fs::last_write_time(propertyFile());
+      property_set("_private_sjef_project_backend_inactive", "1");
+      //    std::cerr << "@@ backend_inactive set to "<<property_get("_private_sjef_project_backend_inactive");
+    } else {
+      if (not fs::exists(pf))
+        throw std::runtime_error("Unexpected absence of property file " + pf);
+//      std::cerr << "propertyFile already exists " << fs::exists(pf) << ", " << fs::file_size(pf) << std::endl;
+//      if (system((std::string{"cat "} + pf).c_str())) {
+//      }
+      //            load_property_file_locked();
+      //    m_property_file_modification_time = (m_master_instance ?
+      //    m_master_instance->m_property_file_modification_time : fs::last_write_time(propertyFile()));
+      m_property_file_modification_time = fs::last_write_time(propertyFile());
+      check_property_file();
     }
-  }
-  if (m_backends.count(sjef::Backend::default_name) == 0) {
-    m_backends[sjef::Backend::default_name] = default_backend();
-    const auto config_file = expand_path("~/.sjef/" + m_project_suffix + "/backends.xml");
-    if (not fs::exists(config_file))
-      std::ofstream(config_file) << "<?xml version=\"1.0\"?>\n<backends>\n</backends>" << std::endl;
-    {
-      FileLock l(config_file);
-      fs::copy_file(config_file, config_file + "-");
-      FileLock ll(config_file + "-");
-      auto in = std::ifstream(config_file + "-");
-      auto out = std::ofstream(config_file);
-      std::string line;
-      auto be_defaults = Backend();
-      while (std::getline(in, line)) {
-        out << line << std::endl;
-        if (line.find("<backends>") != std::string::npos) {
-          out << "  <backend name=\"" + sjef::Backend::default_name + "\" ";
-          if (be_defaults.host != m_backends[sjef::Backend::default_name].host)
-            out << "\n           host=\"" + m_backends[sjef::Backend::default_name].host + "\" ";
-          if (be_defaults.run_command != m_backends[sjef::Backend::default_name].run_command)
-            out << "\n           run_command=\"" + m_backends[sjef::Backend::default_name].run_command + "\" ";
-          if (be_defaults.run_jobnumber != m_backends[sjef::Backend::default_name].run_jobnumber)
-            out << "\n           run_jobnumber=\"" + m_backends[sjef::Backend::default_name].run_jobnumber + "\" ";
-          if (be_defaults.status_command != m_backends[sjef::Backend::default_name].status_command)
-            out << "\n           status_command=\"" + m_backends[sjef::Backend::default_name].status_command + "\" ";
-          if (be_defaults.status_waiting != m_backends[sjef::Backend::default_name].status_waiting)
-            out << "\n           status_waiting=\"" + m_backends[sjef::Backend::default_name].status_waiting + "\" ";
-          if (be_defaults.status_running != m_backends[sjef::Backend::default_name].status_running)
-            out << "\n           status_running=\"" + m_backends[sjef::Backend::default_name].status_running + "\" ";
-          if (be_defaults.kill_command != m_backends[sjef::Backend::default_name].kill_command)
-            out << "\n           kill_command=\"" + m_backends[sjef::Backend::default_name].kill_command + "\" ";
-          out << "\n  />" << std::endl;
+//    std::cout << "property testkey=" << property_get("testkey") << std::endl;
+//    std::cerr << "before property_set " << property_get("run_directories") << std::endl;
+    property_set("_private_sjef_project_backend_inactive_synced", "0");
+//    std::cerr << "after property_set " << property_get("run_directories") << std::endl;
+    cached_status(unevaluated);
+    custom_initialisation();
+
+    auto nimport = property_get("IMPORTED").empty() ? 0 : std::stoi(property_get("IMPORTED"));
+    //    std::cerr << "nimport "<<nimport<<std::endl;
+    for (int i = 0; i < nimport; i++) {
+      //      std::cerr << "key "<<std::string{"IMPORT"}+std::to_string(i)<<", value
+      //      "<<property_get(std::string{"IMPORT"}+std::to_string(i))<<std::endl;
+      m_reserved_files.push_back(property_get(std::string{"IMPORT"} + std::to_string(i)));
+    }
+    // If this is a run-directory project, do not add to recent list
+    if (fs::path{m_filename}.parent_path().filename().native() != "run" and
+        not fs::exists(fs::path{m_filename}.parent_path().parent_path() / "Info.plist"))
+      recent_edit(m_filename);
+
+    m_backends[sjef::Backend::dummy_name] = sjef::Backend(
+        sjef::Backend::dummy_name, "localhost", "{$PWD}",
+        "/bin/sh -c 'echo dummy > ${0%.*}.out; echo \"<?xml version=\\\"1.0\\\"?>\n<root/>\" > ${0%.*}.xml'");
+    if (not sjef::check_backends(m_project_suffix)) {
+      auto config_file = expand_path(std::string{"~/.sjef/"} + m_project_suffix + "/backends.xml");
+//      std::cerr << "contents of " << config_file << ":" << std::endl;
+//      std::cerr << std::ifstream(config_file).rdbuf() << std::endl;
+      throw std::runtime_error("sjef backend files are invalid");
+    }
+    for (const auto& config_dir : std::vector<std::string>{"/usr/local/etc/sjef", "~/.sjef"}) {
+      const auto config_file = expand_path(config_dir + "/" + m_project_suffix + "/backends.xml");
+      if (fs::exists(config_file)) {
+        m_backend_doc->load_file(config_file.c_str());
+        auto backends = m_backend_doc->select_nodes("/backends/backend");
+        for (const auto& be : backends) {
+          auto kName = getattribute(be, "name");
+          m_backends[kName] = Backend(kName);
+          std::string kVal;
+          if ((kVal = getattribute(be, "template")) != "") {
+            m_backends[kName].host = m_backends[kVal].host;
+            m_backends[kName].cache = m_backends[kVal].cache;
+            m_backends[kName].run_command = m_backends[kVal].run_command;
+            m_backends[kName].run_jobnumber = m_backends[kVal].run_jobnumber;
+            m_backends[kName].status_command = m_backends[kVal].status_command;
+            m_backends[kName].status_running = m_backends[kVal].status_running;
+            m_backends[kName].status_waiting = m_backends[kVal].status_waiting;
+            m_backends[kName].kill_command = m_backends[kVal].kill_command;
+          }
+          if ((kVal = getattribute(be, "host")) != "")
+            m_backends[kName].host = kVal;
+          if ((kVal = getattribute(be, "cache")) != "")
+            m_backends[kName].cache = kVal;
+          if ((kVal = getattribute(be, "run_command")) != "")
+            m_backends[kName].run_command = kVal;
+          if ((kVal = getattribute(be, "run_jobnumber")) != "")
+            m_backends[kName].run_jobnumber = kVal;
+          if ((kVal = getattribute(be, "status_command")) != "")
+            m_backends[kName].status_command = kVal;
+          if ((kVal = getattribute(be, "status_running")) != "")
+            m_backends[kName].status_running = kVal;
+          if ((kVal = getattribute(be, "status_waiting")) != "")
+            m_backends[kName].status_waiting = kVal;
+          if ((kVal = getattribute(be, "kill_command")) != "")
+            m_backends[kName].kill_command = kVal;
+          if (not check_backend(kName))
+            throw std::runtime_error(std::string{"sjef backend "} + kName + " is invalid");
         }
       }
     }
-    fs::remove(config_file + "-");
-  }
-  //  for (const auto& be : m_backends) std::cerr << "m_backend "<<be.first<<std::endl;
+    if (m_backends.count(sjef::Backend::default_name) == 0) {
+      m_backends[sjef::Backend::default_name] = default_backend();
+      const auto config_file = expand_path("~/.sjef/" + m_project_suffix + "/backends.xml");
+      if (not fs::exists(config_file))
+        std::ofstream(config_file) << "<?xml version=\"1.0\"?>\n<backends>\n</backends>" << std::endl;
+      {
+        Lock l(config_file);
+        fs::copy_file(config_file, config_file + "-");
+        Lock ll(config_file + "-");
+        auto in = std::ifstream(config_file + "-");
+        auto out = std::ofstream(config_file);
+        std::string line;
+        auto be_defaults = Backend();
+        while (std::getline(in, line)) {
+          out << line << std::endl;
+          if (line.find("<backends>") != std::string::npos) {
+            out << "  <backend name=\"" + sjef::Backend::default_name + "\" ";
+            if (be_defaults.host != m_backends[sjef::Backend::default_name].host)
+              out << "\n           host=\"" + m_backends[sjef::Backend::default_name].host + "\" ";
+            if (be_defaults.run_command != m_backends[sjef::Backend::default_name].run_command)
+              out << "\n           run_command=\"" + m_backends[sjef::Backend::default_name].run_command + "\" ";
+            if (be_defaults.run_jobnumber != m_backends[sjef::Backend::default_name].run_jobnumber)
+              out << "\n           run_jobnumber=\"" + m_backends[sjef::Backend::default_name].run_jobnumber + "\" ";
+            if (be_defaults.status_command != m_backends[sjef::Backend::default_name].status_command)
+              out << "\n           status_command=\"" + m_backends[sjef::Backend::default_name].status_command + "\" ";
+            if (be_defaults.status_waiting != m_backends[sjef::Backend::default_name].status_waiting)
+              out << "\n           status_waiting=\"" + m_backends[sjef::Backend::default_name].status_waiting + "\" ";
+            if (be_defaults.status_running != m_backends[sjef::Backend::default_name].status_running)
+              out << "\n           status_running=\"" + m_backends[sjef::Backend::default_name].status_running + "\" ";
+            if (be_defaults.kill_command != m_backends[sjef::Backend::default_name].kill_command)
+              out << "\n           kill_command=\"" + m_backends[sjef::Backend::default_name].kill_command + "\" ";
+            out << "\n  />" << std::endl;
+          }
+        }
+      }
+      fs::remove(config_file + "-");
+    }
+    //  for (const auto& be : m_backends) std::cerr << "m_backend "<<be.first<<std::endl;
 
-  // std::cerr << "project constructor name()="<<name()<<std::endl;
-  std::cout << "near end of constructor (about to call change_backend) for" <<m_filename<<" master="<<m_master_of_slave<<std::endl;
-  std::cout << "property testkey="<<property_get("testkey")<<std::endl;
-
+    // std::cerr << "project constructor name()="<<name()<<std::endl;
+//    std::cout << "near end of constructor (about to call change_backend) for" << m_filename
+//              << " master=" << m_master_of_slave << std::endl;
+//    std::cout << "property testkey=" << property_get("testkey") << std::endl;
   }
   if (not name().empty() and name().front() != '.') {
     auto be = property_get("backend");
@@ -261,13 +266,13 @@ Project::Project(const std::string& filename, bool construct, const std::string&
       be = sjef::Backend::default_name;
     change_backend(be, true);
   }
-    std::cout << "end of constructor for" <<m_filename<<" master="<<m_master_of_slave<<std::endl;
+//  std::cout << "end of constructor for" << m_filename << " master=" << m_master_of_slave << std::endl;
 }
 
 Project::~Project() {
-    std::cerr << "enter destructor for project " << name() << " address " << this << ", m_master_instance="
-              << m_master_instance << std::endl;
-    std::cout <<"in destructor:\n"<< std::ifstream(fs::path{m_filename}/"Info.plist").rdbuf()<<""<<std::endl;
+//  std::cerr << "enter destructor for project " << name() << " address " << this
+//            << ", m_master_instance=" << m_master_instance << std::endl;
+//  std::cout << "in destructor:\n" << std::ifstream(fs::path{m_filename} / "Info.plist").rdbuf() << "" << std::endl;
   //  std::cerr << "thread joinable? " << m_backend_watcher.joinable() << std::endl;
   //  if (m_master_of_slave)
   //    std::cerr << "shutdown_backend_watcher() about to be called from destructor for " << this << std::endl;
@@ -279,7 +284,7 @@ Project::~Project() {
   if (m_remote_server != nullptr and m_remote_server->process.running())
     m_remote_server->process.terminate();
   //  std::cerr << "shutdown_backend_watcher() returned to destructor for " << this << std::endl;
-    std::cerr << "leaving destructor for project " << name() << " address " << this << std::endl;
+//  std::cerr << "leaving destructor for project " << name() << " address " << this << std::endl;
 }
 
 std::string Project::get_project_suffix(const std::string& filename, const std::string& default_suffix) const {
@@ -365,7 +370,8 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
   //  m_property_file_modification_time << std::endl;
   bool locally_modified;
   {
-    FileLock pl(propertyFile(), false, false);
+//    Lock pl(propertyFile()+".lock");
+    Lock pl(m_filename);
     locally_modified = m_property_file_modification_time != fs::last_write_time(propertyFile());
     //    std::cerr << "initial locally_modified=" << locally_modified << std::endl;
     for (const auto& suffix : {"inp", "xyz"}) {
@@ -549,7 +555,7 @@ bool Project::copy(const std::string& destination_filename, bool force, bool kee
   } catch (...) {
   }
   {
-    auto lock = FileLock(propertyFile());
+    //    auto lock = Lock(propertyFile()+".lock");
     //    fs::copy(fs::path(m_filename), dest, (slave ? fs::copy_options::none : fs::copy_options::recursive));
     if (not copyDir(fs::path(m_filename), dest, false, not slave))
       //      throw std::runtime_error("Failed to copy current project directory");
@@ -1283,7 +1289,8 @@ void Project::wait(unsigned int maximum_microseconds) const {
 }
 
 void Project::property_delete(const std::vector<std::string>& properties) {
-  FileLock pl(propertyFile(), true, false);
+//  Lock pl(propertyFile()+".lock");
+  Lock pl(m_filename);
   check_property_file_locked();
   for (const auto& property : properties)
     property_delete_locked(property);
@@ -1311,13 +1318,15 @@ void Project::property_delete_locked(const std::string& property) {
 }
 
 void Project::property_set(const std::map<std::string, std::string>& properties) {
-  FileLock pl(propertyFile(), true, false);
-    std::cout << "property_set "<<properties.begin()->first<<" about to call check_property_file_locked "<<m_master_of_slave<<std::endl;
+  Lock pl(m_filename);
+//  Lock pl(propertyFile()+".lock");
+//  std::cout << "property_set " << properties.begin()->first << " about to call check_property_file_locked "
+//            << m_master_of_slave << std::endl;
   check_property_file_locked();
   for (const auto& keyval : properties) {
     const auto& property = keyval.first;
     const auto& value = keyval.second;
-        std::cout << "property_set " << property << " = " << value << " on thread " << m_master_of_slave << std::endl;
+//    std::cout << "property_set " << property << " = " << value << " on thread " << m_master_of_slave << std::endl;
 
     property_delete_locked(property);
     std::lock_guard guard(m_unmovables.m_property_set_mutex);
@@ -1376,7 +1385,7 @@ void Project::recent_edit(const std::string& add, const std::string& remove) {
       fs::create_directories(fs::path(recent_projects_file).parent_path());
       std::ofstream junk(recent_projects_file);
     }
-    FileLock lock{recent_projects_file + ".lock"};
+    Lock lock{recent_projects_file};
     std::ifstream in(recent_projects_file);
     std::ofstream out(recent_projects_file + "-");
     size_t lines = 0;
@@ -1438,13 +1447,13 @@ std::string Project::run_directory(int run) const {
   return dir.native();
 }
 int Project::run_directory_new() {
-  FileLock(filename("", ".run_directory_new_lock", -1), true, true);
-  std::cout << "enter run_directory_new() " << m_master_of_slave << std::endl;
-  std::cout << "run_directories: " << property_get("run_directories") << std::endl;
-  if (system((std::string{"ls -ltraR "} + filename()).c_str())) {
-  }
-  if (system((std::string{"cat "} + propertyFile()).c_str())) {
-  }
+//  auto lock = std::make_unique<Lock>(m_filename);
+//  std::cout << "enter run_directory_new() " << m_master_of_slave << std::endl;
+//  std::cout << "run_directories: " << property_get("run_directories") << std::endl;
+//  if (system((std::string{"ls -ltraR "} + filename()).c_str())) {
+//  }
+//  if (system((std::string{"cat "} + propertyFile()).c_str())) {
+//  }
   auto dirlist = run_list();
   auto sequence = run_directory_next();
   dirlist.insert(sequence);
@@ -1486,14 +1495,15 @@ int Project::run_directory_new() {
   //  newproj.property_delete("jobnumber");
   //  newproj.property_delete("run_directories");
   //  newproj.property_delete("private_project_sjef_project_completed_job");
-  std::cout << "run_directory_new() before copy" << std::endl;
-  std::cout << "run_directories: " << property_get("run_directories") << std::endl;
-  if (system((std::string{"ls -ltraR "} + filename()).c_str())) {
-  }
-  if (system((std::string{"cat "} + propertyFile()).c_str())) {
-  }
+//  std::cout << "run_directory_new() before copy" << std::endl;
+//  std::cout << "run_directories: " << property_get("run_directories") << std::endl;
+//  if (system((std::string{"ls -ltraR "} + filename()).c_str())) {
+//  }
+//  if (system((std::string{"cat "} + propertyFile()).c_str())) {
+//  }
+//  lock.reset(nullptr);
   copy(dir.native(), false, false, true);
-  std::cout << "exit  run_directory_new() " << m_master_of_slave << std::endl;
+//  std::cout << "exit  run_directory_new() " << m_master_of_slave << std::endl;
   return sequence;
 }
 
@@ -1528,7 +1538,7 @@ Project::run_list_t Project::run_list() const {
   run_list_t rundirs;
   if (old_algorithm) {
     auto ss = std::stringstream(property_get("run_directories"));
-//    std::cout << "Project::run_list() gets run_directories=" << property_get("run_directories") << std::endl;
+    //    std::cout << "Project::run_list() gets run_directories=" << property_get("run_directories") << std::endl;
     int value;
     while (ss >> value && !ss.eof())
       if (fs::exists(fs::path{m_filename} / "run" / (std::to_string(value) + "." + m_project_suffix)))
@@ -1537,7 +1547,7 @@ Project::run_list_t Project::run_list() const {
     const std::filesystem::path& rundir = fs::path{m_filename} / "run";
     if (fs::exists(rundir))
       for (auto& f : fs::directory_iterator(rundir))
-        if (f.path().extension() == std::string{"."}+m_project_suffix)
+        if (f.path().extension() == std::string{"."} + m_project_suffix)
           rundirs.insert(std::stoi(f.path().stem()));
   }
   return rundirs;
@@ -1608,10 +1618,10 @@ void Project::load_property_file_locked() const {
 bool Project::properties_last_written_by_me(bool removeFile, bool already_locked) const {
   auto path = fs::path{m_filename} / fs::path{writing_object_file};
   //  std::cout << "enter properties_last_written_by_me on thread " << m_master_of_slave << std::endl;
-   std::unique_ptr<FileLock> lock_;
+  std::unique_ptr<Lock> lock_;
   if (not already_locked)
-    lock_.reset(new FileLock(path.string(), false));
-//  FileLock lock(path.string(), false);
+    lock_.reset(new Lock(path.string()));
+  //  FileLock lock(path.string(), false);
   std::ifstream i{path.string(), std::ios_base::in};
   if (not i.is_open())
     return false;
@@ -1626,35 +1636,37 @@ bool Project::properties_last_written_by_me(bool removeFile, bool already_locked
   return writer == me;
 }
 void Project::check_property_file() const {
-  FileLock fileLock(propertyFile(), true, false);
-  std::cerr << "check_property_file acquired lock "<<this<<" : "<<m_master_of_slave<<std::endl;
-  std::cout <<""<< std::ifstream(fs::path{m_filename}/"Info.plist").rdbuf()<<""<<std::endl;
+//  Lock fileLock(propertyFile()+".lock");
+  Lock pl(m_filename);
+//  std::cerr << "check_property_file acquired lock " << this << " : " << m_master_of_slave << std::endl;
+//  std::cout << "" << std::ifstream(fs::path{m_filename} / "Info.plist").rdbuf() << "" << std::endl;
 
   check_property_file_locked();
-  std::cerr << "check_property_file releasing lock "<<this<<" : "<<m_master_of_slave<<std::endl;
-  std::cout <<""<< std::ifstream(fs::path{m_filename}/"Info.plist").rdbuf()<<""<<std::endl;
+//  std::cerr << "check_property_file releasing lock " << this << " : " << m_master_of_slave << std::endl;
+//  std::cout << "" << std::ifstream(fs::path{m_filename} / "Info.plist").rdbuf() << "" << std::endl;
 }
 void Project::check_property_file_locked() const {
-    std::cout << "check_property_file_locked(), master="<<m_master_of_slave<<std::endl;
+//  std::cout << "check_property_file_locked(), master=" << m_master_of_slave << std::endl;
   auto lastwrite = fs::last_write_time(propertyFile());
-//    std::cout << "lastwrite="<lastwrite.time_since_epoch().count()<<std::endl;
-//    std::cout <<
-//    "m_property_file_modification_time="<<m_property_file_modification_time.time_since_epoch().count()<<std::endl;
+  //    std::cout << "lastwrite="<lastwrite.time_since_epoch().count()<<std::endl;
+  //    std::cout <<
+  //    "m_property_file_modification_time="<<m_property_file_modification_time.time_since_epoch().count()<<std::endl;
   if (m_property_file_modification_time == lastwrite) { // tie-breaker
-        std::cout << "tie breaker "<<properties_last_written_by_me(false, true)<<std::endl;
+//    std::cout << "tie breaker " << properties_last_written_by_me(false, true) << std::endl;
     if (not properties_last_written_by_me(false, true))
       m_property_file_modification_time -=
           std::chrono::milliseconds(1); // to mark this object's cached properties as out of date
   }
   if (m_property_file_modification_time < lastwrite) {
-    std::cout << "my modification time < lastwrite"<<std::endl;
+//    std::cout << "my modification time < lastwrite" << std::endl;
     { load_property_file_locked(); }
     m_property_file_modification_time = lastwrite;
   }
 }
 
 void Project::save_property_file() const {
-  FileLock fileLock(propertyFile(), true, false);
+//  Lock fileLock(propertyFile()+".lock");
+  Lock pl(m_filename);
   save_property_file_locked();
 }
 void Project::save_property_file_locked() const {
@@ -1675,7 +1687,7 @@ void Project::save_property_file_locked() const {
   //  std::cout << "end save_property_file master=" << m_master_of_slave << std::endl;
   //  m_property_file_modification_time = fs::last_write_time(propertyFile());
   auto path = (fs::path{m_filename} / fs::path{writing_object_file});
-//  FileLock lock(path.string(), true, false);
+  //  FileLock lock(path.string(), true, false);
   std::ofstream o{path.string()};
   std::hash<const Project*> hasher;
   o << hasher(this);
@@ -1712,7 +1724,7 @@ size_t sjef::Project::project_hash() {
     std::istringstream iss(p);
     iss >> result;
   }
-  std::cout << "result " << result << std::endl;
+//  std::cout << "result " << result << std::endl;
   return result;
 }
 

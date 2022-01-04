@@ -80,6 +80,7 @@ TEST(project, c_binding) {
     if (system((std::string{"cat "} + projectname2+"/Info.plist").c_str())) { }
   ASSERT_EQ(std::string{value}, std::string{sjef_project_property_get(projectname, key)});
   sjef_project_open(projectname2);
+  sleep(1);
   ASSERT_EQ(std::string{value}, std::string{sjef_project_property_get(projectname2, key)});
   sjef_project_close(projectname2);
   sjef_project_erase(projectname2);

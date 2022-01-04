@@ -24,7 +24,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #endif
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 static std::map<std::string, std::unique_ptr<sjef::Project>> projects;
 struct sjef::pugi_xml_document : public pugi::xml_document {};
 

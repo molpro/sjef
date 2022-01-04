@@ -1,13 +1,12 @@
-#include "FileLock.h"
+#include "Lock.h"
 #include "sjef-backend.h"
 #include "sjef.h"
-#include <boost/algorithm/string.hpp>
-#include <boost/filesystem.hpp>
-#include <fstream>
 #include <iostream>
 #include <pugixml.hpp>
+#include <filesystem>
 #include <regex>
-namespace fs = boost::filesystem;
+#include <fstream>
+namespace fs = std::filesystem;
 ///> @private
 struct sjef::pugi_xml_document : public pugi::xml_document {};
 
@@ -47,8 +46,8 @@ void sjef::Project::custom_initialisation() {
   if (m_project_suffix == "molpro") {
     auto molprorc = filename("rc", "molpro");
     auto lockfile = std::regex_replace(molprorc, std::regex{"molpro.rc"}, ".molpro.rc.lock");
-    sjef::FileLock source_lock(lockfile, true, true);
-    if (not boost::filesystem::exists(molprorc)) {
+    sjef::Lock source_lock(lockfile);
+    if (not std::filesystem::exists(molprorc)) {
       std::ofstream s(molprorc);
       s << "--xml-output --no-backup" << std::endl;
     }

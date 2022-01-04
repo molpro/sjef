@@ -9,8 +9,9 @@ static const auto program_name = std::string("Simple Job Execution Framework");
 #include <string>
 #include <tclap/CmdLine.h>
 #include <vector>
-
-namespace fs = boost::filesystem;
+#include <map>
+#include <string>
+#include <cstdlib>
 
 ///> @private
 extern "C" int sjef_program(int argc, char* argv[]) {

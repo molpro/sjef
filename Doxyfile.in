@@ -753,7 +753,7 @@ WARN_LOGFILE           =
 # spaces.
 # Note: If this tag is empty the current directory is searched.
 
- INPUT                  = "@CMAKE_CURRENT_SOURCE_DIR@/README.md" "@CMAKE_CURRENT_SOURCE_DIR@/lib/sjef.h" "@CMAKE_CURRENT_SOURCE_DIR@/lib/sjef-c.h" "@CMAKE_CURRENT_SOURCE_DIR@/sjef-program.md" "@CMAKE_CURRENT_SOURCE_DIR@/lib/FileLock.h" "@CMAKE_CURRENT_SOURCE_DIR@/lib/backends.md"
+ INPUT                  = "@CMAKE_CURRENT_SOURCE_DIR@/README.md" "@CMAKE_CURRENT_SOURCE_DIR@/lib/sjef.h" "@CMAKE_CURRENT_SOURCE_DIR@/lib/sjef-c.h" "@CMAKE_CURRENT_SOURCE_DIR@/sjef-program.md" "@CMAKE_CURRENT_SOURCE_DIR@/lib/Lock.h" "@CMAKE_CURRENT_SOURCE_DIR@/lib/backends.md"
 # INPUT                  = "README.md" "lib/sjef.h" "lib/sjef-c.h" "sjef-program.md" "lib/backends.md"
 
 

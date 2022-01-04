@@ -2,24 +2,14 @@
 #include "sjef-backend.h"
 #include "sjef.h"
 #include <array>
-#include <boost/algorithm/string.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/interprocess/sync/file_lock.hpp>
-#include <boost/process/args.hpp>
-#include <boost/process/child.hpp>
-#include <boost/process/io.hpp>
-#include <boost/process/search_path.hpp>
-#include <boost/process/spawn.hpp>
 #include <chrono>
 #include <ctype.h>
 #include <functional>
 #include <iostream>
 #include <map>
 #include <pugixml.hpp>
-#include <regex>
 #include <string>
 #include <thread>
-#include <unistd.h>
 #if defined(__linux__) || defined(__APPLE__)
 #include <sys/types.h>
 #include <sys/wait.h>

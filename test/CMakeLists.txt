@@ -30,3 +30,8 @@ foreach (t test-c-sjef-backend)
     add_executable(${t} ${t}.c)
     target_link_libraries(${t} PUBLIC ${LIB_NAME})
 endforeach ()
+
+if (NOT MOLPRO STREQUAL MOLPRO-NOTFOUND)
+    find_package(Boost 1.71.0 COMPONENTS filesystem REQUIRED)
+    target_link_libraries(test-sjef-molpro PRIVATE Boost::headers)# pthread Boost::filesystem)
+endif ()

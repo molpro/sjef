@@ -4,7 +4,6 @@
 
 #include "sjef-backend.h"
 #include "sjef.h"
-#include <boost/filesystem.hpp>
 #include <boost/process/search_path.hpp>
 #include <chrono>
 #include <libgen.h>

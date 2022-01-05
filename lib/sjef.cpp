@@ -1403,11 +1403,11 @@ void Project::recent_edit(const std::string& add, const std::string& remove) {
   auto recent_projects_file = expand_path(std::string{"~/.sjef/"} + project_suffix + "/projects");
   bool changed = false;
   {
+    Lock lock{fs::path{recent_projects_file}.parent_path()};
     if (!fs::exists(recent_projects_file)) {
       fs::create_directories(fs::path(recent_projects_file).parent_path());
       std::ofstream junk(recent_projects_file);
     }
-    Lock lock{recent_projects_file};
     std::ifstream in(recent_projects_file);
     std::ofstream out(recent_projects_file + "-");
     size_t lines = 0;
@@ -1425,12 +1425,13 @@ void Project::recent_edit(const std::string& add, const std::string& remove) {
         changed = true;
     }
     changed = changed or lines >= recentMax;
-  }
     if (changed) {
+      if (system((std::string{"ls -lRat "}+recent_projects_file+"*").c_str())) {}
       fs::remove(recent_projects_file);
       fs::rename(recent_projects_file + "-", recent_projects_file);
     } else
       fs::remove(recent_projects_file + "-");
+  }
 }
 
 std::string Project::filename(std::string suffix, const std::string& name, int run) const {

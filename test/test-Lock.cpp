@@ -67,7 +67,7 @@ TEST(Lock, many_write_threads) {
     std::ofstream(data, std::ios_base::app) << message << std::endl;
   };
   for (const auto& message : messages)
-    threads.emplace_back(writer, lockfile, datafile, message);
+    threads.emplace_back(writer, lockfile.string(), datafile.string(), message);
   l1.reset(nullptr);
   for (auto& thread : threads)
     thread.join();

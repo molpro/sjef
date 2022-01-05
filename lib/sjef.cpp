@@ -238,9 +238,9 @@ Project::Project(const std::string& filename, bool construct, const std::string&
       if (not fs::exists(config_file))
         std::ofstream(config_file) << "<?xml version=\"1.0\"?>\n<backends>\n</backends>" << std::endl;
       {
-        Lock l(config_file);
+        Lock l(fs::path(config_file).parent_path());
         fs::copy_file(config_file, config_file + "-");
-        Lock ll(config_file + "-");
+//        Lock ll(config_file + "-");
         auto in = std::ifstream(config_file + "-");
         auto out = std::ofstream(config_file);
         std::string line;
@@ -1425,11 +1425,12 @@ void Project::recent_edit(const std::string& add, const std::string& remove) {
         changed = true;
     }
     changed = changed or lines >= recentMax;
-    if (changed)
-      fs::rename(recent_projects_file + "-", recent_projects_file);
-    else
-      fs::remove(recent_projects_file + "-");
   }
+    if (changed) {
+      fs::remove(recent_projects_file);
+      fs::rename(recent_projects_file + "-", recent_projects_file);
+    } else
+      fs::remove(recent_projects_file + "-");
 }
 
 std::string Project::filename(std::string suffix, const std::string& name, int run) const {

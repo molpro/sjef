@@ -1426,7 +1426,6 @@ void Project::recent_edit(const std::string& add, const std::string& remove) {
     }
     changed = changed or lines >= recentMax;
     if (changed) {
-      if (system((std::string{"ls -lRat "}+recent_projects_file+"*").c_str())) {}
       fs::remove(recent_projects_file);
       fs::rename(recent_projects_file + "-", recent_projects_file);
     } else

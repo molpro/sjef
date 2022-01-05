@@ -9,18 +9,11 @@
 #include <thread>
 #include <vector>
 
-//namespace boost::process {
-//template <class CharT,
-//          class Traits = std::char_traits<CharT>>
-//class basic_ipstream; ///< @private
-//using ipstream = basic_ipstream<char>;
-//}
 namespace pugi {
 struct xpath_node_set; ///< @private
 }
 namespace sjef {
 class Backend;            ///< @private
-class FileLock;           ///< @private
 struct remote_server;     ///< @private
 struct pugi_xml_document; ///< @private
 static constexpr int recentMax = 128;

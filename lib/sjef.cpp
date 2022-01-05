@@ -1782,13 +1782,13 @@ std::string expand_path(const std::string& path, const std::string& suffix) {
   auto text = path;
   // specials
 #ifdef _WIN32
-  text = std::regex_replace(text, std::regex{R"--(\~)--"}, environment("USERPROFILE"));
-  text = std::regex_replace(text, std::regex{R"--(\$\{HOME\})--"}, environment("USERPROFILE"));
-  text = std::regex_replace(text, std::regex{R"--(\$HOME/)--"}, environment("USERPROFILE") + "/");
-  text = std::regex_replace(text, std::regex{R"--(\$\{TMPDIR\})--"}, environment("TEMP"));
-  text = std::regex_replace(text, std::regex{R"--(\$TMPDIR/)--"}, environment("TEMP") + "/");
+  text = std::regex_replace(text, std::regex{R"--(^\~)--"}, environment("USERPROFILE"));
+  text = std::regex_replace(text, std::regex{R"--(^\$\{HOME\})--"}, environment("USERPROFILE"));
+  text = std::regex_replace(text, std::regex{R"--(^\$HOME/)--"}, environment("USERPROFILE") + "/");
+  text = std::regex_replace(text, std::regex{R"--(^\$\{TMPDIR\})--"}, environment("TEMP"));
+  text = std::regex_replace(text, std::regex{R"--(^\$TMPDIR/)--"}, environment("TEMP") + "/");
 #else
-  text = std::regex_replace(text, std::regex{R"--(\~)--"}, environment("HOME"));
+  text = std::regex_replace(text, std::regex{R"--(^\~)--"}, environment("HOME"));
 #endif
   // expand environment variables
   std::smatch match;

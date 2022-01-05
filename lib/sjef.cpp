@@ -162,7 +162,7 @@ Project::Project(const std::string& filename, bool construct, const std::string&
       //    m_property_file_modification_time = (m_master_instance ?
       //    m_master_instance->m_property_file_modification_time : fs::last_write_time(propertyFile()));
       m_property_file_modification_time = fs::last_write_time(propertyFile());
-      check_property_file();
+      check_property_file_locked();
     }
     //    std::cout << "property testkey=" << property_get("testkey") << std::endl;
     //    std::cerr << "before property_set " << property_get("run_directories") << std::endl;

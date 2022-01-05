@@ -1,5 +1,6 @@
 #include <iostream>
 //#include <mutex>
+//#include <thread>
 #ifdef _WIN32
 #include <Windows.h>
 #else
@@ -17,7 +18,7 @@ const fs::path Lock::directory_lock_file = ".lock";
 Lock::Lock(const fs::path& path,const fs::path& directory_lock_file) : m_path(fs::is_directory(path) ? path / directory_lock_file : path) {
 //  std::lock_guard<std::mutex> thread_lock(
 //      s_constructor_mutex); // helps atomicity of the following, but does not guarantee it between processes
-//  std::cerr << "Lock "<<m_path<<std::endl;
+//  std::cerr << "Lock "<<m_path<<std::this_thread::get_id()<<std::endl;
 #ifdef _WIN32
   if ((m_lock = CreateFileA(m_path.string().c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL)) ==
       INVALID_HANDLE_VALUE)
@@ -29,7 +30,7 @@ Lock::Lock(const fs::path& path,const fs::path& directory_lock_file) : m_path(fs
 }
 
 Lock::~Lock() {
-  //  std::cerr << "~Lock "<<m_path<<std::endl;
+//    std::cerr << "~Lock "<<m_path<<std::this_thread::get_id()<<std::endl;
 #ifdef _WIN32
   if (m_lock != INVALID_HANDLE_VALUE)
     CloseHandle((HANDLE)m_lock);

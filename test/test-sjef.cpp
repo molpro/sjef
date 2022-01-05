@@ -400,9 +400,9 @@ TEST(project, spawn_many_dummy) {
 TEST(project, early_change_backend) {
   std::string suffix{"someprogram"};
   savestate state(suffix);
-  auto backenddirectory = sjef::expand_path((fs::path{"~"} / ".sjef" / suffix).native());
+  auto backenddirectory = sjef::expand_path((fs::path{"~"} / ".sjef" / suffix).string());
   fs::create_directories(backenddirectory);
-  auto backendfile = sjef::expand_path((fs::path{backenddirectory} / "backends.xml").native());
+  auto backendfile = sjef::expand_path((fs::path{backenddirectory} / "backends.xml").string());
   std::ofstream(backendfile) << "<?xml version=\"1.0\"?>\n<backends><backend name=\"local\" run_command=\"true\"/><backend name=\"test\" host=\"127.0.0.1\" "
                                 "run_command=\"true\"/></backends>"
                              << std::endl;
@@ -599,8 +599,8 @@ TEST(project, run_directory) {
     EXPECT_EQ(rundir, p.run_verify(rundir));
     EXPECT_EQ(rundir, p.run_verify(0));
     EXPECT_EQ(p.run_directory(), p.filename("", "", 0));
-    EXPECT_EQ(p.run_directory(0), (fs::path{p.filename()} / "run" / si).native());
-    EXPECT_EQ(p.filename("out", "", 0), (fs::path{p.filename()} / "run" / si / (std::to_string(i) + ".out")).native());
+    EXPECT_EQ(p.run_directory(0), (fs::path{p.filename()} / "run" / si).string());
+    EXPECT_EQ(p.filename("out", "", 0), (fs::path{p.filename()} / "run" / si / (std::to_string(i) + ".out")).string());
   }
   p.take_run_files(3, "3.inp", "copied.inp");
   std::ifstream(p.filename("", "copied.inp")) >> input2;

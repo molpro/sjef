@@ -1408,6 +1408,8 @@ void Project::recent_edit(const std::string& add, const std::string& remove) {
       fs::create_directories(fs::path(recent_projects_file).parent_path());
       std::ofstream junk(recent_projects_file);
     }
+    {
+
     std::ifstream in(recent_projects_file);
     std::ofstream out(recent_projects_file + "-");
     size_t lines = 0;
@@ -1425,12 +1427,10 @@ void Project::recent_edit(const std::string& add, const std::string& remove) {
         changed = true;
     }
     changed = changed or lines >= recentMax;
+    }
     if (changed) {
-//      if (fs::exists(recent_projects_file))
-try {
         fs::remove(recent_projects_file);
       fs::rename(recent_projects_file + "-", recent_projects_file);
-} catch (...) {}
     } else
       fs::remove(recent_projects_file + "-");
   }

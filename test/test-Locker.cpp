@@ -54,7 +54,7 @@ TEST(Lock, directory) {
 
 TEST(Lock, no_permission) {
   fs::path lockfile{"/unlikely-directory/testing-lockfile"};
-  EXPECT_ANY_THROW(sjef::Locker locker(lockfile);locker.bolt());
+  EXPECT_ANY_THROW(sjef::Locker locker(lockfile); locker.bolt());
   EXPECT_ANY_THROW(sjef::Interprocess_lock l1(lockfile));
   EXPECT_THROW(sjef::Interprocess_lock l1(lockfile), std::runtime_error);
   EXPECT_FALSE(fs::exists(lockfile));
@@ -107,6 +107,35 @@ TEST(Lock, many_write_threads) {
   EXPECT_TRUE(fs::exists(lockfile));
   fs::remove_all(lockfile);
   fs::remove_all(datafile);
+}
+
+TEST(Locker, thread_common_mutex) {
+  std::string lockfile{"thread_common_mutex.lock"};
+  sjef::Locker locker(lockfile);
+  //  std::cout << "master: address of mutex = " << &(*locker.m_mutex) << std::endl;
+  int flag = 0;
+  std::mutex* slave_mutex_address;
+  auto func = [&flag, lockfile, &slave_mutex_address](const std::shared_ptr<std::mutex>& mutex) {
+    //    std::cout << "slave: address of received mutex = " << &(*mutex) << std::endl;
+    sjef::Locker locker(lockfile, mutex);
+    slave_mutex_address = &(*locker.m_mutex);
+    //    std::cout << "slave: address of constructed mutex = " << slave_mutex_address << std::endl;
+    auto bolt = locker.bolt();
+    flag = 1;
+    //    std::cout << "slave: gets control " << flag << std::endl;
+  };
+  std::thread slave;
+  {
+    auto bolt = locker.bolt();
+    slave = std::thread(func, locker.m_mutex);
+    std::this_thread::sleep_for(std::chrono::duration(std::chrono::milliseconds(1)));
+    flag = 0;
+    //    std::cout << "master: about to release lock " << flag << std::endl;
+  }
+  slave.join();
+  EXPECT_EQ(flag, 1);
+  EXPECT_EQ(slave_mutex_address, &((*locker.m_mutex)));
+  fs::remove(lockfile);
 }
 
 // TODO test interprocess locking

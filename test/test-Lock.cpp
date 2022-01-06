@@ -7,7 +7,7 @@
 #include "Lock.h"
 namespace fs = std::filesystem;
 
-TEST(Lock, simple) {
+TEST(Lock, Lock) {
   fs::path lockfile{"testing-lockfile"};
   if (fs::exists(lockfile))
     fs::remove_all(lockfile);
@@ -21,13 +21,30 @@ TEST(Lock, simple) {
     fs::remove_all(lockfile);
 }
 
+TEST(Lock, Locker) {
+  fs::path lockfile{"testing-lockfile"};
+  if (fs::exists(lockfile))
+    fs::remove_all(lockfile);
+  sjef::Locker locker(lockfile);
+  {
+    auto l1 = locker.bolt();
+    EXPECT_TRUE(fs::exists(lockfile));
+    auto second_bolt = locker.bolt();
+  }
+  EXPECT_TRUE(fs::exists(lockfile));
+  EXPECT_EQ(fs::file_size(lockfile), 0);
+  if (fs::exists(lockfile))
+    fs::remove_all(lockfile);
+}
+
 TEST(Lock, directory) {
   fs::path lockfile{"testing-lockfile-directory"};
   if (fs::exists(lockfile))
     fs::remove_all(lockfile);
   fs::create_directories(lockfile);
+  sjef::Locker locker(lockfile);
   {
-    sjef::Lock l1(lockfile);
+    auto l1 = locker.bolt();
     EXPECT_TRUE(fs::exists(lockfile / sjef::Lock::directory_lock_file));
   }
   EXPECT_TRUE(fs::exists(lockfile / sjef::Lock::directory_lock_file));
@@ -37,7 +54,7 @@ TEST(Lock, directory) {
 
 TEST(Lock, no_permission) {
   fs::path lockfile{"/unlikely-directory/testing-lockfile"};
-  std::ofstream(lockfile) << "hello";
+  EXPECT_ANY_THROW(sjef::Locker locker(lockfile);locker.bolt());
   EXPECT_ANY_THROW(sjef::Lock l1(lockfile));
   EXPECT_THROW(sjef::Lock l1(lockfile), std::runtime_error);
   EXPECT_FALSE(fs::exists(lockfile));
@@ -52,9 +69,9 @@ TEST(Lock, many_write_threads) {
     fs::remove_all(datafile);
   if (fs::exists(lockfile))
     fs::remove_all(lockfile);
+  sjef::Locker locker(lockfile);
   //  { auto toucher = std::ofstream(lockfile); }
-  auto l1 = std::make_unique<sjef::Lock>(lockfile);
-  ASSERT_TRUE(fs::exists(lockfile));
+  ASSERT_FALSE(fs::exists(lockfile));
   int n{100};
   std::vector<std::string> messages;
   messages.reserve(n);
@@ -62,13 +79,14 @@ TEST(Lock, many_write_threads) {
     messages.emplace_back(std::to_string(i));
   std::vector<std::thread> threads;
   threads.reserve(messages.size());
-  auto writer = [](const std::string& path, const std::string& data, const std::string& message) {
-    auto lock = sjef::Lock(path);
+  auto writer = [](sjef::Locker& locker, const std::string& data, const std::string& message) {
+    auto bolt = locker.bolt();
+    auto second_bolt = locker.bolt();
+    auto third_bolt = locker.bolt();
     std::ofstream(data, std::ios_base::app) << message << std::endl;
   };
   for (const auto& message : messages)
-    threads.emplace_back(writer, lockfile.string(), datafile.string(), message);
-  l1.reset(nullptr);
+    threads.emplace_back(writer, std::ref(locker), datafile.string(), message);
   for (auto& thread : threads)
     thread.join();
   ASSERT_TRUE(fs::exists(datafile));

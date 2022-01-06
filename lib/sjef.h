@@ -63,6 +63,12 @@ private:
   ///> @private
   static const std::string s_propertyFile;
 
+//  mutable std::mutex m_project_mutex;
+//  std::unique_ptr<std::lock_guard<std::mutex>> m_project_lock;
+//  std::unique_ptr<Lock>
+//  void lock() { m_project_lock.reset(new std::lock_guard<std::mutex>(m_project_mutex)); }
+//  void unlock() { m_project_lock.reset(nullptr); }
+
 public:
   /*!
    * @brief Construct, or attach to, a Molpro project bundle

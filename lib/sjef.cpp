@@ -41,7 +41,7 @@ inline std::string executable(fs::path command) {
   else {
     constexpr bool use_boost_search_path = true;
     if (use_boost_search_path) {
-      std::cout << "executable(" << command << ") returns" << bp::search_path(command.string()).string() << std::endl;
+//      std::cout << "executable(" << command << ") returns " << bp::search_path(command.string()).string() << std::endl;
       return bp::search_path(command.string()).string();
     } else {
       std::stringstream path{std::string{getenv("PATH")}}; // TODO windows

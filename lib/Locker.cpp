@@ -56,8 +56,10 @@ Interprocess_lock::Interprocess_lock(const fs::path& path, const fs::path& direc
 //      s_constructor_mutex); // helps atomicity of the following, but does not guarantee it between processes
 //  std::cerr << "Lock "<<m_path<<std::this_thread::get_id()<<std::endl;
 #ifdef _WIN32
-  if ((m_lock = CreateFileA(m_path.string().c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL)) ==
-      INVALID_HANDLE_VALUE)
+// TODO restore Windows interprocess lock
+//  if ((m_lock = CreateFileA(m_path.string().c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL)) ==
+//      INVALID_HANDLE_VALUE)
+if (false)
 #else
   m_lock = open(m_path.string().c_str(), O_RDWR | O_CREAT, 0666);
   if ((m_lock >= 0 and flock(m_lock, LOCK_EX) != 0) or (m_lock < 0 && (close(m_lock) or true)))
@@ -68,7 +70,8 @@ Interprocess_lock::Interprocess_lock(const fs::path& path, const fs::path& direc
 Interprocess_lock::~Interprocess_lock() {
 //    std::cerr << "~Lock "<<m_path<<std::this_thread::get_id()<<std::endl;
 #ifdef _WIN32
-  if (m_lock != INVALID_HANDLE_VALUE)
+// TODO restore Windows interprocess lock
+  if (false and m_lock != INVALID_HANDLE_VALUE)
     CloseHandle((HANDLE)m_lock);
 #else
   if (m_lock >= 0) {

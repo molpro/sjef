@@ -107,7 +107,7 @@ Project::Project(const std::string& filename, bool construct, const std::string&
       m_properties(std::make_unique<pugi_xml_document>()), m_suffixes(suffixes),
       m_backend_doc(std::make_unique<pugi_xml_document>()), m_status_lifetime(0),
       m_status_last(std::chrono::steady_clock::now()), m_master_instance(masterProject),
-      m_master_of_slave(masterProject == nullptr), m_backend(""), m_locker(std::make_unique<Locker>(m_filename)),
+      m_master_of_slave(masterProject == nullptr), m_backend(""), m_locker(masterProject==nullptr ? std::make_shared<Locker>(m_filename) : masterProject->m_locker),
       m_property_file_modification_time(), m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}) {
   {
     if (fs::exists(propertyFile())) {

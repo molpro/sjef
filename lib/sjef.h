@@ -14,6 +14,7 @@ struct xpath_node_set; ///< @private
 }
 namespace sjef {
 class Backend;            ///< @private
+class Locker;             ///< @private
 struct remote_server;     ///< @private
 struct pugi_xml_document; ///< @private
 static constexpr int recentMax = 128;
@@ -62,6 +63,8 @@ private:
   std::string remote_server_run(const std::string& command, int verbosity = 0, bool wait = true) const;
   ///> @private
   static const std::string s_propertyFile;
+  ///> @private
+  std::unique_ptr<Locker> m_locker;
 
 //  mutable std::mutex m_project_mutex;
 //  std::unique_ptr<std::lock_guard<std::mutex>> m_project_lock;

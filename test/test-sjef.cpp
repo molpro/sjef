@@ -87,6 +87,8 @@ TEST(project, move_generic) {
   ASSERT_FALSE(fs::exists(fs::path(filename)));
   ASSERT_TRUE(fs::exists(fs::path(x2.filename())));
   //  std::cerr << "filename="<<filename<<std::endl;
+  EXPECT_NE(system("echo a;ls -lat /tmp/sjef-project-test.sjef"),0);
+  std::cout << "a done"<<std::endl;
   x2.copy(filename);
   EXPECT_TRUE(fs::exists(sjef::expand_path(filename + "/.lock")));
   EXPECT_TRUE(fs::exists(sjef::expand_path(filename2 + "/.lock")));
@@ -96,7 +98,7 @@ TEST(project, move_generic) {
   x2.move(filename, true);
   EXPECT_FALSE(fs::exists(sjef::expand_path(filename2)));
   EXPECT_TRUE(fs::exists(sjef::expand_path(filename)));
-  EXPECT_TRUE(fs::exists(sjef::expand_path(filename + "/.lock")));
+  EXPECT_TRUE(fs::exists(sjef::expand_path(fs::path{filename}/"Info.plist")));
   EXPECT_FALSE(fs::exists(sjef::expand_path(filename2 + "/.lock")));
 }
 

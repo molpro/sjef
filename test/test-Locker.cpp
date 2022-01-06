@@ -4,15 +4,15 @@
 #include <gtest/gtest.h>
 #include <thread>
 
-#include "Lock.h"
+#include "Locker.h"
 namespace fs = std::filesystem;
 
-TEST(Lock, Lock) {
+TEST(Lock, Interprocess_lock) {
   fs::path lockfile{"testing-lockfile"};
   if (fs::exists(lockfile))
     fs::remove_all(lockfile);
   {
-    sjef::Lock l1(lockfile);
+    sjef::Interprocess_lock l1(lockfile);
     EXPECT_TRUE(fs::exists(lockfile));
   }
   EXPECT_TRUE(fs::exists(lockfile));
@@ -45,18 +45,18 @@ TEST(Lock, directory) {
   sjef::Locker locker(lockfile);
   {
     auto l1 = locker.bolt();
-    EXPECT_TRUE(fs::exists(lockfile / sjef::Lock::directory_lock_file));
+    EXPECT_TRUE(fs::exists(lockfile / sjef::Interprocess_lock::directory_lock_file));
   }
-  EXPECT_TRUE(fs::exists(lockfile / sjef::Lock::directory_lock_file));
-  EXPECT_EQ(fs::file_size(lockfile / sjef::Lock::directory_lock_file), 0);
+  EXPECT_TRUE(fs::exists(lockfile / sjef::Interprocess_lock::directory_lock_file));
+  EXPECT_EQ(fs::file_size(lockfile / sjef::Interprocess_lock::directory_lock_file), 0);
   fs::remove_all(lockfile);
 }
 
 TEST(Lock, no_permission) {
   fs::path lockfile{"/unlikely-directory/testing-lockfile"};
   EXPECT_ANY_THROW(sjef::Locker locker(lockfile);locker.bolt());
-  EXPECT_ANY_THROW(sjef::Lock l1(lockfile));
-  EXPECT_THROW(sjef::Lock l1(lockfile), std::runtime_error);
+  EXPECT_ANY_THROW(sjef::Interprocess_lock l1(lockfile));
+  EXPECT_THROW(sjef::Interprocess_lock l1(lockfile), std::runtime_error);
   EXPECT_FALSE(fs::exists(lockfile));
   if (fs::exists(lockfile))
     fs::remove_all(lockfile);
@@ -92,7 +92,7 @@ TEST(Lock, many_write_threads) {
   ASSERT_TRUE(fs::exists(datafile));
   //  std::cerr << std::ifstream(datafile).rdbuf()<<std::endl;
   for (auto i = 0; i < n; ++i) {
-    auto l = sjef::Lock(lockfile);
+    auto l = locker.bolt();
     std::string line;
     int lines = 0;
     for (auto s = std::ifstream(datafile); s; ++lines) {

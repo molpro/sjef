@@ -2,7 +2,7 @@
 #include <map>
 #include <mutex>
 #include <string>
-//#include <thread>
+#include <thread>
 #ifdef _WIN32
 #include <Windows.h>
 #else
@@ -10,12 +10,12 @@
 #include <unistd.h>
 #endif
 
-#include "Lock.h"
+#include "Locker.h"
 
 std::map<std::string, std::mutex> mutexes;
 
 namespace sjef {
-const fs::path Lock::directory_lock_file = ".lock";
+const fs::path Interprocess_lock::directory_lock_file = ".lock";
 
 Locker::Locker(fs::path path) : m_path(std::move(path)) {}
 Locker::~Locker() {}
@@ -28,7 +28,7 @@ void Locker::add_bolt() {
   }
   if (m_bolts[std::this_thread::get_id()] == 0) {
     m_lock_guard.reset(new std::lock_guard<std::mutex>(m_mutex));
-    m_interprocess_lock.reset(new Lock(m_path));
+    m_interprocess_lock.reset(new Interprocess_lock(m_path));
   }
   ++m_bolts[std::this_thread::get_id()];
 //  std::cout << "add_bolt increases bolts to " << m_bolts[std::this_thread::get_id()] << std::endl;
@@ -50,7 +50,7 @@ Locker::Bolt::Bolt(Locker& locker) : m_locker(locker) { m_locker.add_bolt(); }
 Locker::Bolt::~Bolt() { m_locker.remove_bolt(); }
 
 // std::mutex s_constructor_mutex;
-Lock::Lock(const fs::path& path, const fs::path& directory_lock_file)
+Interprocess_lock::Interprocess_lock(const fs::path& path, const fs::path& directory_lock_file)
     : m_path(fs::is_directory(path) ? path / directory_lock_file : path) {
 //  std::lock_guard<std::mutex> thread_lock(
 //      s_constructor_mutex); // helps atomicity of the following, but does not guarantee it between processes
@@ -65,7 +65,7 @@ Lock::Lock(const fs::path& path, const fs::path& directory_lock_file)
     throw std::runtime_error("Cannot create a lock on file " + path.string());
 }
 
-Lock::~Lock() {
+Interprocess_lock::~Interprocess_lock() {
 //    std::cerr << "~Lock "<<m_path<<std::this_thread::get_id()<<std::endl;
 #ifdef _WIN32
   if (m_lock != INVALID_HANDLE_VALUE)

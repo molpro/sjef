@@ -1,4 +1,4 @@
-#include "Lock.h"
+#include "Locker.h"
 #include "sjef-backend.h"
 #include "sjef.h"
 #include <iostream>
@@ -46,7 +46,7 @@ void sjef::Project::custom_initialisation() {
   if (m_project_suffix == "molpro") {
     auto molprorc = filename("rc", "molpro");
     auto lockfile = std::regex_replace(molprorc, std::regex{"molpro.rc"}, ".molpro.rc.lock");
-    sjef::Lock source_lock(lockfile);
+    sjef::Interprocess_lock source_lock(lockfile);
     if (not std::filesystem::exists(molprorc)) {
       std::ofstream s(molprorc);
       s << "--xml-output --no-backup" << std::endl;

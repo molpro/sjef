@@ -1,5 +1,5 @@
-#ifndef SJEF_LIB_LOCK_H_
-#define SJEF_LIB_LOCK_H_
+#ifndef SJEF_LIB_LOCKER_H_
+#define SJEF_LIB_LOCKER_H_
 #include <filesystem>
 #include <map>
 #include <mutex>
@@ -9,7 +9,7 @@ namespace fs = std::filesystem;
 
 namespace sjef {
 
-class Lock;
+class Interprocess_lock;
 /*!
  * @brief A thread-safe class for an inter-thread/inter-process lock.
  * The lock mechanism is based on std::mutex between threads, and a locked file in the file system.
@@ -35,7 +35,7 @@ private:
   std::mutex m_mutex;
   std::mutex m_bolts_mutex;
   std::unique_ptr<std::lock_guard<std::mutex>> m_lock_guard;
-  std::unique_ptr<Lock> m_interprocess_lock;
+  std::unique_ptr<Interprocess_lock> m_interprocess_lock;
 
 public:
   // RAII
@@ -60,7 +60,7 @@ public:
  * On creation of a class instance, execution will wait until access to the file can be obtained,
  * and the access obtained will block other subsequent access requests until the object is destroyed.
  */
-class Lock {
+class Interprocess_lock {
 public:
   /*!
    * @brief Assert and obtain access to a file for the lifetime of a class instance.
@@ -68,13 +68,13 @@ public:
    * @param directory_lock_file In the case that path is a directory, the name of the file in that directory that will
    * be used for the lock
    */
-  explicit Lock(const fs::path& path, const fs::path& directory_lock_file = Lock::directory_lock_file);
-  virtual ~Lock();
+  explicit Interprocess_lock(const fs::path& path, const fs::path& directory_lock_file = Interprocess_lock::directory_lock_file);
+  virtual ~Interprocess_lock();
   const static fs::path directory_lock_file;
 
 private:
-  Lock(const Lock&) = delete;
-  Lock& operator=(const Lock&) = delete;
+  Interprocess_lock(const Interprocess_lock&) = delete;
+  Interprocess_lock& operator=(const Interprocess_lock&) = delete;
 
 #ifdef _WIN32
   using handle_t = void*;
@@ -86,4 +86,4 @@ private:
 };
 
 } // namespace sjef
-#endif // SJEF_LIB_LOCK_H_
+#endif // SJEF_LIB_LOCKER_H_

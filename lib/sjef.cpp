@@ -1,5 +1,5 @@
 #include "sjef.h"
-#include "Lock.h"
+#include "Locker.h"
 #include "sjef-backend.h"
 #include <array>
 #include <boost/process/args.hpp>
@@ -56,13 +56,13 @@ bool copyDir(fs::path const& source, fs::path const& destination, bool delete_so
   // Check whether the function call is valid
   if (!fs::exists(source) || !fs::is_directory(source))
     throw std::runtime_error("Source directory " + source.string() + " does not exist or is not a directory.");
-  sjef::Lock source_lock((source));
+  sjef::Interprocess_lock source_lock((source));
   if (fs::exists(destination))
     throw std::runtime_error("Destination directory " + destination.string() + " already exists.");
   // Create the destination directory
   if (!fs::create_directory(destination))
     throw std::runtime_error("Unable to create destination directory " + destination.string());
-  sjef::Lock destination_lock((destination));
+  sjef::Interprocess_lock destination_lock((destination));
   // Iterate through the source directory
   for (fs::directory_iterator file(source); file != fs::directory_iterator(); ++file) {
     fs::path current(file->path());
@@ -112,7 +112,7 @@ Project::Project(const std::string& filename, bool construct, const std::string&
       //      std::cout << "old project " << m_filename << std::endl;
       //          if (system((std::string{"ls -ltra "} + m_filename).c_str())) {}
       //          if (system((std::string{"cat "} + propertyFile()).c_str())) {}
-      Lock lock(m_filename);
+      Interprocess_lock lock(m_filename);
       load_property_file_locked();
     } else {
       //      std::cout << "new project " << m_filename << std::endl;
@@ -238,7 +238,7 @@ Project::Project(const std::string& filename, bool construct, const std::string&
       if (not fs::exists(config_file))
         std::ofstream(config_file) << "<?xml version=\"1.0\"?>\n<backends>\n</backends>" << std::endl;
       {
-        Lock l(fs::path(config_file).parent_path());
+        Interprocess_lock l(fs::path(config_file).parent_path());
         fs::copy_file(config_file, config_file + "-");
 //        Lock ll(config_file + "-");
         auto in = std::ifstream(config_file + "-");
@@ -387,7 +387,7 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
   bool locally_modified;
   {
     //    Lock pl(propertyFile()+".lock");
-    Lock pl(m_filename);
+    Interprocess_lock pl(m_filename);
     locally_modified = m_property_file_modification_time != fs::last_write_time(propertyFile());
     //    std::cerr << "initial locally_modified=" << locally_modified << std::endl;
     for (const auto& suffix : {"inp", "xyz"}) {
@@ -1312,7 +1312,7 @@ void Project::wait(unsigned int maximum_microseconds) const {
 
 void Project::property_delete(const std::vector<std::string>& properties) {
   //  Lock pl(propertyFile()+".lock");
-  Lock pl(m_filename);
+  Interprocess_lock pl(m_filename);
   check_property_file_locked();
   for (const auto& property : properties)
     property_delete_locked(property);
@@ -1340,7 +1340,7 @@ void Project::property_delete_locked(const std::string& property) {
 }
 
 void Project::property_set(const std::map<std::string, std::string>& properties) {
-  Lock pl(m_filename);
+  Interprocess_lock pl(m_filename);
   //  Lock pl(propertyFile()+".lock");
   //  std::cout << "property_set " << properties.begin()->first << " about to call check_property_file_locked "
   //            << m_master_of_slave << std::endl;
@@ -1403,7 +1403,7 @@ void Project::recent_edit(const std::string& add, const std::string& remove) {
   auto recent_projects_file = expand_path(std::string{"~/.sjef/"} + project_suffix + "/projects");
   bool changed = false;
   {
-    Lock lock{fs::path{recent_projects_file}.parent_path()};
+    Interprocess_lock lock{fs::path{recent_projects_file}.parent_path()};
     if (!fs::exists(recent_projects_file)) {
       fs::create_directories(fs::path(recent_projects_file).parent_path());
       std::ofstream junk(recent_projects_file);
@@ -1642,9 +1642,9 @@ void Project::load_property_file_locked() const {
 bool Project::properties_last_written_by_me(bool removeFile, bool already_locked) const {
   auto path = fs::path{m_filename} / fs::path{writing_object_file};
   //  std::cout << "enter properties_last_written_by_me on thread " << m_master_of_slave << std::endl;
-  std::unique_ptr<Lock> lock_;
+  std::unique_ptr<Interprocess_lock> lock_;
   if (not already_locked)
-    lock_.reset(new Lock(path.string()));
+    lock_.reset(new Interprocess_lock(path.string()));
   //  FileLock lock(path.string(), false);
   std::ifstream i{path.string(), std::ios_base::in};
   if (not i.is_open())
@@ -1661,7 +1661,7 @@ bool Project::properties_last_written_by_me(bool removeFile, bool already_locked
 }
 void Project::check_property_file() const {
   //  Lock fileLock(propertyFile()+".lock");
-  Lock pl(m_filename);
+  Interprocess_lock pl(m_filename);
   //  std::cerr << "check_property_file acquired lock " << this << " : " << m_master_of_slave << std::endl;
   //  std::cout << "" << std::ifstream(fs::path{m_filename} / "Info.plist").rdbuf() << "" << std::endl;
 
@@ -1690,7 +1690,7 @@ void Project::check_property_file_locked() const {
 
 void Project::save_property_file() const {
   //  Lock fileLock(propertyFile()+".lock");
-  Lock pl(m_filename);
+  Interprocess_lock pl(m_filename);
   save_property_file_locked();
 }
 void Project::save_property_file_locked() const {

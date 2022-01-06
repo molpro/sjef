@@ -17,7 +17,8 @@ std::map<std::string, std::mutex> mutexes;
 namespace sjef {
 const fs::path Interprocess_lock::directory_lock_file = ".lock";
 
-Locker::Locker(fs::path path) : m_path(std::move(path)) {}
+Locker::Locker(fs::path path, const std::shared_ptr<std::mutex>& mutex) : m_path(std::move(path)), m_mutex(mutex) {}
+Locker::Locker(fs::path path) : m_path(std::move(path)), m_mutex(std::make_shared<std::mutex>()) {}
 Locker::~Locker() {}
 
 void Locker::add_bolt() {
@@ -27,7 +28,7 @@ void Locker::add_bolt() {
       m_bolts[std::this_thread::get_id()] = 0;
   }
   if (m_bolts[std::this_thread::get_id()] == 0) {
-    m_lock_guard.reset(new std::lock_guard<std::mutex>(m_mutex));
+    m_lock_guard.reset(new std::lock_guard<std::mutex>(*m_mutex));
     m_interprocess_lock.reset(new Interprocess_lock(m_path));
   }
   ++m_bolts[std::this_thread::get_id()];

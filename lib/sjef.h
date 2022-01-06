@@ -64,7 +64,7 @@ private:
   ///> @private
   static const std::string s_propertyFile;
   ///> @private
-  std::shared_ptr<Locker> m_locker;
+  std::unique_ptr<Locker> m_locker;
 
 //  mutable std::mutex m_project_mutex;
 //  std::unique_ptr<std::lock_guard<std::mutex>> m_project_lock;

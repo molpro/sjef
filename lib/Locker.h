@@ -25,6 +25,7 @@ class Interprocess_lock;
 class Locker {
 public:
   explicit Locker(fs::path path);
+  explicit Locker(fs::path path, const std::shared_ptr<std::mutex>& mutex);
   virtual ~Locker();
   void add_bolt();
   void remove_bolt();
@@ -32,10 +33,11 @@ public:
 private:
   fs::path m_path;
   std::map<std::thread::id, int> m_bolts;
-  std::mutex m_mutex;
   std::mutex m_bolts_mutex;
   std::unique_ptr<std::lock_guard<std::mutex>> m_lock_guard;
   std::unique_ptr<Interprocess_lock> m_interprocess_lock;
+public:
+  std::shared_ptr<std::mutex> m_mutex;
 
 public:
   // RAII

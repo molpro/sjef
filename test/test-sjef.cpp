@@ -88,8 +88,6 @@ TEST(project, move_generic) {
   ASSERT_TRUE(fs::exists(fs::path(x2.filename())));
   //  std::cerr << "filename="<<filename<<std::endl;
   x2.copy(filename);
-  EXPECT_TRUE(fs::exists(sjef::expand_path(filename + "/.lock")));
-  EXPECT_TRUE(fs::exists(sjef::expand_path(filename2 + "/.lock")));
   ASSERT_TRUE(fs::exists(fs::path(x2.filename())));
   ASSERT_TRUE(fs::exists(sjef::expand_path(filename2)));
   ASSERT_TRUE(fs::exists(sjef::expand_path(filename)));
@@ -97,7 +95,6 @@ TEST(project, move_generic) {
   EXPECT_FALSE(fs::exists(sjef::expand_path(filename2)));
   EXPECT_TRUE(fs::exists(sjef::expand_path(filename)));
   EXPECT_TRUE(fs::exists(sjef::expand_path((fs::path{filename}/"Info.plist").string())));
-  EXPECT_FALSE(fs::exists(sjef::expand_path(filename2 + "/.lock")));
 }
 
 TEST(project, moveMolpro) {

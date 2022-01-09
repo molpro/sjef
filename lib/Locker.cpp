@@ -23,20 +23,24 @@ Locker::~Locker() {}
 
 void Locker::add_bolt() {
   {
+    std::cerr << "Locker::add_bolt() "<<this<<" "<<std::this_thread::get_id()<<m_path<<std::endl;
     std::lock_guard<std::mutex> lock(m_bolts_mutex);
     if (m_bolts.count(std::this_thread::get_id()) == 0)
       m_bolts[std::this_thread::get_id()] = 0;
   }
   if (m_bolts[std::this_thread::get_id()] == 0) {
+    std::cerr <<"mutex at "<<&(*m_mutex)<<std::endl;
     m_lock_guard.reset(new std::lock_guard<std::mutex>(*m_mutex));
+    std::cerr << "Locker::add_bolt() acquires mutex "<<std::this_thread::get_id()<<m_path<<std::endl;
     m_interprocess_lock.reset(new Interprocess_lock(m_path));
   }
   ++m_bolts[std::this_thread::get_id()];
-//  std::cout << "add_bolt increases bolts to " << m_bolts[std::this_thread::get_id()] << std::endl;
+  std::cout << "add_bolt increases bolts to " << m_bolts[std::this_thread::get_id()] << std::endl;
 }
 void Locker::remove_bolt() {
+  std::cerr << "Locker::remove_bolt() "<<std::this_thread::get_id()<<" "<<m_path<<std::endl;
   --m_bolts[std::this_thread::get_id()];
-//  std::cout << "remove_bolt decreases bolts to " << m_bolts[std::this_thread::get_id()] << std::endl;
+  std::cout << "remove_bolt decreases bolts to " << m_bolts[std::this_thread::get_id()] << std::endl;
   if (m_bolts[std::this_thread::get_id()] < 0)
     throw std::logic_error("Locker::remove_bolt called too many times");
   if (m_bolts[std::this_thread::get_id()] == 0) {
@@ -55,25 +59,34 @@ Interprocess_lock::Interprocess_lock(const fs::path& path, const fs::path& direc
     : m_path(fs::is_directory(path) ? path / directory_lock_file : path) {
 //  std::lock_guard<std::mutex> thread_lock(
 //      s_constructor_mutex); // helps atomicity of the following, but does not guarantee it between processes
-//  std::cerr << "Lock "<<m_path<<std::this_thread::get_id()<<std::endl;
+//  std::cerr << "Interprocess_lock "<<std::this_thread::get_id()<<" "<<m_path<<std::endl;
+  std::stringstream ss;
+  ss << std::this_thread::get_id();
 #ifdef _WIN32
-// TODO restore Windows interprocess lock
-//  if ((m_lock = CreateFileA(m_path.string().c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL)) ==
+//  if ((m_lock = CreateFileA(m_path.string().c_str(), GENERIC_WRITE, 0, NULL, OPEN_ALWAYS, 0, NULL)) ==
 //      INVALID_HANDLE_VALUE)
+//if (((m_lock = CreateMutex(0, FALSE, m_path.string().c_str())) == INVALID_HANDLE_VALUE) || (WaitForSingleObject(m_lock,INFINITE)==WAIT_FAILED))
 if (false)
 #else
   m_lock = open(m_path.string().c_str(), O_RDWR | O_CREAT, 0666);
   if ((m_lock >= 0 and flock(m_lock, LOCK_EX) != 0) or (m_lock < 0 && (close(m_lock) or true)))
 #endif
-    throw std::runtime_error("Cannot create a lock on file " + path.string());
+  {
+#ifdef _WIN32
+    std::cerr <<"GetLastError: "<< GetLastError()<<std::endl;
+#endif
+    throw std::runtime_error("Cannot create a lock on file " + path.string()+" from thread"+ss.str());
+  }
 }
 
 Interprocess_lock::~Interprocess_lock() {
-//    std::cerr << "~Lock "<<m_path<<std::this_thread::get_id()<<std::endl;
+//    std::cerr << "~Interprocess_lock "<<std::this_thread::get_id()<<" "<<m_path<<std::endl;
 #ifdef _WIN32
 // TODO restore Windows interprocess lock
-  if (false and m_lock != INVALID_HANDLE_VALUE)
-    CloseHandle((HANDLE)m_lock);
+//  if (m_lock != INVALID_HANDLE_VALUE) {
+//    ReleaseMutex(m_lock);
+//    CloseHandle((HANDLE)m_lock);
+//  }
 #else
   if (m_lock >= 0) {
     flock(m_lock, LOCK_UN);

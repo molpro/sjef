@@ -153,10 +153,10 @@ TEST(project, erase) {
 
 TEST(project, import) {
   savestate state("sjef");
-  std::string filename = state.testfile("$TMPDIR/sjef-project-test.sjef");
+  std::string filename = state.testfile("sjef-project-test.sjef");
   sjef::Project x(filename);
   filename = x.filename();
-  auto importfile = sjef::expand_path("$TMPDIR/sjef-project-test.import");
+  auto importfile = sjef::expand_path("sjef-project-test.import");
   std::ofstream ofs{importfile};
   ofs << "Hello" << std::endl;
   x.import_file(importfile);

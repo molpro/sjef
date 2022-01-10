@@ -105,6 +105,14 @@ struct remote_server {
 inline std::string getattribute(pugi::xpath_node node, std::string name) {
   return node.node().attribute(name.c_str()).value();
 }
+
+std::map<fs::path, std::shared_ptr<Locker>> lockers;
+inline std::shared_ptr<Locker> make_locker(const fs::path& filename) {
+  auto name = fs::absolute(filename);
+  if (lockers.count(name) == 0)
+    lockers[name] = std::make_shared<Locker>(fs::path{name} / ".lock");
+  return lockers[name];
+}
 const std::vector<std::string> Project::suffix_keys{"inp", "out", "xml"};
 Project::Project(const std::string& filename, bool construct, const std::string& default_suffix,
                  const std::map<std::string, std::string>& suffixes, const Project* masterProject)
@@ -115,8 +123,7 @@ Project::Project(const std::string& filename, bool construct, const std::string&
       m_backend_doc(std::make_unique<pugi_xml_document>()), m_status_lifetime(0),
       m_status_last(std::chrono::steady_clock::now()), m_master_instance(masterProject),
       m_master_of_slave(masterProject == nullptr), m_backend(""),
-      m_locker(masterProject == nullptr ? std::make_shared<Locker>(fs::path{m_filename} / ".lock")
-                                        : masterProject->m_locker),
+      m_locker(make_locker(m_filename)),
       m_property_file_modification_time(), m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}) {
   {
     if (fs::exists(propertyFile())) {

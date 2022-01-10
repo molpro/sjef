@@ -33,10 +33,10 @@ inline fs::path lock_file(fs::path path) {
     try {
       const auto& parent_path = result.parent_path();
       if (not parent_path.empty()) {
-        std::cout << "create directory " << parent_path.string() << std::endl;
+//        std::cout << "create directory " << parent_path.string() << std::endl;
         fs::create_directories(parent_path);
       }
-      std::cout << "create " << result.string() << std::endl;
+//      std::cout << "create " << result.string() << std::endl;
       std::ofstream(result.string()) << "";
     } catch (...) {
       throw std::runtime_error("Cannot create lock file " + result.string());
@@ -50,7 +50,7 @@ Locker::Locker(fs::path path)
 Locker::~Locker() {}
 
 void Locker::add_bolt() {
-  std::cout << "Locker::add_bolt() " << this << " " << std::this_thread::get_id() << " " << m_path << std::endl;
+//  std::cout << "Locker::add_bolt() " << this << " " << std::this_thread::get_id() << " " << m_path << std::endl;
   auto this_thread = std::this_thread::get_id();
   if (m_owning_thread == this_thread and m_bolts > 0) {
     m_bolts++;
@@ -60,7 +60,7 @@ void Locker::add_bolt() {
   m_owning_thread = this_thread;
   m_bolts = 1;
   m_file_lock.lock();
-  std::cout << "Interprocess_lock acquired " << std::this_thread::get_id() << " " << m_path << std::endl;
+//  std::cout << "Interprocess_lock acquired " << std::this_thread::get_id() << " " << m_path << std::endl;
 }
 void Locker::remove_bolt() {
   --m_bolts;
@@ -70,7 +70,7 @@ void Locker::remove_bolt() {
   if (m_bolts == 0) {
     //    std::cout << "Locker::remove_bolt() releases mutex " << std::this_thread::get_id() << m_path << std::endl;
     m_file_lock.unlock();
-    std::cout << "Interprocess_lock relinquished " << std::this_thread::get_id() << " " << m_path << std::endl;
+//    std::cout << "Interprocess_lock relinquished " << std::this_thread::get_id() << " " << m_path << std::endl;
     m_lock.reset(nullptr);
   }
 }

@@ -13,10 +13,10 @@ TEST(Lock, Interprocess_lock) {
     fs::remove_all(lockfile);
   {
     sjef::Interprocess_lock l1(lockfile);
-//    EXPECT_TRUE(fs::exists(lockfile));
+    //    EXPECT_TRUE(fs::exists(lockfile));
   }
-//  EXPECT_TRUE(fs::exists(lockfile));
-//  EXPECT_EQ(fs::file_size(lockfile), 0);
+  //  EXPECT_TRUE(fs::exists(lockfile));
+  //  EXPECT_EQ(fs::file_size(lockfile), 0);
   if (fs::exists(lockfile))
     fs::remove_all(lockfile);
 }
@@ -28,11 +28,11 @@ TEST(Lock, Locker) {
   sjef::Locker locker(lockfile);
   {
     auto l1 = locker.bolt();
-//    EXPECT_TRUE(fs::exists(lockfile));
+    //    EXPECT_TRUE(fs::exists(lockfile));
     auto second_bolt = locker.bolt();
   }
-//  EXPECT_TRUE(fs::exists(lockfile));
-//  EXPECT_EQ(fs::file_size(lockfile), 0);
+  //  EXPECT_TRUE(fs::exists(lockfile));
+  //  EXPECT_EQ(fs::file_size(lockfile), 0);
   if (fs::exists(lockfile))
     fs::remove_all(lockfile);
 }
@@ -45,10 +45,10 @@ TEST(Lock, directory) {
   sjef::Locker locker(lockfile);
   {
     auto l1 = locker.bolt();
-//    EXPECT_TRUE(fs::exists(lockfile / sjef::Interprocess_lock::directory_lock_file));
+    //    EXPECT_TRUE(fs::exists(lockfile / sjef::Interprocess_lock::directory_lock_file));
   }
-//  EXPECT_TRUE(fs::exists(lockfile / sjef::Interprocess_lock::directory_lock_file));
-//  EXPECT_EQ(fs::file_size(lockfile / sjef::Interprocess_lock::directory_lock_file), 0);
+  //  EXPECT_TRUE(fs::exists(lockfile / sjef::Interprocess_lock::directory_lock_file));
+  //  EXPECT_EQ(fs::file_size(lockfile / sjef::Interprocess_lock::directory_lock_file), 0);
   fs::remove_all(lockfile);
 }
 
@@ -81,8 +81,11 @@ TEST(Lock, many_write_threads) {
   threads.reserve(messages.size());
   auto writer = [](sjef::Locker& locker, const std::string& data, const std::string& message) {
     auto bolt = locker.bolt();
+    std::ofstream(data, std::ios_base::app) << message << std::endl;
     auto second_bolt = locker.bolt();
     auto third_bolt = locker.bolt();
+    auto duration = std::stoi(message) % 5;
+    std::this_thread::sleep_for(std::chrono::milliseconds(duration));
     std::ofstream(data, std::ios_base::app) << message << std::endl;
   };
   for (const auto& message : messages)
@@ -93,18 +96,23 @@ TEST(Lock, many_write_threads) {
   //  std::cerr << std::ifstream(datafile).rdbuf()<<std::endl;
   for (auto i = 0; i < n; ++i) {
     auto l = locker.bolt();
-    std::string line;
     int lines = 0;
     for (auto s = std::ifstream(datafile); s; ++lines) {
+      std::string line;
+      std::string line2;
       std::getline(s, line);
       if (line.empty())
         --lines;
-      //      else std::cout << "line: " << line <<std::endl;
+      else {
+        std::getline(s, line2);
+        EXPECT_EQ(line, line2);
+        //        std::cout << "line: " << line << std::endl;
+      }
     }
     //    std::cout << lines << " lines" << std::endl;
     EXPECT_EQ(lines, threads.size());
   }
-//  EXPECT_TRUE(fs::exists(lockfile));
+  //  EXPECT_TRUE(fs::exists(lockfile));
   fs::remove_all(lockfile);
   fs::remove_all(datafile);
 }

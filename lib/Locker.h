@@ -8,11 +8,10 @@
 namespace fs = std::filesystem;
 
 namespace sjef {
-
 class Interprocess_lock;
 /*!
- * @brief A thread-safe class for an inter-thread/inter-process lock.
- * The lock mechanism is based on std::mutex between threads, and a locked file in the file system.
+ * @brief A thread-unsafe class for an inter-thread/inter-process lock.
+ * The lock mechanism is based on a locked file in the file system.
  * The locked file is a file that may or may not already exist; if it doesn't, it is created.
  * The file contents are not altered, and the file is not deleted.
  * If the specified file is a directory, the lock is instead made on a file in that directory.
@@ -25,19 +24,14 @@ class Interprocess_lock;
 class Locker {
 public:
   explicit Locker(fs::path path);
-  explicit Locker(fs::path path, const std::shared_ptr<std::mutex>& mutex);
   virtual ~Locker();
+private:
   void add_bolt();
   void remove_bolt();
 
 private:
   fs::path m_path;
-  std::map<std::thread::id, int> m_bolts;
-  std::mutex m_bolts_mutex;
-  std::unique_ptr<std::lock_guard<std::mutex>> m_lock_guard;
   std::unique_ptr<Interprocess_lock> m_interprocess_lock;
-public:
-  std::shared_ptr<std::mutex> m_mutex;
 
 public:
   // RAII

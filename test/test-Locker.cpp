@@ -7,7 +7,7 @@
 #include "Locker.h"
 namespace fs = std::filesystem;
 
-TEST(Lock, Interprocess_lock) {
+TEST(Locker, Interprocess_lock) {
   fs::path lockfile{"testing-lockfile"};
   if (fs::exists(lockfile))
     fs::remove_all(lockfile);
@@ -21,7 +21,7 @@ TEST(Lock, Interprocess_lock) {
     fs::remove_all(lockfile);
 }
 
-TEST(Lock, Locker) {
+TEST(Locker, Locker) {
   fs::path lockfile{"testing-lockfile"};
   if (fs::exists(lockfile))
     fs::remove_all(lockfile);
@@ -37,8 +37,7 @@ TEST(Lock, Locker) {
     fs::remove_all(lockfile);
 }
 
-
-TEST(Lock, directory) {
+TEST(Locker, directory) {
   fs::path lockfile{"testing-lockfile-directory"};
   if (fs::exists(lockfile))
     fs::remove_all(lockfile);
@@ -53,7 +52,7 @@ TEST(Lock, directory) {
   fs::remove_all(lockfile);
 }
 
-TEST(Lock, no_permission) {
+TEST(Locker, no_permission) {
   fs::path lockfile{"/unlikely-directory/testing-lockfile"};
   EXPECT_ANY_THROW(sjef::Locker locker(lockfile); locker.bolt());
   EXPECT_ANY_THROW(sjef::Interprocess_lock l1(lockfile));
@@ -63,62 +62,7 @@ TEST(Lock, no_permission) {
     fs::remove_all(lockfile);
 }
 
-TEST(Lock, many_write_threads) {
-  fs::path lockfile{"testing-lockfile"};
-  fs::path datafile{"testing-data"};
-  if (fs::exists(datafile))
-    fs::remove_all(datafile);
-  if (fs::exists(lockfile))
-    fs::remove_all(lockfile);
-  sjef::Locker locker(lockfile);
-  //  { auto toucher = std::ofstream(lockfile); }
-  ASSERT_FALSE(fs::exists(lockfile));
-  int n{100};
-  std::vector<std::string> messages;
-  messages.reserve(n);
-  for (auto i = 0; i < n; ++i)
-    messages.emplace_back(std::to_string(i));
-  std::vector<std::thread> threads;
-  threads.reserve(messages.size());
-  auto writer = [](sjef::Locker& locker, const std::string& data, const std::string& message) {
-    auto bolt = locker.bolt();
-    std::ofstream(data, std::ios_base::app) << message << std::endl;
-    auto second_bolt = locker.bolt();
-    auto third_bolt = locker.bolt();
-    auto duration = std::stoi(message) % 5;
-    std::this_thread::sleep_for(std::chrono::milliseconds(duration));
-    std::ofstream(data, std::ios_base::app) << message << std::endl;
-  };
-  for (const auto& message : messages)
-    threads.emplace_back(writer, std::ref(locker), datafile.string(), message);
-  for (auto& thread : threads)
-    thread.join();
-  ASSERT_TRUE(fs::exists(datafile));
-  //  std::cerr << std::ifstream(datafile).rdbuf()<<std::endl;
-  for (auto i = 0; i < n; ++i) {
-    auto l = locker.bolt();
-    int lines = 0;
-    for (auto s = std::ifstream(datafile); s; ++lines) {
-      std::string line;
-      std::string line2;
-      std::getline(s, line);
-      if (line.empty())
-        --lines;
-      else {
-        std::getline(s, line2);
-        EXPECT_EQ(line, line2);
-        //        std::cout << "line: " << line << std::endl;
-      }
-    }
-    //    std::cout << lines << " lines" << std::endl;
-    EXPECT_EQ(lines, threads.size());
-  }
-  //  EXPECT_TRUE(fs::exists(lockfile));
-  fs::remove_all(lockfile);
-  fs::remove_all(datafile);
-}
-
-TEST(Lock, independent_locks){
+TEST(Locker, write_many_threads) {
   fs::path lockfile{"testing-lockfile"};
   fs::path datafile{"testing-data"};
   if (fs::exists(datafile))
@@ -177,29 +121,28 @@ TEST(Lock, independent_locks){
 TEST(Locker, thread_common_mutex) {
   std::string lockfile{"thread_common_mutex.lock"};
   sjef::Locker locker(lockfile);
-  //  std::cout << "master: address of mutex = " << &(*locker.m_mutex) << std::endl;
   int flag = 0;
-  std::mutex* slave_mutex_address;
-  auto func = [&flag, lockfile, &slave_mutex_address](const std::shared_ptr<std::mutex>& mutex) {
-    //    std::cout << "slave: address of received mutex = " << &(*mutex) << std::endl;
-    sjef::Locker locker(lockfile, mutex);
-    slave_mutex_address = &(*locker.m_mutex);
-    //    std::cout << "slave: address of constructed mutex = " << slave_mutex_address << std::endl;
+  std::cout << "master: sets flag=0 " << std::this_thread::get_id() << std::endl;
+
+  auto func = [&flag, lockfile]() {
+    std::cout << "slave " << std::this_thread::get_id() << std::endl;
+    sjef::Locker locker(lockfile);
     auto bolt = locker.bolt();
     flag = 1;
-    //    std::cout << "slave: gets control " << flag << std::endl;
+    std::cout << "slave: gets control " << flag << std::endl;
   };
+
   std::thread slave;
   {
     auto bolt = locker.bolt();
-    slave = std::thread(func, locker.m_mutex);
+    std::cout << "master has locked " << std::endl;
+    slave = std::thread(func);
     std::this_thread::sleep_for(std::chrono::duration(std::chrono::milliseconds(1)));
     flag = 0;
-    //    std::cout << "master: about to release lock " << flag << std::endl;
+    std::cout << "master: about to release lock " << flag << std::endl;
   }
   slave.join();
   EXPECT_EQ(flag, 1);
-  EXPECT_EQ(slave_mutex_address, &((*locker.m_mutex)));
   fs::remove(lockfile);
 }
 

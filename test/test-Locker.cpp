@@ -37,6 +37,7 @@ TEST(Lock, Locker) {
     fs::remove_all(lockfile);
 }
 
+
 TEST(Lock, directory) {
   fs::path lockfile{"testing-lockfile-directory"};
   if (fs::exists(lockfile))
@@ -90,6 +91,62 @@ TEST(Lock, many_write_threads) {
   };
   for (const auto& message : messages)
     threads.emplace_back(writer, std::ref(locker), datafile.string(), message);
+  for (auto& thread : threads)
+    thread.join();
+  ASSERT_TRUE(fs::exists(datafile));
+  //  std::cerr << std::ifstream(datafile).rdbuf()<<std::endl;
+  for (auto i = 0; i < n; ++i) {
+    auto l = locker.bolt();
+    int lines = 0;
+    for (auto s = std::ifstream(datafile); s; ++lines) {
+      std::string line;
+      std::string line2;
+      std::getline(s, line);
+      if (line.empty())
+        --lines;
+      else {
+        std::getline(s, line2);
+        EXPECT_EQ(line, line2);
+        //        std::cout << "line: " << line << std::endl;
+      }
+    }
+    //    std::cout << lines << " lines" << std::endl;
+    EXPECT_EQ(lines, threads.size());
+  }
+  //  EXPECT_TRUE(fs::exists(lockfile));
+  fs::remove_all(lockfile);
+  fs::remove_all(datafile);
+}
+
+TEST(Lock, independent_locks){
+  fs::path lockfile{"testing-lockfile"};
+  fs::path datafile{"testing-data"};
+  if (fs::exists(datafile))
+    fs::remove_all(datafile);
+  if (fs::exists(lockfile))
+    fs::remove_all(lockfile);
+  sjef::Locker locker(lockfile);
+  //  { auto toucher = std::ofstream(lockfile); }
+  ASSERT_FALSE(fs::exists(lockfile));
+  int n{100};
+  std::vector<std::string> messages;
+  messages.reserve(n);
+  for (auto i = 0; i < n; ++i)
+    messages.emplace_back(std::to_string(i));
+  std::vector<std::thread> threads;
+  threads.reserve(messages.size());
+  auto writer = [](const fs::path& lockfile, const std::string& data, const std::string& message) {
+    sjef::Locker locker(lockfile);
+    auto bolt = locker.bolt();
+    std::ofstream(data, std::ios_base::app) << message << std::endl;
+    auto second_bolt = locker.bolt();
+    auto third_bolt = locker.bolt();
+    auto duration = std::stoi(message) % 5;
+    std::this_thread::sleep_for(std::chrono::milliseconds(duration));
+    std::ofstream(data, std::ios_base::app) << message << std::endl;
+  };
+  for (const auto& message : messages)
+    threads.emplace_back(writer, lockfile, datafile.string(), message);
   for (auto& thread : threads)
     thread.join();
   ASSERT_TRUE(fs::exists(datafile));

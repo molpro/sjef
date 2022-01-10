@@ -71,6 +71,7 @@ if (false)
 #else
   m_lock = open(m_path.string().c_str(), O_RDWR | O_CREAT, 0666);
   if ((m_lock >= 0 and flock(m_lock, LOCK_EX) != 0) or (m_lock < 0 && (close(m_lock) or true)))
+//  if (false)
 #endif
   {
 #ifdef _WIN32

@@ -3,6 +3,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <sstream>
 #ifdef _WIN32
 #include <Windows.h>
 #else

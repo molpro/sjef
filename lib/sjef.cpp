@@ -106,12 +106,23 @@ inline std::string getattribute(pugi::xpath_node node, std::string name) {
   return node.node().attribute(name.c_str()).value();
 }
 
+std::mutex s_make_locker_mutex;
 std::map<fs::path, std::shared_ptr<Locker>> lockers;
 inline std::shared_ptr<Locker> make_locker(const fs::path& filename) {
+  std::lock_guard lock(s_make_locker_mutex);
   auto name = fs::absolute(filename);
-  if (lockers.count(name) == 0)
+  if (lockers.count(name) == 0) {
     lockers[name] = std::make_shared<Locker>(fs::path{name} / ".lock");
+//    std::cout << "registering new locker for " << name << std::endl;
+  }
+//  std::cout << "use count of locker: " << lockers[name].use_count() << std::endl;
   return lockers[name];
+}
+inline void prune_lockers(const fs::path& filename) {
+  std::lock_guard lock(s_make_locker_mutex);
+  auto name = fs::absolute(filename);
+  if (lockers.count(name) > 0 and lockers[name].use_count() == 0)
+    lockers.erase(name);
 }
 const std::vector<std::string> Project::suffix_keys{"inp", "out", "xml"};
 Project::Project(const std::string& filename, bool construct, const std::string& default_suffix,
@@ -122,8 +133,7 @@ Project::Project(const std::string& filename, bool construct, const std::string&
       m_properties(std::make_unique<pugi_xml_document>()), m_suffixes(suffixes),
       m_backend_doc(std::make_unique<pugi_xml_document>()), m_status_lifetime(0),
       m_status_last(std::chrono::steady_clock::now()), m_master_instance(masterProject),
-      m_master_of_slave(masterProject == nullptr), m_backend(""),
-      m_locker(make_locker(m_filename)),
+      m_master_of_slave(masterProject == nullptr), m_backend(""), m_locker(make_locker(m_filename)),
       m_property_file_modification_time(), m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}) {
   {
     if (fs::exists(propertyFile())) {
@@ -520,8 +530,7 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
 }
 
 void Project::force_file_names(const std::string& oldname) {
-
-  m_locker = std::make_unique<Locker>(m_filename);
+  m_locker->bolt();
   fs::directory_iterator end_iter;
   for (fs::directory_iterator dir_itr(m_filename); dir_itr != end_iter; ++dir_itr) {
     auto path = dir_itr->path();
@@ -1415,20 +1424,21 @@ std::vector<std::string> Project::property_names() const {
   return result;
 }
 
+std::mutex s_recent_edit_mutex;
 void Project::recent_edit(const std::string& add, const std::string& remove) {
   auto project_suffix =
       add.empty() ? fs::path(remove).extension().string().substr(1) : fs::path(add).extension().string().substr(1);
   auto recent_projects_file = expand_path(std::string{"~/.sjef/"} + project_suffix + "/projects");
   bool changed = false;
+  auto lock_threads = std::lock_guard(s_recent_edit_mutex);
+  Locker locker{fs::path{recent_projects_file}.parent_path()};
   {
-    Locker locker{fs::path{recent_projects_file}.parent_path()};
     auto lock = locker.bolt();
     if (!fs::exists(recent_projects_file)) {
       fs::create_directories(fs::path(recent_projects_file).parent_path());
       std::ofstream junk(recent_projects_file);
     }
     {
-
       std::ifstream in(recent_projects_file);
       std::ofstream out(recent_projects_file + "-");
       size_t lines = 0;

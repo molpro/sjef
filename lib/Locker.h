@@ -10,7 +10,6 @@
 namespace fs = std::filesystem;
 
 namespace sjef {
-class Interprocess_lock;
 /*!
  * @brief A thread-safe class for an inter-thread/inter-process lock.
  * The lock mechanism is based on a locked file in the file system.
@@ -35,7 +34,6 @@ private:
 
 private:
   const fs::path m_path;
-  std::unique_ptr<Interprocess_lock> m_interprocess_lock;
   std::unique_ptr<std::lock_guard<std::mutex>> m_lock;
   std::mutex m_mutex;
   int m_bolts;

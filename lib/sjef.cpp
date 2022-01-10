@@ -41,7 +41,8 @@ inline std::string executable(fs::path command) {
   else {
     constexpr bool use_boost_search_path = true;
     if (use_boost_search_path) {
-//      std::cout << "executable(" << command << ") returns " << bp::search_path(command.string()).string() << std::endl;
+      //      std::cout << "executable(" << command << ") returns " << bp::search_path(command.string()).string() <<
+      //      std::endl;
       return bp::search_path(command.string()).string();
     } else {
       std::stringstream path{std::string{getenv("PATH")}}; // TODO windows
@@ -114,7 +115,8 @@ Project::Project(const std::string& filename, bool construct, const std::string&
       m_backend_doc(std::make_unique<pugi_xml_document>()), m_status_lifetime(0),
       m_status_last(std::chrono::steady_clock::now()), m_master_instance(masterProject),
       m_master_of_slave(masterProject == nullptr), m_backend(""),
-      m_locker(masterProject == nullptr ? std::make_unique<Locker>(m_filename) : std::make_unique<Locker>(m_filename)),
+      m_locker(masterProject == nullptr ? std::make_shared<Locker>(fs::path{m_filename} / ".lock")
+                                        : masterProject->m_locker),
       m_property_file_modification_time(), m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}) {
   {
     if (fs::exists(propertyFile())) {

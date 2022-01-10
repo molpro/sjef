@@ -7,19 +7,7 @@
 #include "Locker.h"
 namespace fs = std::filesystem;
 
-TEST(Locker, Interprocess_lock) {
-  fs::path lockfile{"testing-lockfile"};
-  if (fs::exists(lockfile))
-    fs::remove_all(lockfile);
-  {
-    sjef::Interprocess_lock l1(lockfile);
-    //    EXPECT_TRUE(fs::exists(lockfile));
-  }
-  //  EXPECT_TRUE(fs::exists(lockfile));
-  //  EXPECT_EQ(fs::file_size(lockfile), 0);
-  if (fs::exists(lockfile))
-    fs::remove_all(lockfile);
-}
+
 
 TEST(Locker, Locker) {
   fs::path lockfile{"testing-lockfile"};
@@ -55,8 +43,7 @@ TEST(Locker, directory) {
 TEST(Locker, no_permission) {
   fs::path lockfile{"/unlikely-directory/testing-lockfile"};
   EXPECT_ANY_THROW(sjef::Locker locker(lockfile); locker.bolt());
-  EXPECT_ANY_THROW(sjef::Interprocess_lock l1(lockfile));
-  EXPECT_THROW(sjef::Interprocess_lock l1(lockfile), std::runtime_error);
+  EXPECT_THROW(sjef::Locker locker(lockfile); locker.bolt(), std::runtime_error);
   EXPECT_FALSE(fs::exists(lockfile));
   if (fs::exists(lockfile))
     fs::remove_all(lockfile);
@@ -71,7 +58,7 @@ TEST(Locker, write_many_threads) {
     fs::remove_all(lockfile);
   sjef::Locker locker(lockfile);
   //  { auto toucher = std::ofstream(lockfile); }
-  ASSERT_FALSE(fs::exists(lockfile));
+  ASSERT_TRUE(fs::exists(lockfile));
   int n{100};
   std::vector<std::string> messages;
   messages.reserve(n);
@@ -79,18 +66,24 @@ TEST(Locker, write_many_threads) {
     messages.emplace_back(std::to_string(i));
   std::vector<std::thread> threads;
   threads.reserve(messages.size());
-  auto writer = [](const fs::path& lockfile, const std::string& data, const std::string& message) {
-    sjef::Locker locker(lockfile);
+  auto writer = [&locker]( const std::string& data, const std::string& message) {
+    std::cout << "thread about to lock "<<std::this_thread::get_id()<<std::endl;
     auto bolt = locker.bolt();
+    std::cout << "thread locked "<<std::this_thread::get_id()<<std::endl;
     std::ofstream(data, std::ios_base::app) << message << std::endl;
+    std::cout << "first message written "<<std::this_thread::get_id()<<std::endl;
     auto second_bolt = locker.bolt();
+    std::cout << "second bolt placed "<<std::this_thread::get_id()<<std::endl;
     auto third_bolt = locker.bolt();
     auto duration = std::stoi(message) % 5;
     std::this_thread::sleep_for(std::chrono::milliseconds(duration));
+    std::cout << "awake "<<std::this_thread::get_id()<<std::endl;
     std::ofstream(data, std::ios_base::app) << message << std::endl;
+    std::cout << "second message written "<<std::this_thread::get_id()<<std::endl;
+    std::cout << "thread finishing " <<std::this_thread::get_id()<< std::endl;
   };
   for (const auto& message : messages)
-    threads.emplace_back(writer, lockfile, datafile.string(), message);
+    threads.emplace_back(writer, datafile.string(), message);
   for (auto& thread : threads)
     thread.join();
   ASSERT_TRUE(fs::exists(datafile));
@@ -124,9 +117,8 @@ TEST(Locker, thread_common_mutex) {
   int flag = 0;
   std::cout << "master: sets flag=0 " << std::this_thread::get_id() << std::endl;
 
-  auto func = [&flag, lockfile]() {
+  auto func = [&flag, &locker]() {
     std::cout << "slave " << std::this_thread::get_id() << std::endl;
-    sjef::Locker locker(lockfile);
     auto bolt = locker.bolt();
     flag = 1;
     std::cout << "slave: gets control " << flag << std::endl;

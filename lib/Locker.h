@@ -1,5 +1,7 @@
 #ifndef SJEF_LIB_LOCKER_H_
 #define SJEF_LIB_LOCKER_H_
+#include <boost/interprocess/sync/file_lock.hpp>
+#include <boost/interprocess/sync/named_mutex.hpp>
 #include <filesystem>
 #include <map>
 #include <mutex>
@@ -10,11 +12,12 @@ namespace fs = std::filesystem;
 namespace sjef {
 class Interprocess_lock;
 /*!
- * @brief A thread-unsafe class for an inter-thread/inter-process lock.
+ * @brief A thread-safe class for an inter-thread/inter-process lock.
  * The lock mechanism is based on a locked file in the file system.
  * The locked file is a file that may or may not already exist; if it doesn't, it is created.
  * The file contents are not altered, and the file is not deleted.
  * If the specified file is a directory, the lock is instead made on a file in that directory.
+ * All threads in the same process using the locker must do so through the same Locker object.
  *
  * The lock is initially open, and is closed by calling add_bolt() and reopened with remove_bolt(); add_bolt() can be
  * called multiple times, with only the first instance having a real effect, and the lock being released when the last
@@ -25,13 +28,19 @@ class Locker {
 public:
   explicit Locker(fs::path path);
   virtual ~Locker();
+
 private:
   void add_bolt();
   void remove_bolt();
 
 private:
-  fs::path m_path;
+  const fs::path m_path;
   std::unique_ptr<Interprocess_lock> m_interprocess_lock;
+  std::unique_ptr<std::lock_guard<std::mutex>> m_lock;
+  std::mutex m_mutex;
+  int m_bolts;
+  boost::interprocess::file_lock m_file_lock;
+  std::thread::id m_owning_thread;
 
 public:
   // RAII
@@ -64,7 +73,8 @@ public:
    * @param directory_lock_file In the case that path is a directory, the name of the file in that directory that will
    * be used for the lock
    */
-  explicit Interprocess_lock(const fs::path& path, const fs::path& directory_lock_file = Interprocess_lock::directory_lock_file);
+  explicit Interprocess_lock(const fs::path& path,
+                             const fs::path& directory_lock_file = Interprocess_lock::directory_lock_file);
   virtual ~Interprocess_lock();
   const static fs::path directory_lock_file;
 
@@ -72,12 +82,7 @@ private:
   Interprocess_lock(const Interprocess_lock&) = delete;
   Interprocess_lock& operator=(const Interprocess_lock&) = delete;
 
-#ifdef _WIN32
-  using handle_t = void*;
-#else
-  using handle_t = int;
-#endif
-  handle_t m_lock;
+  boost::interprocess::file_lock m_file_lock;
   fs::path m_path;
 };
 

@@ -213,8 +213,13 @@ Project::Project(const std::string& filename, bool construct, const std::string&
 
     m_backends[sjef::Backend::dummy_name] = sjef::Backend(
         sjef::Backend::dummy_name, "localhost", "{$PWD}",
-//        "/bin/sh -c 'echo dummy > ${0%.*}.out; echo \"<?xml version=\\\"1.0\\\"?>\n<root/>\" > ${0%.*}.xml'"
-        "dummy"
+        "dummy",
+        "([0-9]+)",
+#ifdef WIN32
+        "tasklist /FO LIST /FI \"PID eq \"", "^PID: *[0-9][0-9]*", " ", "taskkill /f /PID "
+#else
+        "/bin/ps -o pid,state -p", "^ *[0-9][0-9]* ", " [Tt]" , "pkill -P"
+#endif
         );
     if (not sjef::check_backends(m_project_suffix)) {
       auto config_file = expand_path(std::string{"~/.sjef/"} + m_project_suffix + "/backends.xml");

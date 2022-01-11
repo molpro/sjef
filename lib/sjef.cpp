@@ -70,7 +70,7 @@ bool copyDir(fs::path const& source, fs::path const& destination, bool delete_so
   // Create the destination directory
   if (!fs::create_directory(destination))
     throw std::runtime_error("Unable to create destination directory " + destination.string());
-  sjef::Locker destination_locker(source);
+  sjef::Locker destination_locker(destination);
   auto destination_lock = destination_locker.bolt();
   // Iterate through the source directory
   for (fs::directory_iterator file(source); file != fs::directory_iterator(); ++file) {
@@ -602,6 +602,7 @@ bool Project::copy(const std::string& destination_filename, bool force, bool kee
     if (fs::exists(dest))
       throw std::runtime_error("Copy to " + dest.string() + " cannot be done because the destination already exists");
     //    fs::copy(fs::path(m_filename), dest, (slave ? fs::copy_options::none : fs::copy_options::recursive));
+//    auto bolt =m_locker->bolt();
     if (not copyDir(fs::path(m_filename), dest, false, not slave))
       //      throw std::runtime_error("Failed to copy current project directory");
       return false;

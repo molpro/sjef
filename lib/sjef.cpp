@@ -601,8 +601,8 @@ bool Project::copy(const std::string& destination_filename, bool force, bool kee
       fs::remove_all(dest);
     if (fs::exists(dest))
       throw std::runtime_error("Copy to " + dest.string() + " cannot be done because the destination already exists");
+    auto bolt =m_locker->bolt();
     //    fs::copy(fs::path(m_filename), dest, (slave ? fs::copy_options::none : fs::copy_options::recursive));
-//    auto bolt =m_locker->bolt();
     if (not copyDir(fs::path(m_filename), dest, false, not slave))
       //      throw std::runtime_error("Failed to copy current project directory");
       return false;

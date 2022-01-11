@@ -13,11 +13,13 @@
 #endif
 
 #include "Locker.h"
+#include <boost/interprocess/sync/file_lock.hpp>
+#include <mutex>
 
 std::map<std::string, std::mutex> mutexes;
 
 namespace sjef {
-const fs::path Interprocess_lock::directory_lock_file = ".lock";
+const fs::path directory_lock_file = ".lock";
 std::mutex s_mutex;
 
 inline std::string hash_path(const fs::path& path) {
@@ -28,7 +30,7 @@ inline std::string hash_path(const fs::path& path) {
   return std::to_string(x);
 }
 inline fs::path lock_file(fs::path path) {
-  auto result = fs::is_directory(path) ? std::move(path) / Interprocess_lock::directory_lock_file : std::move(path);
+  auto result = fs::is_directory(path) ? std::move(path) / directory_lock_file : std::move(path);
   if (not fs::exists(result))
     try {
       const auto& parent_path = result.parent_path();
@@ -46,7 +48,7 @@ inline fs::path lock_file(fs::path path) {
 
 Locker::Locker(fs::path path)
     : m_path(lock_file(std::move(path))), m_bolts(0),
-      m_file_lock(boost::interprocess::file_lock{fs::absolute(m_path).string().c_str()}) {}
+      m_file_lock(std::make_unique<boost::interprocess::file_lock>(fs::absolute(m_path).string().c_str())) {}
 Locker::~Locker() {}
 
 void Locker::add_bolt() {
@@ -59,7 +61,7 @@ void Locker::add_bolt() {
   m_lock.reset(new std::lock_guard<std::mutex>(m_mutex));
   m_owning_thread = this_thread;
   m_bolts = 1;
-  m_file_lock.lock();
+  m_file_lock->lock();
 //  std::cout << "Interprocess_lock acquired " << std::this_thread::get_id() << " " << m_path << std::endl;
 }
 void Locker::remove_bolt() {
@@ -69,7 +71,7 @@ void Locker::remove_bolt() {
     throw std::logic_error("Locker::remove_bolt called too many times");
   if (m_bolts == 0) {
     //    std::cout << "Locker::remove_bolt() releases mutex " << std::this_thread::get_id() << m_path << std::endl;
-    m_file_lock.unlock();
+    m_file_lock->unlock();
 //    std::cout << "Interprocess_lock relinquished " << std::this_thread::get_id() << " " << m_path << std::endl;
     m_lock.reset(nullptr);
   }

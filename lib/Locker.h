@@ -1,13 +1,15 @@
 #ifndef SJEF_LIB_LOCKER_H_
 #define SJEF_LIB_LOCKER_H_
-#include <boost/interprocess/sync/file_lock.hpp>
-#include <boost/interprocess/sync/named_mutex.hpp>
 #include <filesystem>
 #include <map>
 #include <mutex>
 #include <string>
 #include <thread>
 namespace fs = std::filesystem;
+
+namespace boost::interprocess {
+class file_lock; ///< @private
+}
 
 namespace sjef {
 /*!
@@ -28,7 +30,7 @@ public:
   explicit Locker(fs::path path);
   virtual ~Locker();
 
-private:
+protected:
   void add_bolt();
   void remove_bolt();
 
@@ -37,7 +39,7 @@ private:
   std::unique_ptr<std::lock_guard<std::mutex>> m_lock;
   std::mutex m_mutex;
   int m_bolts;
-  boost::interprocess::file_lock m_file_lock;
+  const std::unique_ptr<boost::interprocess::file_lock> m_file_lock;
   std::thread::id m_owning_thread;
 
 public:
@@ -53,35 +55,6 @@ public:
     Locker& m_locker;
   };
   const Bolt bolt();
-};
-
-/*!
- * @brief A thread-unsafe class for a lock based on a global mutex in the file system.
- * The mutex is a file that may or may not already exist; if it doesn't, it is created.
- * The file contents are not altered, and the file is not deleted.
- * If the specified file is a directory, the lock is instead made on a file in that directory.
- * On creation of a class instance, execution will wait until access to the file can be obtained,
- * and the access obtained will block other subsequent access requests until the object is destroyed.
- */
-class Interprocess_lock {
-public:
-  /*!
-   * @brief Assert and obtain access to a file for the lifetime of a class instance.
-   * @param path The file to be locked.
-   * @param directory_lock_file In the case that path is a directory, the name of the file in that directory that will
-   * be used for the lock
-   */
-  explicit Interprocess_lock(const fs::path& path,
-                             const fs::path& directory_lock_file = Interprocess_lock::directory_lock_file);
-  virtual ~Interprocess_lock();
-  const static fs::path directory_lock_file;
-
-private:
-  Interprocess_lock(const Interprocess_lock&) = delete;
-  Interprocess_lock& operator=(const Interprocess_lock&) = delete;
-
-  boost::interprocess::file_lock m_file_lock;
-  fs::path m_path;
 };
 
 } // namespace sjef

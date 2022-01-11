@@ -6,6 +6,12 @@
 #include <sjef.h>
  namespace fs = std::filesystem;
 
+#ifdef WIN32
+const std::string path_environment_separator = ";";
+#else
+const std::string path_environment_separator = ":";
+#endif
+
 class savestate {
   std::string rf;
   std::vector<std::string> testfiles;
@@ -27,6 +33,12 @@ public:
           throw std::runtime_error(std::string{"Creating directory "} + path + " has failed");
       }
     }
+
+    auto path = fs::absolute(fs::current_path().parent_path() / "lib").string() + path_environment_separator +
+        std::getenv("PATH");
+//    std::cout << "PWD: " << fs::current_path() << std::endl;
+//    std::cout << "PATH: " << path << std::endl;
+    setenv("PATH", path.c_str(), 1);
   }
   explicit savestate(std::string suffix) : savestate(std::vector<std::string>{{suffix}}) {}
   ~savestate() {
@@ -52,4 +64,5 @@ public:
     return testfiles.back();
   }
 };
+
 #endif // SJEF_TEST_TEST_SJEF_H_

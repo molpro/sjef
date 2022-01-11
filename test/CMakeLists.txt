@@ -37,3 +37,4 @@ if (NOT MOLPRO STREQUAL MOLPRO-NOTFOUND)
     endif()
     target_link_libraries(test-sjef-molpro PRIVATE Boost::headers)
 endif ()
+

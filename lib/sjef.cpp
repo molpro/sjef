@@ -213,7 +213,9 @@ Project::Project(const std::string& filename, bool construct, const std::string&
 
     m_backends[sjef::Backend::dummy_name] = sjef::Backend(
         sjef::Backend::dummy_name, "localhost", "{$PWD}",
-        "/bin/sh -c 'echo dummy > ${0%.*}.out; echo \"<?xml version=\\\"1.0\\\"?>\n<root/>\" > ${0%.*}.xml'");
+//        "/bin/sh -c 'echo dummy > ${0%.*}.out; echo \"<?xml version=\\\"1.0\\\"?>\n<root/>\" > ${0%.*}.xml'"
+        "dummy"
+        );
     if (not sjef::check_backends(m_project_suffix)) {
       auto config_file = expand_path(std::string{"~/.sjef/"} + m_project_suffix + "/backends.xml");
       std::cerr << "contents of " << config_file << ":" << std::endl;

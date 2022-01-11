@@ -5,12 +5,13 @@
 #include "sjef.h"
 #include "test-sjef.h"
 #include <filesystem>
+#include <fstream>
 #include <libgen.h>
 #include <list>
 #include <map>
 #include <regex>
+#include <stdlib.h>
 #include <unistd.h>
-#include <fstream>
 
 namespace fs = std::filesystem;
 
@@ -94,7 +95,7 @@ TEST(project, move_generic) {
   x2.move(filename, true);
   EXPECT_FALSE(fs::exists(sjef::expand_path(filename2)));
   EXPECT_TRUE(fs::exists(sjef::expand_path(filename)));
-  EXPECT_TRUE(fs::exists(sjef::expand_path((fs::path{filename}/"Info.plist").string())));
+  EXPECT_TRUE(fs::exists(sjef::expand_path((fs::path{filename} / "Info.plist").string())));
 }
 
 TEST(project, moveMolpro) {
@@ -400,7 +401,8 @@ TEST(project, early_change_backend) {
   auto backenddirectory = sjef::expand_path((fs::path{"~"} / ".sjef" / suffix).string());
   fs::create_directories(backenddirectory);
   auto backendfile = sjef::expand_path((fs::path{backenddirectory} / "backends.xml").string());
-  std::ofstream(backendfile) << "<?xml version=\"1.0\"?>\n<backends><backend name=\"local\" run_command=\"true\"/><backend name=\"test\" host=\"127.0.0.1\" "
+  std::ofstream(backendfile) << "<?xml version=\"1.0\"?>\n<backends><backend name=\"local\" "
+                                "run_command=\"true\"/><backend name=\"test\" host=\"127.0.0.1\" "
                                 "run_command=\"true\"/></backends>"
                              << std::endl;
   auto filename = state.testfile(std::string{"early_change_backend."} + suffix);
@@ -408,9 +410,9 @@ TEST(project, early_change_backend) {
   EXPECT_EQ(sjef::Project(filename).filename(), filename);
   EXPECT_EQ(sjef::Project(filename).property_get("backend"), "test");
   EXPECT_THROW(sjef::Project(filename).change_backend("test2"), std::runtime_error);
-  std::ofstream(backendfile)
-      << "<?xml version=\"1.0\"?>\n<backends><backend name=\"test2\" host=\"127.0.0.1\" run_command=\"true\"/></backends>"
-      << std::endl;
+  std::ofstream(backendfile) << "<?xml version=\"1.0\"?>\n<backends><backend name=\"test2\" host=\"127.0.0.1\" "
+                                "run_command=\"true\"/></backends>"
+                             << std::endl;
   EXPECT_EQ(sjef::Project(filename).filename(), filename);
   EXPECT_EQ(sjef::Project(filename).property_get("backend"), "local");
   EXPECT_THROW(sjef::Project(filename).change_backend("test"), std::runtime_error);
@@ -528,7 +530,8 @@ TEST(project, project_name_embedded_space) {
   ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{"~/.sjef/"} + suffix)));
   {
     const std::string& path = sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml");
-    std::ofstream(path) << "<?xml version=\"1.0\"?> <backends> <backend name=\"local\" run_command=\"true\"/><backend name=\"light\" run_command=\"sh "
+    std::ofstream(path) << "<?xml version=\"1.0\"?> <backends> <backend name=\"local\" run_command=\"true\"/><backend "
+                           "name=\"light\" run_command=\"sh "
                         << (fs::current_path() / "light.sh").string() << "\"/></backends>";
   }
   sjef::Project p(state.testfile(std::string{"completely new."} + suffix));
@@ -555,7 +558,8 @@ TEST(project, project_dir_embedded_space) {
   ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{"~/.sjef/"} + suffix)));
   const std::string& path = sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml");
   {
-    std::ofstream(path) << "<?xml version=\"1.0\"?> <backends><backend name=\"local\" run_command=\"true\"/> <backend name=\"light\" run_command=\"sh "
+    std::ofstream(path) << "<?xml version=\"1.0\"?> <backends><backend name=\"local\" run_command=\"true\"/> <backend "
+                           "name=\"light\" run_command=\"sh "
                         << (fs::current_path() / "light.sh").string() << "\"/></backends>";
   }
   std::ofstream("light.sh") << "while [ ${1#-} != ${1} ]; do shift; done; "
@@ -622,8 +626,9 @@ TEST(project, sync_backend) {
     throw std::runtime_error("cannot create " + cache);
   const auto run_script = state.testfile("light.sh");
   std::ofstream(sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml"))
-      << "<?xml version=\"1.0\"?>\n<backends>\n <backend name=\"local\" run_command=\"true\"/><backend name=\"test-remote\" run_command=\"sh " << run_script
-      << "\" host=\"127.0.0.1\" cache=\"" << cache << "\"/>\n</backends>";
+      << "<?xml version=\"1.0\"?>\n<backends>\n <backend name=\"local\" run_command=\"true\"/><backend "
+         "name=\"test-remote\" run_command=\"sh "
+      << run_script << "\" host=\"127.0.0.1\" cache=\"" << cache << "\"/>\n</backends>";
   std::ofstream(run_script) << "while [ ${1#-} != ${1} ]; do shift; done; "
                                "echo dummy > \"${1%.*}.out\";echo '<?xml "
                                "version=\"1.0\"?>\n<root/>' > \"${1%.*}.xml\";";
@@ -667,7 +672,8 @@ TEST(sjef, xpath_search) {
   std::string suffix{"xpath_search"};
   savestate state(suffix);
   const std::string& path = sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml");
-  std::ofstream(path) << "<?xml version=\"1.0\"?> <backends> <backend name=\"null\" run_command=\"true\"/><backend name=\"local\" run_command=\"true\"/></backends>";
+  std::ofstream(path) << "<?xml version=\"1.0\"?> <backends> <backend name=\"null\" run_command=\"true\"/><backend "
+                         "name=\"local\" run_command=\"true\"/></backends>";
   auto p = sjef::Project(state.testfile(std::string{"xpath_search."} + suffix));
   std::ofstream(p.filename("inp")) << "test" << std::endl;
   p.run("null", 0, true, true);
@@ -802,8 +808,9 @@ TEST(project, corrupt_geometry_include) {
   std::string suffix{"corrupt_geometry_include"};
   savestate state(suffix);
   const std::string& path = sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml");
-  std::ofstream(path) << "<?xml version=\"1.0\"?> <backends> <backend name=\"local\" run_command=\"true\"/><backend name=\"null\" run_command=\"true\"/></backends>";
-  sjef::Project p(state.testfile(std::string{"corrupt_geometry_include."}+suffix));
+  std::ofstream(path) << "<?xml version=\"1.0\"?> <backends> <backend name=\"local\" run_command=\"true\"/><backend "
+                         "name=\"null\" run_command=\"true\"/></backends>";
+  sjef::Project p(state.testfile(std::string{"corrupt_geometry_include."} + suffix));
   std::ofstream(p.filename("inp")) << "orient,mass;\n"
                                       "geomtyp=xyz;\n"
                                       "geometry=\n"
@@ -813,7 +820,7 @@ TEST(project, corrupt_geometry_include) {
                                       "\n"
                                       "df-hf";
   p.change_backend("null");
-  p.run(0,true,true);
+  p.run(0, true, true);
 }
 
 TEST(project, reopen) {

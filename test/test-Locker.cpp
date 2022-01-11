@@ -41,12 +41,14 @@ TEST(Locker, directory) {
 }
 
 TEST(Locker, no_permission) {
-  fs::path lockfile{"/unlikely-directory/testing-lockfile"};
+  fs::path lockdir{"no_permission_dir"};
+  std::ofstream(lockdir.string()) <<"content"<<std::endl;
+  fs::path lockfile{lockdir/"file"};
   EXPECT_ANY_THROW(sjef::Locker locker(lockfile); locker.bolt());
   EXPECT_THROW(sjef::Locker locker(lockfile); locker.bolt(), std::runtime_error);
   EXPECT_FALSE(fs::exists(lockfile));
-  if (fs::exists(lockfile))
-    fs::remove_all(lockfile);
+  if (fs::exists(lockdir))
+    fs::remove_all(lockdir);
 }
 
 TEST(Locker, write_many_threads) {
@@ -67,20 +69,20 @@ TEST(Locker, write_many_threads) {
   std::vector<std::thread> threads;
   threads.reserve(messages.size());
   auto writer = [&locker]( const std::string& data, const std::string& message) {
-    std::cout << "thread about to lock "<<std::this_thread::get_id()<<std::endl;
+//    std::cout << "thread about to lock "<<std::this_thread::get_id()<<std::endl;
     auto bolt = locker.bolt();
-    std::cout << "thread locked "<<std::this_thread::get_id()<<std::endl;
+//    std::cout << "thread locked "<<std::this_thread::get_id()<<std::endl;
     std::ofstream(data, std::ios_base::app) << message << std::endl;
-    std::cout << "first message written "<<std::this_thread::get_id()<<std::endl;
+//    std::cout << "first message written "<<std::this_thread::get_id()<<std::endl;
     auto second_bolt = locker.bolt();
-    std::cout << "second bolt placed "<<std::this_thread::get_id()<<std::endl;
+//    std::cout << "second bolt placed "<<std::this_thread::get_id()<<std::endl;
     auto third_bolt = locker.bolt();
     auto duration = std::stoi(message) % 5;
     std::this_thread::sleep_for(std::chrono::milliseconds(duration));
-    std::cout << "awake "<<std::this_thread::get_id()<<std::endl;
+//    std::cout << "awake "<<std::this_thread::get_id()<<std::endl;
     std::ofstream(data, std::ios_base::app) << message << std::endl;
-    std::cout << "second message written "<<std::this_thread::get_id()<<std::endl;
-    std::cout << "thread finishing " <<std::this_thread::get_id()<< std::endl;
+//    std::cout << "second message written "<<std::this_thread::get_id()<<std::endl;
+//    std::cout << "thread finishing " <<std::this_thread::get_id()<< std::endl;
   };
   for (const auto& message : messages)
     threads.emplace_back(writer, datafile.string(), message);
@@ -115,23 +117,23 @@ TEST(Locker, thread_common_mutex) {
   std::string lockfile{"thread_common_mutex.lock"};
   sjef::Locker locker(lockfile);
   int flag = 0;
-  std::cout << "master: sets flag=0 " << std::this_thread::get_id() << std::endl;
+//  std::cout << "master: sets flag=0 " << std::this_thread::get_id() << std::endl;
 
   auto func = [&flag, &locker]() {
-    std::cout << "slave " << std::this_thread::get_id() << std::endl;
+//    std::cout << "slave " << std::this_thread::get_id() << std::endl;
     auto bolt = locker.bolt();
     flag = 1;
-    std::cout << "slave: gets control " << flag << std::endl;
+//    std::cout << "slave: gets control " << flag << std::endl;
   };
 
   std::thread slave;
   {
     auto bolt = locker.bolt();
-    std::cout << "master has locked " << std::endl;
+//    std::cout << "master has locked " << std::endl;
     slave = std::thread(func);
     std::this_thread::sleep_for(std::chrono::duration(std::chrono::milliseconds(1)));
     flag = 0;
-    std::cout << "master: about to release lock " << flag << std::endl;
+//    std::cout << "master: about to release lock " << flag << std::endl;
   }
   slave.join();
   EXPECT_EQ(flag, 1);

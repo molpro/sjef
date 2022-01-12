@@ -1,11 +1,11 @@
 #include "Locker.h"
 #include "sjef-backend.h"
 #include "sjef.h"
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <pugixml.hpp>
-#include <filesystem>
 #include <regex>
-#include <fstream>
 namespace fs = std::filesystem;
 ///> @private
 struct sjef::pugi_xml_document : public pugi::xml_document {};
@@ -63,8 +63,8 @@ void sjef::Project::custom_run_preface() {
 
 sjef::Backend sjef::Project::default_backend() {
   if (m_project_suffix == "molpro") {
-    return Backend("local", "localhost", "${PWD}",
-                   "molpro {-n %n!MPI size} {-M %M!Total memory} {-m %m!Process memory} {-G %G!GA memory}");
+    return Backend(Backend::local(),"local", "localhost", "${PWD}",
+                         "molpro {-n %n!MPI size} {-M %M!Total memory} {-m %m!Process memory} {-G %G!GA memory}");
   } else
-    return Backend("local");
+    return Backend(Backend::local(),"local");
 }

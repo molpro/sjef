@@ -35,6 +35,8 @@ const std::string sjef::Project::s_propertyFile = "Info.plist";
 const std::string writing_object_file = ".Info.plist.writing_object";
 
 ///> @private
+inline bool localhost(const std::string& host) { return (host == "localhost" or host == "127.0.0.1"); }
+///> @private
 inline std::string executable(fs::path command) {
   if (command.is_absolute())
     return command.string();
@@ -113,9 +115,9 @@ inline std::shared_ptr<Locker> make_locker(const fs::path& filename) {
   auto name = fs::absolute(filename);
   if (lockers.count(name) == 0) {
     lockers[name] = std::make_shared<Locker>(fs::path{name} / ".lock");
-//    std::cout << "registering new locker for " << name << std::endl;
+    //    std::cout << "registering new locker for " << name << std::endl;
   }
-//  std::cout << "use count of locker: " << lockers[name].use_count() << std::endl;
+  //  std::cout << "use count of locker: " << lockers[name].use_count() << std::endl;
   return lockers[name];
 }
 inline void prune_lockers(const fs::path& filename) {
@@ -211,16 +213,11 @@ Project::Project(const std::string& filename, bool construct, const std::string&
         not fs::exists(fs::path{m_filename}.parent_path().parent_path() / "Info.plist"))
       recent_edit(m_filename);
 
-    m_backends[sjef::Backend::dummy_name] = sjef::Backend(
-        sjef::Backend::dummy_name, "localhost", "{$PWD}",
-        "dummy",
-        "([0-9]+)",
-#ifdef WIN32
-        "tasklist /FO LIST /FI \"PID eq \"", "^PID: *[0-9][0-9]*", " ", "taskkill /f /PID "
-#else
-        "/bin/ps -o pid,state -p", "^ *[0-9][0-9]* ", " [Tt]" , "pkill -P"
-#endif
-        );
+//    const Backend::linux x;
+//    Backend backend = Backend(x, sjef::Backend::dummy_name, "localhost", "{$PWD}", "dummy");
+//    m_backends[sjef::Backend::dummy_name] = backend;
+    m_backends.try_emplace(Backend::dummy_name,Backend::local(), sjef::Backend::dummy_name, "localhost", "{$PWD}", "dummy");
+    //        static_cast<Backend>(Backend_local(sjef::Backend::dummy_name, "localhost", "{$PWD}", "dummy"));
     if (not sjef::check_backends(m_project_suffix)) {
       auto config_file = expand_path(std::string{"~/.sjef/"} + m_project_suffix + "/backends.xml");
       std::cerr << "contents of " << config_file << ":" << std::endl;
@@ -234,7 +231,12 @@ Project::Project(const std::string& filename, bool construct, const std::string&
         auto backends = m_backend_doc->select_nodes("/backends/backend");
         for (const auto& be : backends) {
           auto kName = getattribute(be, "name");
-          m_backends[kName] = Backend(kName);
+          auto kHost = getattribute(be, "host");
+//          m_backends[kName] = localhost(kHost) ? Backend_local(kName) : Backend_linux(kName);
+          if (localhost(kHost))
+            m_backends.try_emplace(kName,Backend::local(),kName);
+          else
+            m_backends.try_emplace(kName,Backend::linux(),kName);
           std::string kVal;
           if ((kVal = getattribute(be, "template")) != "") {
             m_backends[kName].host = m_backends[kVal].host;
@@ -279,7 +281,7 @@ Project::Project(const std::string& filename, bool construct, const std::string&
         auto in = std::ifstream(config_file + "-");
         auto out = std::ofstream(config_file);
         std::string line;
-        auto be_defaults = Backend();
+        auto be_defaults = Backend(Backend::local());
         while (std::getline(in, line)) {
           out << line << std::endl;
           if (line.find("<backends>") != std::string::npos) {
@@ -608,7 +610,7 @@ bool Project::copy(const std::string& destination_filename, bool force, bool kee
       fs::remove_all(dest);
     if (fs::exists(dest))
       throw std::runtime_error("Copy to " + dest.string() + " cannot be done because the destination already exists");
-    auto bolt =m_locker->bolt();
+    auto bolt = m_locker->bolt();
     //    fs::copy(fs::path(m_filename), dest, (slave ? fs::copy_options::none : fs::copy_options::recursive));
     if (not copyDir(fs::path(m_filename), dest, false, not slave))
       //      throw std::runtime_error("Failed to copy current project directory");
@@ -2164,7 +2166,7 @@ unsigned int Project::current_run() const {
 }
 
 void Project::add_backend(const std::string& name, const std::map<std::string, std::string>& fields) {
-  m_backends[name] = Backend(name);
+  m_backends[name] = static_cast<Backend>(localhost((fields.count("host") > 0 ? fields.at("host") : "localhost")) ? Backend(Backend::local(),name) : Backend(Backend::linux(),name));
   if (fields.count("host") > 0)
     m_backends[name].host = fields.at("host");
   if (fields.count("cache") > 0)

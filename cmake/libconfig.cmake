@@ -11,13 +11,27 @@ function(declare_dependency NAME URL)
     get_dependency_name(${NAME})
     file(STRINGS "${_SHA_file}" GIT_TAG)
     message(STATUS "Declare dependency NAME=${NAME} URL=${URL} TAG=${GIT_TAG} DEPENDENCY=${_dependency_name}")
-    FetchContent_Declare(
-            ${_dependency_name}
-            SOURCE_DIR "${CMAKE_SOURCE_DIR}/dependencies/${NAME}"
-            GIT_REPOSITORY ${URL}
-            GIT_TAG ${GIT_TAG}
-            UPDATE_COMMAND "${CMAKE_SOURCE_DIR}/dependencies/checkout.sh" ${NAME} ${CMAKE_BUILD_TYPE}
-    )
+    if (UNIX AND NOT APPLE)
+        #    horrible hack to find WSL
+        file(READ "/proc/version" _PROC_VERSION)
+        string(REGEX MATCH "Microsoft" WSL "${_PROC_VERSION}")
+    endif ()
+    if (WIN32 OR WSL)
+        FetchContent_Declare(
+                ${_dependency_name}
+                SOURCE_DIR "${CMAKE_SOURCE_DIR}/dependencies/${NAME}"
+                GIT_REPOSITORY ${URL}
+                GIT_TAG ${GIT_TAG}
+        )
+    else ()
+        FetchContent_Declare(
+                ${_dependency_name}
+                SOURCE_DIR "${CMAKE_SOURCE_DIR}/dependencies/${NAME}"
+                GIT_REPOSITORY ${URL}
+                GIT_TAG ${GIT_TAG}
+                UPDATE_COMMAND "${CMAKE_SOURCE_DIR}/dependencies/checkout.sh" ${NAME} ${CMAKE_BUILD_TYPE}
+        )
+    endif ()
 endfunction()
 
 # Load an external git-hosted library on which this project depends.

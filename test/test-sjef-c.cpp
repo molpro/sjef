@@ -112,6 +112,7 @@ TEST(project, C_quick_destroy) {
 
 TEST(backend, C_values) { // TODO actually implement some of this for C
   char projname[] = "C_project.molpro";
+  fs::remove_all(projname);
   sjef_project_open(projname);
   EXPECT_THAT(std::string{sjef_project_recent(1, "molpro")}, ::testing::HasSubstr(std::string{"C_project.molpro"}));
   EXPECT_EQ(sjef_project_recent_find(sjef_project_recent(1, "molpro")), 1);

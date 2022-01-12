@@ -7,6 +7,7 @@ install(TARGETS ${PROGRAM_NAME} RUNTIME DESTINATION bin)
 
 set(package_name "sjef-${SJEF_VERSION}.${CMAKE_SYSTEM_NAME}_${CMAKE_SYSTEM_PROCESSOR}")
 
+if (NOT WIN32)
 set(deploy ${CMAKE_CURRENT_BINARY_DIR}/deploy)
 set(prefix "/usr/local")
 set(deployp "${deploy}${prefix}")
@@ -18,6 +19,7 @@ add_custom_command(OUTPUT ${deployp}/bin/${PROGRAM_FILENAME}${CMAKE_EXECUTABLE_S
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${PROGRAM_FILENAME}${CMAKE_EXECUTABLE_SUFFIX} ${deployp}/bin
         )
 add_custom_target(${LIB_FILENAME}-deploy ALL DEPENDS ${deployp}/bin/${PROGRAM_FILENAME}${CMAKE_EXECUTABLE_SUFFIX})
+endif()
 
 if (APPLE)
     add_custom_command(OUTPUT ${package_name}.pkg
@@ -28,9 +30,11 @@ if (APPLE)
             )
     add_custom_target(sjef-pkg DEPENDS ${package_name}.pkg)
 else ()
+    if (NOT WIN32)
     add_custom_command(OUTPUT ${package_name}${CMAKE_EXECUTABLE_SUFFIX}
             DEPENDS ${deployp}/bin/${PROGRAM_FILENAME}${CMAKE_EXECUTABLE_SUFFIX}
             COMMAND ${CMAKE_COMMAND} -E copy ${deployp}/bin/${PROGRAM_FILENAME}${CMAKE_EXECUTABLE_SUFFIX} ${package_name}${CMAKE_EXECUTABLE_SUFFIX}
             )
     add_custom_target(binary ALL DEPENDS ${package_name}${CMAKE_EXECUTABLE_SUFFIX})
+        endif()
 endif ()

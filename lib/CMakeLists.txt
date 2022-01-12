@@ -2,7 +2,7 @@
 add_library(${LIB_NAME}
         sjef-backend.cpp
         sjef.cpp
-        sjef-customization.cpp sjef-c.cpp sjef-c.h Lock.h Lock.cpp
+        sjef-customization.cpp sjef-c.cpp sjef-c.h Locker.h Locker.cpp
         sjef-program.cpp
         )
 target_compile_features(${LIB_NAME} PUBLIC cxx_std_17)
@@ -40,3 +40,6 @@ endif ()
 
 target_link_libraries(${LIB_NAME} PRIVATE pugixml::pugixml)
 configure_library(${LIB_NAME} pugixml)
+
+add_executable(dummy dummy.cpp)
+target_compile_features(dummy PRIVATE cxx_std_17)

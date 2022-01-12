@@ -236,7 +236,7 @@ Project::Project(const std::string& filename, bool construct, const std::string&
           if (localhost(kHost))
             m_backends.try_emplace(kName,Backend::local(),kName);
           else
-            m_backends.try_emplace(kName,Backend::linux(),kName);
+            m_backends.try_emplace(kName,Backend::Linux(),kName);
           std::string kVal;
           if ((kVal = getattribute(be, "template")) != "") {
             m_backends[kName].host = m_backends[kVal].host;
@@ -2166,7 +2166,7 @@ unsigned int Project::current_run() const {
 }
 
 void Project::add_backend(const std::string& name, const std::map<std::string, std::string>& fields) {
-  m_backends[name] = static_cast<Backend>(localhost((fields.count("host") > 0 ? fields.at("host") : "localhost")) ? Backend(Backend::local(),name) : Backend(Backend::linux(),name));
+  m_backends[name] = static_cast<Backend>(localhost((fields.count("host") > 0 ? fields.at("host") : "localhost")) ? Backend(Backend::local(),name) : Backend(Backend::Linux(),name));
   if (fields.count("host") > 0)
     m_backends[name].host = fields.at("host");
   if (fields.count("cache") > 0)

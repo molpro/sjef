@@ -29,8 +29,8 @@ public:
         kill_command(std::move(kill_command)) {}
   // default constructor so that std::map::operator[ can be used
   Backend() {};
-  struct linux {};
-  Backend(linux x, std::string name = Backend::default_name, std::string host = "localhost",
+  struct Linux {};
+  Backend(Linux x, std::string name = Backend::default_name, std::string host = "localhost",
           std::string cache = "${PWD}", std::string run_command = "sjef", std::string run_jobnumber = "([0-9]+)",
           std::string status_command = "/bin/ps -o pid,state -p", std::string status_running = "^ *[0-9][0-9]* ",
           std::string status_waiting = " [Tt]", std::string kill_command = "pkill -P")
@@ -38,8 +38,8 @@ public:
                 std::move(status_command), std::move(status_running), std::move(status_waiting),
                 std::move(kill_command)) {}
 
-  struct windows {};
-  Backend(windows x, std::string name = Backend::default_name, std::string host = "localhost",
+  struct Windows {};
+  Backend(Windows x, std::string name = Backend::default_name, std::string host = "localhost",
           std::string cache = "${PWD}", std::string run_command = "sjef", std::string run_jobnumber = "([0-9]+)",
           std::string status_command = "tasklist /FO LIST /FI \"PID eq \"",
           std::string status_running = "^PID: *[0-9][0-9]*", std::string status_waiting = " ",
@@ -50,7 +50,7 @@ public:
 #ifdef WIN32
   using local = windows;
 #else
-  using local = linux;
+  using local = Linux;
 #endif
 
   static const std::vector<std::string> s_keys;

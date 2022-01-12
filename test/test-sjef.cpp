@@ -395,6 +395,7 @@ TEST(project, spawn_many_dummy) {
   }
 }
 
+#ifndef WIN32
 TEST(project, early_change_backend) {
   std::string suffix{"someprogram"};
   savestate state(suffix);
@@ -417,6 +418,7 @@ TEST(project, early_change_backend) {
   EXPECT_EQ(sjef::Project(filename).property_get("backend"), "local");
   EXPECT_THROW(sjef::Project(filename).change_backend("test"), std::runtime_error);
 }
+#endif
 
 TEST(backend, backend_parameter_expand) {
   savestate state("someprogram");
@@ -556,28 +558,13 @@ TEST(project, project_dir_embedded_space) {
   std::cout << dir << std::endl;
   ASSERT_TRUE(fs::create_directories(dir));
   ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{"~/.sjef/"} + suffix)));
-  const std::string& path = sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml");
-  {
-    std::ofstream(path) << "<?xml version=\"1.0\"?> <backends><backend name=\"local\" run_command=\"true\"/> <backend "
-                           "name=\"light\" run_command=\"sh "
-                        << (fs::current_path() / "light.sh").string() << "\"/></backends>";
-  }
-  std::ofstream("light.sh") << "while [ ${1#-} != ${1} ]; do shift; done; "
-                               "echo dummy > \"${1%.*}.out\";echo '<?xml "
-                               "version=\"1.0\"?>\n<root/>' > \"${1%.*}.xml\";";
   {
     sjef::Project p(state.testfile((dir / (std::string{"run_directory."} + suffix)).string()));
     std::ofstream(p.filename("inp")) << "geometry={He};rhf\n";
-    p.run("light", 0, true, false);
+    p.run(sjef::Backend::dummy_name, 0, true, false);
     p.wait();
-    //    timespec delay;
-    //    delay.tv_sec = 0;
-    //    delay.tv_nsec = 10000000000;
-    //    nanosleep(&delay, NULL);
-    //  sleep(10);
     EXPECT_EQ(p.file_contents("out"), "dummy");
     EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
-    fs::remove("light.sh");
   }
   fs::remove_all(dir);
 }
@@ -617,6 +604,7 @@ TEST(project, run_directory) {
   //  system((std::string("ls -lR ")+p.filename()).c_str());
 }
 
+#ifndef WIN32
 TEST(project, sync_backend) {
   std::string suffix{"sync_backend"};
   savestate state(suffix);
@@ -662,6 +650,7 @@ TEST(project, sync_backend) {
       << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
       << "ms" << std::endl;
 }
+#endif
 
 TEST(sjef, version) {
   std::cerr << "version: " << sjef::version() << std::endl;
@@ -671,19 +660,12 @@ TEST(sjef, version) {
 TEST(sjef, xpath_search) {
   std::string suffix{"xpath_search"};
   savestate state(suffix);
-  const std::string& path = sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml");
-  std::ofstream(path) << "<?xml version=\"1.0\"?> <backends> <backend name=\"null\" run_command=\"true\"/><backend "
-                         "name=\"local\" run_command=\"true\"/></backends>";
   auto p = sjef::Project(state.testfile(std::string{"xpath_search."} + suffix));
   std::ofstream(p.filename("inp")) << "test" << std::endl;
-  p.run("null", 0, true, true);
-  //  std::cout << p.status_message()<<std::endl;
-  //  std::cout << p.run_directory()<<std::endl;
-  //  std::cout << p.filename("xml","",0)<<std::endl;
+  p.run(sjef::Backend::dummy_name, 0, true, true);
   std::ofstream(p.filename("xml", "", 0))
       << "<?xml version=\"1.0\"?>\n<root><try att1=\"value1\">content1</try><try>content2<subtry/> </try></root>"
       << std::endl;
-  //  EXPECT_EQ(system("ls -Rl xpath_search.xpath_search"),0);
   EXPECT_EQ(p.status(), sjef::status::completed);
   EXPECT_EQ(p.select_nodes("/try").size(), 0) << p.xml() << std::endl;
   ASSERT_EQ(p.select_nodes("//try").size(), 2) << p.xml() << std::endl;
@@ -807,9 +789,6 @@ TEST(sjef, molpro_xpath_search) {
 TEST(project, corrupt_geometry_include) {
   std::string suffix{"corrupt_geometry_include"};
   savestate state(suffix);
-  const std::string& path = sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml");
-  std::ofstream(path) << "<?xml version=\"1.0\"?> <backends> <backend name=\"local\" run_command=\"true\"/><backend "
-                         "name=\"null\" run_command=\"true\"/></backends>";
   sjef::Project p(state.testfile(std::string{"corrupt_geometry_include."} + suffix));
   std::ofstream(p.filename("inp")) << "orient,mass;\n"
                                       "geomtyp=xyz;\n"
@@ -819,7 +798,7 @@ TEST(project, corrupt_geometry_include) {
                                       "basis=vdz\n"
                                       "\n"
                                       "df-hf";
-  p.change_backend("null");
+  p.change_backend(sjef::Backend::dummy_name);
   p.run(0, true, true);
 }
 

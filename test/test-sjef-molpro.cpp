@@ -12,6 +12,7 @@
 #include <memory>
 #include <regex>
 #include <unistd.h>
+#include <fstream>
 
 #include "test-sjef.h"
 
@@ -92,13 +93,13 @@ TEST(project, molpro_workflow) {
         //      std::cout << p.xml() << std::endl;
         xmldoc.load_string(p.xml().c_str());
         auto results = xmldoc.select_nodes("//jobstep//property[@name='Energy']");
-        if (results.empty()) {
-          std::cerr << getpid() << std::endl;
-          EXPECT_EQ(system((std::string{"ls -lR "} + cache).c_str()), 0);
-          EXPECT_EQ(system((std::string{"ls -lR "} + p.filename()).c_str()), 0);
-          kill(getpid(), SIGSTOP);
-          //                  goto end;
-        }
+//        if (results.empty()) {
+//          std::cerr << getpid() << std::endl;
+//          EXPECT_EQ(system((std::string{"ls -lR "} + cache).c_str()), 0);
+//          EXPECT_EQ(system((std::string{"ls -lR "} + p.filename()).c_str()), 0);
+//          kill(getpid(), SIGSTOP);
+//                            goto end;
+//        }
         ASSERT_GE(results.size(), 1) << "\n xml()=" << p.xml() << "\nxml file contents: " << p.file_contents("xml")
                                      << std::endl;
         //  for (const auto& result:results)

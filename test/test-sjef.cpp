@@ -530,24 +530,12 @@ TEST(project, project_name_embedded_space) {
   std::string suffix{"project_name_embedded_space"};
   savestate state(suffix);
   ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{"~/.sjef/"} + suffix)));
-  {
-    const std::string& path = sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml");
-    std::ofstream(path) << "<?xml version=\"1.0\"?> <backends> <backend name=\"local\" run_command=\"true\"/><backend "
-                           "name=\"light\" run_command=\"sh "
-                        << (fs::current_path() / "light.sh").string() << "\"/></backends>";
-  }
   sjef::Project p(state.testfile(std::string{"completely new."} + suffix));
   std::ofstream(p.filename("inp")) << "geometry={He};rhf\n";
-  std::ofstream("light.sh") << "while [ ${1#-} != ${1} ]; do shift; done; "
-                               "echo dummy > \"${1%.*}.out\";echo '<?xml "
-                               "version=\"1.0\"?>\n<root/>' > \"${1%.*}.xml\";";
-  p.run("light", 0, true, false);
+  p.run(sjef::Backend::dummy_name, 0, true, false);
   p.wait();
-  //  timespec delay; delay.tv_sec=0; delay.tv_nsec=10000000;
-  //  nanosleep(&delay,NULL);
   EXPECT_EQ(p.file_contents("out"), "dummy");
   EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
-  fs::remove("light.sh");
 }
 
 TEST(project, project_dir_embedded_space) {

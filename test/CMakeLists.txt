@@ -14,7 +14,7 @@ file(COPY He.molpro DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
 find_program(MOLPRO molpro)
 
 include(GoogleTest)
-foreach (t test-sjef test-sjef-c test-Lock test-sjef-molpro)
+foreach (t test-sjef test-sjef-c test-Locker test-sjef-molpro)
     if (NOT (MOLPRO STREQUAL MOLPRO-NOTFOUND AND t STREQUAL test-sjef-molpro))
         add_executable(${t} ${t}.cpp test-sjef.h)
         target_compile_definitions(${t} PRIVATE SJEF_VERSION=\"${SJEF_VERSION}\")
@@ -37,3 +37,4 @@ if (NOT MOLPRO STREQUAL MOLPRO-NOTFOUND)
     endif()
     target_link_libraries(test-sjef-molpro PRIVATE Boost::headers)
 endif ()
+

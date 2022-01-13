@@ -13,36 +13,12 @@
 
 namespace fs = std::filesystem;
 
-class savestate_old {
-  std::string rf;
 
-public:
-  savestate_old() {
-    for (const auto& suffix : std::vector<std::string>{"sjef", "molpro"}) {
-      rf = sjef::expand_path(std::string{"~/."} + suffix + "/projects");
-      if (!fs::exists(rf))
-        rf.clear();
-      if (!rf.empty()) {
-        fs::rename(rf, rf + ".save");
-        //      std::cerr << "savestate saves " << rf << std::endl;
-      }
-    }
-  }
-  ~savestate_old() {
-    for (const auto& suffix : std::vector<std::string>{"sjef", "molpro"}) {
-      rf = sjef::expand_path(std::string{"~/."} + suffix + "/projects");
-      if (!rf.empty() and fs::exists(rf + ".save")) {
-        //      std::cerr << "savestate restores " << rf << std::endl;
-        fs::rename(rf + ".save", rf);
-      }
-    }
-  }
-};
 
 TEST(project, c_binding) {
   savestate x;
-  const char* projectname = strdup(x.testfile("cproject.sjef").c_str());
-  const char* projectname2 = strdup(x.testfile("cproject2.sjef").c_str());
+  const char* projectname = strdup(x.testproject("cproject").c_str());
+  const char* projectname2 = strdup(x.testproject("cproject2").c_str());
   //  sjef_project_erase(projectname);
   //  sjef_project_erase(projectname2);
   char key[] = "testkey";
@@ -105,17 +81,19 @@ TEST(backend, C_keys) {
   free(allKeys);
 }
 TEST(project, C_quick_destroy) {
-  char projname[] = "C_project.molpro";
+  savestate state;
+  const char* projname = strdup(state.testproject("C_project").c_str());
   sjef_project_open(projname);
   sjef_project_close(projname);
 }
 
 TEST(backend, C_values) { // TODO actually implement some of this for C
-  char projname[] = "C_project.molpro";
+  savestate state;
+  const char* projname = strdup(state.testproject("C_project").c_str());
   fs::remove_all(projname);
   sjef_project_open(projname);
-  EXPECT_THAT(std::string{sjef_project_recent(1, "molpro")}, ::testing::HasSubstr(std::string{"C_project.molpro"}));
-  EXPECT_EQ(sjef_project_recent_find(sjef_project_recent(1, "molpro")), 1);
+  EXPECT_THAT(std::string{sjef_project_recent(1, state.suffix().c_str())}, ::testing::HasSubstr(std::string{"C_project."}+state.suffix()));
+  EXPECT_EQ(sjef_project_recent_find(sjef_project_recent(1, state.suffix().c_str())), 1);
   auto allBackends = sjef_project_backend_names(projname);
   //  std::cerr << "back from making allBackends"<<std::endl;
   // char** allBackends = NULL;

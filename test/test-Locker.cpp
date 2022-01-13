@@ -55,6 +55,7 @@ TEST(Locker, no_permission) {
 TEST(Locker, write_many_threads) {
   std::ostringstream ss;
   ss << std::this_thread::get_id();
+  ss << getpid();
   fs::path lockfile{ss.str()+"testing-lockfile-write_many_threads"};
   fs::path datafile{ss.str()+"testing-data-write_many_threads"};
   if (fs::exists(datafile))

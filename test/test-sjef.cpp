@@ -1,6 +1,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "Locker.h"
 #include "sjef-backend.h"
 #include "sjef.h"
 #include "test-sjef.h"
@@ -14,25 +15,6 @@
 #include <unistd.h>
 
 namespace fs = std::filesystem;
-
-TEST(project, filename) {
-  savestate state("sjef");
-  std::string slash{std::filesystem::path::preferred_separator};
-  char* e = getenv(
-#ifdef _WIN32
-      "TEMP"
-#else
-      "TMPDIR"
-#endif
-  );
-  std::string tmpdir{e == nullptr ? "/tmp" : e};
-  std::map<std::string, std::string> names;
-  //  system((std::string{"ls -la "}+tmpdir).c_str());
-  names["$TMPDIR/tmp.sjef/"] = tmpdir + slash + "tmp.sjef";
-  names["$TMPDIR/tmp"] = tmpdir + slash + "tmp.sjef";
-  for (const auto& n : names)
-    ASSERT_EQ(sjef::Project(n.first, false, "sjef").filename(), n.second);
-}
 
 TEST(project, expand_path) {
   std::string slash{std::filesystem::path::preferred_separator};
@@ -63,22 +45,21 @@ TEST(project, expand_path) {
     ASSERT_EQ(sjef::expand_path(n.first, "ext"), n.second);
 }
 
-TEST(project, construction) {
-  savestate state("sjef");
+TEST(project, contruction) {
+  savestate state;
+  ASSERT_EQ(state.suffix(), ::testing::UnitTest::GetInstance()->current_test_info()->name());
   std::string name("sjef-project-test");
-  for (const auto& dirs : std::vector<std::string>{"$TMPDIR", "$HOME", "${HOME}", "~"}) {
-    auto filename = state.testfile(dirs + "/" + name + ".sjef");
-    sjef::Project x(filename);
-    ASSERT_EQ(x.name(), name);
-  }
+  auto filename = state.testproject(name);
+  sjef::Project x(filename);
+  ASSERT_EQ(x.name(), name);
 }
 
 TEST(project, move_generic) {
-  savestate state("sjef");
+  savestate state;
   std::string name("sjef-project-test");
-  auto filename = state.testfile("$TMPDIR/" + name + ".sjef");
+  auto filename = state.testfile(name + "." + state.suffix());
   auto name2 = name + "2";
-  auto filename2 = state.testfile("$TMPDIR/" + name2 + ".sjef");
+  auto filename2 = state.testfile(name2 + "." + state.suffix());
   sjef::Project x2(filename);
   ASSERT_EQ(x2.name(), name);
   ASSERT_EQ(x2.filename(), filename);
@@ -99,9 +80,9 @@ TEST(project, move_generic) {
 }
 
 TEST(project, moveMolpro) {
-  savestate state("molpro");
-  auto filename_old = state.testfile("moveMolproOld.molpro");
-  auto filename_new = state.testfile("moveMolproNew.molpro");
+  savestate state;
+  auto filename_old = state.testfile("moveMolproOld." + state.suffix());
+  auto filename_new = state.testfile("moveMolproNew." + state.suffix());
   sjef::Project p(filename_old);
   std::ofstream(p.filename("inp")) << "geometry=" + p.name() + ".xyz" + "\n";
   std::ofstream(p.filename("xyz")) << "1\n\nHe 0 0 0\n";
@@ -118,9 +99,9 @@ TEST(project, moveMolpro) {
 }
 
 TEST(project, copyMolpro) {
-  savestate state("molpro");
-  auto filename_old = state.testfile("copyMolproOld.molpro");
-  auto filename_new = state.testfile("copyMolproNew.molpro");
+  savestate state;
+  auto filename_old = state.testfile("copyMolproOld." + state.suffix());
+  auto filename_new = state.testfile("copyMolproNew." + state.suffix());
   std::string input;
   {
     sjef::Project p(filename_old);
@@ -139,8 +120,8 @@ TEST(project, copyMolpro) {
 }
 
 TEST(project, erase) {
-  savestate state("sjef");
-  std::string filename = state.testfile("$TMPDIR/sjef-project-test.sjef");
+  savestate state;
+  std::string filename = state.testproject("sjef-project-test");
   {
     sjef::Project x(filename);
     filename = x.filename();
@@ -153,11 +134,11 @@ TEST(project, erase) {
 }
 
 TEST(project, import) {
-  savestate state("sjef");
-  std::string filename = state.testfile("sjef-project-test.sjef");
+  savestate state;
+  std::string filename = state.testproject("sjef-project-test");
   sjef::Project x(filename);
   filename = x.filename();
-  auto importfile = sjef::expand_path("sjef-project-test.import");
+  auto importfile = state.testfile("sjef-project-test.importfile");
   std::ofstream ofs{importfile};
   ofs << "Hello" << std::endl;
   x.import_file(importfile);
@@ -165,8 +146,8 @@ TEST(project, import) {
 }
 
 TEST(project, clean) {
-  savestate state("sjef");
-  std::string filename = state.testfile("$TMPDIR/sjef-project-test.sjef");
+  savestate state;
+  std::string filename = state.testproject("sjef-project-test");
   sjef::Project x(filename);
   filename = x.filename();
   ASSERT_FALSE(fs::exists(fs::path(filename) / fs::path(filename + ".out")));
@@ -182,8 +163,8 @@ TEST(project, clean) {
 }
 
 TEST(project, properties) {
-  savestate state("sjef");
-  auto filename = state.testfile("$TMPDIR/try.sjef");
+  savestate state;
+  auto filename = state.testproject("try");
   sjef::Project x(filename);
   //  const auto keys = x.property_names();
   //  std::string key;
@@ -229,20 +210,19 @@ TEST(project, properties) {
 
 TEST(project, recent_files) {
   {
-
-    std::string suffix{"someprogram"};
-    savestate state(suffix);
+    savestate state;
+    auto suffix = state.suffix();
     auto rf = sjef::expand_path("~/.sjef/" + suffix + "/projects");
     auto oldfile = fs::exists(rf);
     if (oldfile)
       fs::rename(rf, rf + ".save");
-    std::string probername("$TMPDIR/prober." + suffix);
+    std::string probername("prober." + suffix);
     state.testfile(probername);
     sjef::Project prober(probername);
     std::list<std::string> p;
     for (size_t i = 0; i < 3; i++) {
       {
-        sjef::Project proj("$TMPDIR/p" + std::to_string(i) + "." + suffix);
+        sjef::Project proj("p" + std::to_string(i) + "." + suffix);
         p.emplace_back(proj.filename());
       }
       state.testfile(p.back());
@@ -280,26 +260,26 @@ TEST(project, recent_files) {
 TEST(project, project_hash) {
   for (int repeat = 0; repeat < 10; ++repeat) {
     //    std::cerr<<"repeat "<<repeat<<std::endl;
-    savestate state("sjef");
-    sjef::Project x(state.testfile("project_hash_try.sjef"));
+    savestate state;
+    sjef::Project x(state.testproject("project_hash_try"));
     ASSERT_GT(fs::file_size(x.propertyFile()), 0);
     auto xph = x.project_hash();
     ASSERT_NE(xph, 0);
-    state.testfile("project_hash_try2.sjef"); // remove any previous contents
-                                              //    std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    ASSERT_TRUE(x.copy("project_hash_try2.sjef"));
-    sjef::Project x2("project_hash_try2.sjef");
+    auto f2 = state.testproject("project_hash_try2"); // remove any previous contents
+                                                      //    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    ASSERT_TRUE(x.copy(f2));
+    sjef::Project x2(f2);
     ASSERT_GT(fs::file_size(x2.propertyFile()), 0);
     ASSERT_NE(xph, x2.project_hash());
-    state.testfile("project_hash_try3.sjef"); // remove any previous contents
-    x.move("project_hash_try3.sjef");
+    auto f3 = state.testproject("project_hash_try3"); // remove any previous contents
+    x.move(f3);
     ASSERT_EQ(xph, x.project_hash());
   }
 }
 
 TEST(project, input_hash_molpro) {
-  savestate state("molpro");
-  sjef::Project x(state.testfile("project_hash_try.molpro"));
+  savestate state;
+  sjef::Project x(state.testproject("project_hash_try"));
   {
     std::ofstream ss(x.filename("inp"));
     ss << "one\ngeometry=try.xyz\ntwo" << std::endl;
@@ -309,12 +289,12 @@ TEST(project, input_hash_molpro) {
     ss << "1\nThe xyz file\nHe 0 0 0" << std::endl;
   }
   auto xph = x.input_hash();
-  auto try2 = state.testfile("project_hash_try2.molpro");
+  auto try2 = state.testproject("project_hash_try2");
   fs::remove_all(try2);
   ASSERT_TRUE(x.copy(try2));
   sjef::Project x2(try2);
   ASSERT_EQ(xph, x2.input_hash());
-  auto try3 = state.testfile("project_hash_try3.molpro");
+  auto try3 = state.testproject("project_hash_try3");
   fs::remove_all(try3);
   x.move(try3);
   ASSERT_EQ(xph, x.input_hash());
@@ -340,36 +320,12 @@ TEST(project, xmlRepair) {
 }
 
 TEST(project, xmloutput) {
-  savestate state(std::vector<std::string>{"molpro", "someprogram"});
-  sjef::Project He("He.molpro");
-  EXPECT_EQ(sjef::xmlRepair(He.file_contents("xml")), He.xml());
+  savestate state;
   {
-    sjef::Project newProject(state.testfile("test___.someprogram"));
+    sjef::Project newProject(state.testproject("test___"));
     EXPECT_EQ(newProject.file_contents("xml"), "");
     EXPECT_EQ(newProject.xml(), "<?xml version=\"1.0\"?><root/>");
   }
-}
-
-TEST(project, input_from_output) {
-  savestate state("molpro");
-  sjef::Project He("He.molpro");
-  std::string input = He.file_contents("inp");
-  input = std::regex_replace(input, std::regex{"\r"}, "");
-  input = std::regex_replace(input, std::regex{" *\n\n*"}, "\n");
-  input = std::regex_replace(input, std::regex{"\n$"}, "");
-  EXPECT_EQ(input, He.input_from_output());
-  auto copy = state.testfile("Hecopy.molpro");
-  He.copy(copy);
-  sjef::Project Hecopy(copy);
-  EXPECT_EQ(He.file_contents("inp"), Hecopy.file_contents("inp"));
-  EXPECT_EQ(input, He.input_from_output());
-  EXPECT_EQ(Hecopy.input_from_output(), "");
-}
-
-TEST(project, run_needed) {
-  savestate x("molpro");
-  sjef::Project He("He.molpro");
-  EXPECT_FALSE(He.run_needed());
 }
 
 // TEST(project,input_from_output) {
@@ -383,8 +339,8 @@ TEST(project, run_needed) {
 // }
 
 TEST(project, spawn_many_dummy) {
-  savestate state("someprogram");
-  sjef::Project p(state.testfile("spawn_many.someprogram"));
+  savestate state;
+  sjef::Project p(state.testproject("spawn_many"));
   { std::ofstream(p.filename("inp")) << ""; }
   const auto& backend = sjef::Backend::dummy_name;
   for (auto i = 0; i < 5; ++i) {
@@ -397,8 +353,8 @@ TEST(project, spawn_many_dummy) {
 
 #ifndef WIN32
 TEST(project, early_change_backend) {
-  std::string suffix{"someprogram"};
-  savestate state(suffix);
+  savestate state;
+  auto suffix = state.suffix();
   auto backenddirectory = sjef::expand_path((fs::path{"~"} / ".sjef" / suffix).string());
   fs::create_directories(backenddirectory);
   auto backendfile = sjef::expand_path((fs::path{backenddirectory} / "backends.xml").string());
@@ -406,7 +362,7 @@ TEST(project, early_change_backend) {
                                 "run_command=\"true\"/><backend name=\"test\" host=\"127.0.0.1\" "
                                 "run_command=\"true\"/></backends>"
                              << std::endl;
-  auto filename = state.testfile(std::string{"early_change_backend."} + suffix);
+  auto filename = state.testproject("early_change_backend");
   sjef::Project(filename).change_backend("test");
   EXPECT_EQ(sjef::Project(filename).filename(), filename);
   EXPECT_EQ(sjef::Project(filename).property_get("backend"), "test");
@@ -421,8 +377,8 @@ TEST(project, early_change_backend) {
 #endif
 
 TEST(backend, backend_parameter_expand) {
-  savestate state("someprogram");
-  sjef::Project He("He.someprogram");
+  savestate state;
+  sjef::Project He(state.testproject("He"));
   std::string backend = "random_backend_name";
   for (const auto& prologue : std::vector<std::string>{"A prologue ", ""}) {
     He.backend_parameter_set(backend, "present", "123");
@@ -439,45 +395,45 @@ TEST(backend, backend_parameter_expand) {
     EXPECT_EQ(He.backend_parameter_expand(backend, "thing {" + prologue + "%present:default value} thing2"),
               "thing " + prologue + "123 thing2");
   }
-  { // another set of tests
-    savestate x("molpro");
-    auto& backend = sjef::Backend::dummy_name;
-    sjef::Project p(state.testfile("backend_parameter_expand.molpro"));
-    p.property_set("backend", backend);
-    p.backend_parameter_set(backend, "thing", "its value");
-    std::map<std::string, std::string> tests;
-    std::vector<std::string> preambles{"stuff ", ""};
-    auto test = [&preambles, &p](const std::string& run_command, const std::string& expect_resolved,
-                                 const std::string& expect_documentation) {
-      for (const auto& preamble : preambles) {
-        p.m_backends[backend].run_command = preamble + run_command + " more stuff";
-        //        std::cout << "run_command set to "<<p.m_backends[backend].run_command<<std::endl;
-        //        std::cout << "documentation returned "<<p.backend_parameter_documentation(backend,"n")<<std::endl;
-        //        std::cout << "documentation expected "<<expect_documentation<<std::endl;
-        EXPECT_EQ(p.backend_parameter_documentation(backend, "n"), expect_documentation);
-        EXPECT_EQ(p.backend_parameter_expand(backend), preamble + expect_resolved + " more stuff");
-      }
-    };
-    test("{ -n %n}", "", "");
-    test("{ -n %n! with documentation}", "", " with documentation");
-    test("{ -n %n:99}", " -n 99", "");
-    test("{ -n %n:99! with documentation}", " -n 99", " with documentation");
-    test("{ -n %thing}", " -n its value", "");
-    test("{ -n %thing! with documentation}", " -n its value", "");
-    test("{ -n %thing:99}", " -n its value", "");
-    test("{ -n %thing:99! with documentation}", " -n its value", "");
-    std::map<std::string, std::string> badtests;
-    badtests["{ -n !%n:99 This is an ill-formed parameter string because the % comes in the comment, so should be "
-             "detected as absent}"] = "";
-    for (const auto& preamble : preambles)
-      for (const auto& test : badtests)
-        EXPECT_THROW(p.backend_parameter_expand(backend, preamble + test.first + " more stuff"), std::runtime_error);
-  }
+}
+TEST(backend, backend_parameter_expand2) {
+  savestate state;
+  auto& backend = sjef::Backend::dummy_name;
+  sjef::Project p(state.testproject("backend_parameter_expand"));
+  p.property_set("backend", backend);
+  p.backend_parameter_set(backend, "thing", "its value");
+  std::map<std::string, std::string> tests;
+  std::vector<std::string> preambles{"stuff ", ""};
+  auto test = [&preambles, &p](const std::string& run_command, const std::string& expect_resolved,
+                               const std::string& expect_documentation) {
+    for (const auto& preamble : preambles) {
+      p.m_backends[backend].run_command = preamble + run_command + " more stuff";
+      //        std::cout << "run_command set to "<<p.m_backends[backend].run_command<<std::endl;
+      //        std::cout << "documentation returned "<<p.backend_parameter_documentation(backend,"n")<<std::endl;
+      //        std::cout << "documentation expected "<<expect_documentation<<std::endl;
+      EXPECT_EQ(p.backend_parameter_documentation(backend, "n"), expect_documentation);
+      EXPECT_EQ(p.backend_parameter_expand(backend), preamble + expect_resolved + " more stuff");
+    }
+  };
+  test("{ -n %n}", "", "");
+  test("{ -n %n! with documentation}", "", " with documentation");
+  test("{ -n %n:99}", " -n 99", "");
+  test("{ -n %n:99! with documentation}", " -n 99", " with documentation");
+  test("{ -n %thing}", " -n its value", "");
+  test("{ -n %thing! with documentation}", " -n its value", "");
+  test("{ -n %thing:99}", " -n its value", "");
+  test("{ -n %thing:99! with documentation}", " -n its value", "");
+  std::map<std::string, std::string> badtests;
+  badtests["{ -n !%n:99 This is an ill-formed parameter string because the % comes in the comment, so should be "
+           "detected as absent}"] = "";
+  for (const auto& preamble : preambles)
+    for (const auto& test : badtests)
+      EXPECT_THROW(p.backend_parameter_expand(backend, preamble + test.first + " more stuff"), std::runtime_error);
 }
 
 TEST(sjef, atomic) {
-  savestate state("someprogram");
-  auto filename = state.testfile("He.someprogram");
+  savestate state;
+  auto filename = state.testproject("He");
   std::string testval = "testval";
   sjef::Project object1(filename);
   sjef::Project object2(filename);
@@ -494,11 +450,11 @@ TEST(sjef, atomic) {
 }
 
 TEST(project, recent) {
-  savestate state("someprogram");
+  savestate state;
   std::string fn;
-  auto fn2 = state.testfile("transient.someprogram");
+  auto fn2 = state.testproject("transient");
   for (auto i = 0; i < 2; ++i) {
-    sjef::Project p(state.testfile("completely_new" + std::to_string(i) + ".someprogram"));
+    sjef::Project p(state.testproject("completely_new" + std::to_string(i)));
     fn = p.filename();
     EXPECT_EQ(p.recent_find(fn), 1);
     { auto p2 = sjef::Project(fn2); }
@@ -512,8 +468,8 @@ TEST(project, recent) {
 }
 
 TEST(project, dummy_backend) {
-  savestate state("sjef");
-  sjef::Project p(state.testfile("completely_new.sjef"));
+  savestate state;
+  sjef::Project p(state.testproject("completely_new"));
   p.run(sjef::Backend::dummy_name, 0, true, false);
   p.wait();
   timespec delay;
@@ -527,10 +483,10 @@ TEST(project, dummy_backend) {
 }
 
 TEST(project, project_name_embedded_space) {
-  std::string suffix{"project_name_embedded_space"};
-  savestate state(suffix);
+  savestate state;
+  auto suffix = state.suffix();
   ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{"~/.sjef/"} + suffix)));
-  sjef::Project p(state.testfile(std::string{"completely new."} + suffix));
+  sjef::Project p(state.testproject("completely new"));
   std::ofstream(p.filename("inp")) << "geometry={He};rhf\n";
   p.run(sjef::Backend::dummy_name, 0, true, false);
   p.wait();
@@ -539,8 +495,8 @@ TEST(project, project_name_embedded_space) {
 }
 
 TEST(project, project_dir_embedded_space) {
-  const std::string suffix{"project_dir_embedded_space"};
-  savestate state(suffix);
+  savestate state;
+  auto suffix = state.suffix();
   auto dir = fs::absolute("has some spaces");
   fs::remove_all(dir);
   std::cout << dir << std::endl;
@@ -558,8 +514,8 @@ TEST(project, project_dir_embedded_space) {
 }
 
 TEST(project, run_directory) {
-  savestate state("molpro");
-  auto filename = state.testfile("run_directory.molpro");
+  savestate state;
+  auto filename = state.testproject("run_directory");
   sjef::Project p(filename);
   std::string input = "geometry=" + p.name() + ".xyz";
   std::ofstream(p.filename("inp")) << input + "\n";
@@ -569,7 +525,7 @@ TEST(project, run_directory) {
   std::ofstream(p.filename("xyz")) << "1\n\nHe 0 0 0\n";
   EXPECT_TRUE(fs::exists(sjef::expand_path(filename)));
   for (int i = 1; i < 4; i++) {
-    auto si = std::to_string(i) + ".molpro";
+    auto si = std::to_string(i) + "." + state.suffix();
     auto rundir = p.run_directory_new();
     EXPECT_EQ(rundir, i);
     EXPECT_EQ(rundir, p.run_verify(rundir));
@@ -594,8 +550,8 @@ TEST(project, run_directory) {
 
 #ifndef WIN32
 TEST(project, sync_backend) {
-  std::string suffix{"sync_backend"};
-  savestate state(suffix);
+  savestate state;
+  auto suffix = state.suffix();
   ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{"~/.sjef/"} + suffix)));
   const auto cache = state.testfile(fs::current_path() / "test-remote-cache");
   if (not fs::create_directories(cache))
@@ -646,8 +602,8 @@ TEST(sjef, version) {
 }
 
 TEST(sjef, xpath_search) {
-  std::string suffix{"xpath_search"};
-  savestate state(suffix);
+  savestate state;
+  auto suffix = state.suffix();
   auto p = sjef::Project(state.testfile(std::string{"xpath_search."} + suffix));
   std::ofstream(p.filename("inp")) << "test" << std::endl;
   p.run(sjef::Backend::dummy_name, 0, true, true);
@@ -678,9 +634,9 @@ TEST(sjef, xpath_search) {
 }
 
 TEST(sjef, molpro_xpath_search) {
-  std::string suffix{"molpro_xpath_search"};
-  savestate state(suffix);
-  auto p = sjef::Project(state.testfile(std::string{"xpath_search."} + suffix));
+  savestate state;
+  auto suffix = state.suffix();
+  auto p = sjef::Project(state.testproject("xpath_search"));
   std::ofstream(p.filename("xml"))
       << "<?xml version=\"1.0\"?>\n"
          "<molpro xmlns=\"http://www.molpro.net/schema/molpro-output\"\n"
@@ -775,9 +731,8 @@ TEST(sjef, molpro_xpath_search) {
 }
 
 TEST(project, corrupt_geometry_include) {
-  std::string suffix{"corrupt_geometry_include"};
-  savestate state(suffix);
-  sjef::Project p(state.testfile(std::string{"corrupt_geometry_include."} + suffix));
+  savestate state;
+  sjef::Project p(state.testproject("corrupt_geometry_include"));
   std::ofstream(p.filename("inp")) << "orient,mass;\n"
                                       "geomtyp=xyz;\n"
                                       "geometry=\n"
@@ -792,8 +747,8 @@ TEST(project, corrupt_geometry_include) {
 
 TEST(project, reopen) {
   savestate x;
-  auto projectname = x.testfile("cproject.sjef");
-  auto projectname2 = x.testfile("cproject2.sjef");
+  auto projectname = x.testproject("cproject");
+  auto projectname2 = x.testproject("cproject2");
   std::string key = "testkey";
   std::string value = "testvalue";
   std::string value2 = "testvalue2";

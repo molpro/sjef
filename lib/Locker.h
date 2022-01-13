@@ -29,8 +29,9 @@ class Locker {
 public:
   explicit Locker(fs::path path);
   virtual ~Locker();
+  const fs::path& path() const { return m_path; }
 
-protected:
+public:
   void add_bolt();
   void remove_bolt();
 

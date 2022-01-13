@@ -3,6 +3,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <thread>
+#include <sstream>
 
 #include "Locker.h"
 namespace fs = std::filesystem;
@@ -52,8 +53,10 @@ TEST(Locker, no_permission) {
 }
 
 TEST(Locker, write_many_threads) {
-  fs::path lockfile{"testing-lockfile"};
-  fs::path datafile{"testing-data"};
+  std::ostringstream ss;
+  ss << std::this_thread::get_id();
+  fs::path lockfile{ss.str()+"testing-lockfile-write_many_threads"};
+  fs::path datafile{ss.str()+"testing-data-write_many_threads"};
   if (fs::exists(datafile))
     fs::remove_all(datafile);
   if (fs::exists(lockfile))

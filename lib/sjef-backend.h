@@ -48,7 +48,7 @@ public:
                 std::move(status_command), std::move(status_running), std::move(status_waiting),
                 std::move(kill_command)) {}
 #ifdef WIN32
-  using local = windows;
+  using local = Windows;
 #else
   using local = Linux;
 #endif

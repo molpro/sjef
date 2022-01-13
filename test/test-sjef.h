@@ -32,9 +32,9 @@ class savestate {
   std::set<std::string> m_not_preexisting;
 
 public:
-  explicit savestate(const std::vector<std::string> suffixes = {})
+  explicit savestate(const std::vector<std::string>& suffixes = {})
       : m_default_suffix(::testing::UnitTest::GetInstance()->current_test_info()->name()),
-        m_suffixes(std::move(suffixes)) {
+        m_suffixes(suffixes) {
     fs::create_directories(sjef::expand_path(std::string{"~/.sjef"}));
     m_suffixes.push_back(m_default_suffix);
     //    m_suffixes.push_back("__lock__");

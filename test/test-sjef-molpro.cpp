@@ -15,8 +15,30 @@
 #include <fstream>
 
 #include "test-sjef.h"
+#include <Locker.h>
 
-TEST(project, spawn_many_molpro) {
+
+namespace {
+
+static std::mutex molpro_mutex;
+class molpro_test : public ::testing::Test {
+protected:
+  sjef::Locker locker=sjef::Locker(".molpro_lock");
+  virtual void SetUp() override
+  {
+//    molpro_mutex.lock();
+//    locker.add_bolt();
+//    std::cout << "Hello from molpro_test "<<&molpro_mutex<<" pid "<<getpid()<<std::endl;
+  }
+
+  virtual void TearDown() override
+  { //molpro_mutex.unlock();
+//    locker.remove_bolt();
+  }
+};
+}
+
+TEST_F(molpro_test, spawn_many_molpro) {
   savestate state("molpro");
   sjef::Project p(state.testfile("spawn_many.molpro"));
   { std::ofstream(p.filename("inp")) << ""; }
@@ -29,7 +51,7 @@ TEST(project, spawn_many_molpro) {
     }
 }
 
-TEST(project, molpro_workflow) {
+TEST_F(molpro_test, molpro_workflow) {
   savestate state("molpro");
   const auto cache = state.testfile(fs::current_path() / "molpro_workflow-cache");
   std::ofstream(sjef::expand_path(std::string{"~/.sjef/molpro/backends.xml"}))
@@ -115,3 +137,25 @@ TEST(project, molpro_workflow) {
     }
   //  end:;
 }
+TEST_F(molpro_test, input_from_output) {
+  savestate state("molpro");
+  sjef::Project He("He.molpro");
+  std::string input = He.file_contents("inp");
+  input = std::regex_replace(input, std::regex{"\r"}, "");
+  input = std::regex_replace(input, std::regex{" *\n\n*"}, "\n");
+  input = std::regex_replace(input, std::regex{"\n$"}, "");
+  EXPECT_EQ(input, He.input_from_output());
+  auto copy = state.testfile("Hecopy.molpro");
+  He.copy(copy);
+  sjef::Project Hecopy(copy);
+  EXPECT_EQ(He.file_contents("inp"), Hecopy.file_contents("inp"));
+  EXPECT_EQ(input, He.input_from_output());
+  EXPECT_EQ(Hecopy.input_from_output(), "");
+}
+
+TEST_F(molpro_test, run_needed) {
+  savestate x("molpro");
+  sjef::Project He("He.molpro");
+  EXPECT_FALSE(He.run_needed());
+}
+

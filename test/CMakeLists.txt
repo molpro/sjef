@@ -40,4 +40,6 @@ endif ()
 
 add_executable(logger logger.cpp)
 target_link_libraries(logger PRIVATE ${LIB_NAME})
+message("CMAKE_EXECUTABLE_SUFFIX=${CMAKE_EXECUTABLE_SUFFIX}")
+target_compile_definitions(test-Locker PRIVATE EXECUTABLE_SUFFIX="${CMAKE_EXECUTABLE_SUFFIX}")
 add_dependencies(test-Locker logger)

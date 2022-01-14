@@ -150,6 +150,8 @@ TEST(Locker, Interprocess) {
   auto lockfile = logfile + ".lock";
   std::filesystem::remove(logfile);
   std::filesystem::remove(lockfile);
+  auto logger = fs::current_path() / (std::string{"logger"} + std::string{EXECUTABLE_SUFFIX});
+//  std::cout << logger << std::endl;
   std::vector<bp::child> processes;
   for (int i = 0; i < 50; ++i) {
     processes.emplace_back(logger.string(), std::vector<std::string>{logfile, "1"});

@@ -41,5 +41,9 @@ endif ()
 target_link_libraries(${LIB_NAME} PRIVATE pugixml::pugixml)
 configure_library(${LIB_NAME} pugixml)
 
+if (MINGW)
+    target_link_libraries(${LIB_NAME} PUBLIC ws2_32)
+endif ()
+
 add_executable(dummy dummy.cpp)
 target_compile_features(dummy PRIVATE cxx_std_17)

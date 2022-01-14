@@ -5,7 +5,6 @@
 #include <gtest/gtest.h>
 #include <sstream>
 #include <thread>
-#include <sstream>
 
 #include "Locker.h"
 namespace fs = std::filesystem;
@@ -56,8 +55,8 @@ TEST(Locker, write_many_threads) {
   std::ostringstream ss;
   ss << std::this_thread::get_id();
   ss << getpid();
-  fs::path lockfile{ss.str()+"testing-lockfile-write_many_threads"};
-  fs::path datafile{ss.str()+"testing-data-write_many_threads"};
+  fs::path lockfile{ss.str() + "testing-lockfile-write_many_threads"};
+  fs::path datafile{ss.str() + "testing-data-write_many_threads"};
   if (fs::exists(datafile))
     fs::remove_all(datafile);
   if (fs::exists(lockfile))
@@ -152,11 +151,11 @@ TEST(Locker, Interprocess) {
   std::filesystem::remove(logfile + ".lock");
   std::vector<bp::child> processes;
   for (int i = 0; i < 50; ++i) {
-    processes.emplace_back("./logger", std::vector<std::string>{logfile, "1"});
+    processes.emplace_back((fs::current_path() / "logger").string(), std::vector<std::string>{logfile, "1"});
   }
   for (auto& p : processes)
     p.wait();
-//  std::cout << std::ifstream(logfile).rdbuf() << std::endl;
+  //  std::cout << std::ifstream(logfile).rdbuf() << std::endl;
   auto is = std::ifstream(logfile);
   std::string line;
   while (std::getline(is, line)) {

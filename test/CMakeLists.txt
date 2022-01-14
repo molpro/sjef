@@ -38,3 +38,6 @@ if (NOT MOLPRO STREQUAL MOLPRO-NOTFOUND)
     target_link_libraries(test-sjef-molpro PRIVATE Boost::headers)
 endif ()
 
+add_executable(logger logger.cpp)
+target_link_libraries(logger PRIVATE ${LIB_NAME})
+add_dependencies(test-Locker logger)

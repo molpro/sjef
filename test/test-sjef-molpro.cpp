@@ -60,7 +60,7 @@ TEST_F(molpro_test, molpro_workflow) {
       << "\"/>\n</backends>";
   //  ASSERT_EQ(system("cat ~/.sjef/molpro/backends.xml"),0);
   std::map<std::string, double> energies;
-  for (int repeat = 0; repeat < 5; ++repeat)
+  for (int repeat = 0; repeat < 1; ++repeat)
     for (const auto& backend : std::vector<std::string>{
              "local"
                                                         ,

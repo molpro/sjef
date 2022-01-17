@@ -35,7 +35,7 @@ const std::string sjef::Project::s_propertyFile = "Info.plist";
 const std::string writing_object_file = ".Info.plist.writing_object";
 
 ///> @private
-inline bool localhost(const std::string& host) { return (host == "localhost" or host == "127.0.0.1"); }
+inline bool localhost(const std::string& host) { return (host.empty() or host == "localhost" or host == "127.0.0.1"); }
 ///> @private
 inline std::string executable(fs::path command) {
   if (command.is_absolute())

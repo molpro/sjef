@@ -404,7 +404,9 @@ TEST(backend, backend_parameter_expand2) {
   p.backend_parameter_set(backend, "thing", "its value");
   std::map<std::string, std::string> tests;
   std::vector<std::string> preambles{"stuff ", ""};
+#ifdef __clang__
 #pragma clang diagnostic ignored "-Wunused-lambda-capture"
+#endif
   auto test = [&preambles, &p, &backend](const std::string& run_command, const std::string& expect_resolved,
                                const std::string& expect_documentation) {
     for (const auto& preamble : preambles) {

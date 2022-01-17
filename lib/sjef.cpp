@@ -138,11 +138,11 @@ Project::Project(const std::string& filename, bool construct, const std::string&
       m_master_of_slave(masterProject == nullptr), m_backend(""), m_locker(make_locker(m_filename)),
       m_property_file_modification_time(), m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}) {
   {
+    auto lock = m_locker->bolt();
     if (fs::exists(propertyFile())) {
       //      std::cout << "old project " << m_filename << std::endl;
       //          if (system((std::string{"ls -ltra "} + m_filename).c_str())) {}
       //          if (system((std::string{"cat "} + propertyFile()).c_str())) {}
-      auto lock = m_locker->bolt();
       load_property_file_locked();
     } else {
       //      std::cout << "new project " << m_filename << std::endl;

@@ -404,6 +404,7 @@ TEST(backend, backend_parameter_expand2) {
   p.backend_parameter_set(backend, "thing", "its value");
   std::map<std::string, std::string> tests;
   std::vector<std::string> preambles{"stuff ", ""};
+#pragma clang diagnostic ignored "-Wunused-lambda-capture"
   auto test = [&preambles, &p, &backend](const std::string& run_command, const std::string& expect_resolved,
                                const std::string& expect_documentation) {
     for (const auto& preamble : preambles) {
@@ -451,20 +452,24 @@ TEST(sjef, atomic) {
 
 TEST(project, recent) {
   savestate state;
-  std::string fn;
+  std::string fn; std::string suffix=state.suffix();
   auto fn2 = state.testproject("transient");
+  fs::path recent(fs::path("/Volumes/Home/Users/peterk/.sjef")/suffix/"projects");
   for (auto i = 0; i < 2; ++i) {
-    sjef::Project p(state.testproject("completely_new" + std::to_string(i)));
-    fn = p.filename();
-    EXPECT_EQ(p.recent_find(fn), 1);
+    {
+      sjef::Project p(state.testproject("completely_new" + std::to_string(i)));
+      fn = p.filename();
+      suffix = fs::path(fn).extension().string().substr(1);
+    }
+    EXPECT_EQ(sjef::Project::recent_find(suffix,fn), 1);
     { auto p2 = sjef::Project(fn2); }
-    EXPECT_EQ(p.recent(1), fn2);
-    EXPECT_EQ(p.recent_find(fn), 2);
+    EXPECT_EQ(sjef::Project::recent(suffix,1), fn2);
+    EXPECT_EQ(sjef::Project::recent_find(suffix,fn), 2);
     sjef::Project::erase(fn2);
-    EXPECT_EQ(p.recent(1), fn);
-    EXPECT_EQ(p.recent_find(fn), 1);
+    EXPECT_EQ(sjef::Project::recent(suffix,1), fn);
+    EXPECT_EQ(sjef::Project::recent_find(suffix,fn), 1);
   }
-  EXPECT_EQ(sjef::Project(fn).recent_find(fn.c_str()), 1);
+  EXPECT_EQ(sjef::Project::recent_find(suffix,fn), 1);
 }
 
 TEST(project, dummy_backend) {

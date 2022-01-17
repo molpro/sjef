@@ -404,7 +404,7 @@ TEST(backend, backend_parameter_expand2) {
   p.backend_parameter_set(backend, "thing", "its value");
   std::map<std::string, std::string> tests;
   std::vector<std::string> preambles{"stuff ", ""};
-  auto test = [&preambles, &p](const std::string& run_command, const std::string& expect_resolved,
+  auto test = [&preambles, &p, &backend](const std::string& run_command, const std::string& expect_resolved,
                                const std::string& expect_documentation) {
     for (const auto& preamble : preambles) {
       p.m_backends[backend].run_command = preamble + run_command + " more stuff";

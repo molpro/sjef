@@ -145,26 +145,33 @@ TEST(Locker, thread_common_mutex) {
 
 // TODO test interprocess locking
 TEST(Locker, Interprocess) {
+  sjef::Locker l(".Interprocess.lock");
+  auto b = l.bolt();
   namespace bp = ::boost::process;
   const std::string logfile = "Interprocess.log";
+  auto lockfile = logfile + ".lock";
   std::filesystem::remove(logfile);
-  std::filesystem::remove(logfile + ".lock");
+  std::filesystem::remove(lockfile);
+  auto logger = fs::current_path() / (std::string{"logger"} + std::string{EXECUTABLE_SUFFIX});
+  std::cout << logger << std::endl;
   std::vector<bp::child> processes;
   for (int i = 0; i < 50; ++i) {
-    processes.emplace_back("./logger", std::vector<std::string>{logfile, "1"});
+    processes.emplace_back(logger.string(), std::vector<std::string>{logfile, "1"});
   }
   for (auto& p : processes)
     p.wait();
-//  std::cout << std::ifstream(logfile).rdbuf() << std::endl;
-  auto is = std::ifstream(logfile);
-  std::string line;
-  while (std::getline(is, line)) {
-    std::string line2;
-    std::getline(is, line2);
-    auto pid1 = std::stoi(line.substr(line.find_last_of(" ") + 1));
-    auto pid2 = std::stoi(line2.substr(line2.find_last_of(" ") + 1));
-    EXPECT_EQ(pid1, pid2) << std::ifstream(logfile).rdbuf() << std::endl;
+  //  std::cout << std::ifstream(logfile).rdbuf() << std::endl;
+  {
+    auto is = std::ifstream(logfile);
+    std::string line;
+    while (std::getline(is, line)) {
+      std::string line2;
+      std::getline(is, line2);
+      auto pid1 = std::stoi(line.substr(line.find_last_of(" ") + 1));
+      auto pid2 = std::stoi(line2.substr(line2.find_last_of(" ") + 1));
+      EXPECT_EQ(pid1, pid2) << std::ifstream(logfile).rdbuf() << std::endl;
+    }
   }
   std::filesystem::remove(logfile);
-  std::filesystem::remove(logfile + ".lock");
+  std::filesystem::remove(lockfile);
 }

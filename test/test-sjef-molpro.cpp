@@ -44,7 +44,7 @@ TEST_F(molpro_test, spawn_many_molpro) {
   { std::ofstream(p.filename("inp")) << ""; }
   const auto& backend = sjef::Backend::default_name;
   if (not boost::process::search_path("molpro").empty()) // test the default backend only if it exists
-    for (auto i = 0; i < 5; ++i) {
+    for (auto i = 0; i < 1; ++i) {
       ASSERT_TRUE(p.run(backend, -1, true, true));
       EXPECT_NE(p.property_get("jobnumber"), "-1");
       EXPECT_EQ(p.status(false), sjef::completed);

@@ -213,10 +213,11 @@ Project::Project(const std::string& filename, bool construct, const std::string&
         not fs::exists(fs::path{m_filename}.parent_path().parent_path() / "Info.plist"))
       recent_edit(m_filename);
 
-//    const Backend::linux x;
-//    Backend backend = Backend(x, sjef::Backend::dummy_name, "localhost", "{$PWD}", "dummy");
-//    m_backends[sjef::Backend::dummy_name] = backend;
-    m_backends.try_emplace(Backend::dummy_name,Backend::local(), sjef::Backend::dummy_name, "localhost", "{$PWD}", "dummy");
+    //    const Backend::linux x;
+    //    Backend backend = Backend(x, sjef::Backend::dummy_name, "localhost", "{$PWD}", "dummy");
+    //    m_backends[sjef::Backend::dummy_name] = backend;
+    m_backends.try_emplace(Backend::dummy_name, Backend::local(), sjef::Backend::dummy_name, "localhost", "{$PWD}",
+                           "dummy");
     //        static_cast<Backend>(Backend_local(sjef::Backend::dummy_name, "localhost", "{$PWD}", "dummy"));
     if (not sjef::check_backends(m_project_suffix)) {
       auto config_file = expand_path(std::string{"~/.sjef/"} + m_project_suffix + "/backends.xml");
@@ -232,11 +233,11 @@ Project::Project(const std::string& filename, bool construct, const std::string&
         for (const auto& be : backends) {
           auto kName = getattribute(be, "name");
           auto kHost = getattribute(be, "host");
-//          m_backends[kName] = localhost(kHost) ? Backend_local(kName) : Backend_linux(kName);
+          //          m_backends[kName] = localhost(kHost) ? Backend_local(kName) : Backend_linux(kName);
           if (localhost(kHost))
-            m_backends.try_emplace(kName,Backend::local(),kName);
+            m_backends.try_emplace(kName, Backend::local(), kName);
           else
-            m_backends.try_emplace(kName,Backend::Linux(),kName);
+            m_backends.try_emplace(kName, Backend::Linux(), kName);
           std::string kVal;
           if ((kVal = getattribute(be, "template")) != "") {
             m_backends[kName].host = m_backends[kVal].host;
@@ -1209,16 +1210,18 @@ status Project::status(int verbosity, bool cached) const {
     bp::child c;
     bp::ipstream is;
     std::string line;
-auto cmdstring=be.status_command.back()=='"' ? be.status_command.substr(0,be.status_command.size()-1)+pid+"\"" : be.status_command + " " + pid;
-    auto cmd = splitString(cmdstring,' ','\"');
-//    std::cout << "status() executing ";for (const auto& c : cmd ) std::cout <<" : "<<c;std::cout<<std::endl;
+    auto cmdstring = be.status_command.back() == '"'
+                         ? be.status_command.substr(0, be.status_command.size() - 1) + pid + "\""
+                         : be.status_command + " " + pid;
+    auto cmd = splitString(cmdstring, ' ', '\"');
+    //    std::cout << "status() executing ";for (const auto& c : cmd ) std::cout <<" : "<<c;std::cout<<std::endl;
     c = bp::child(executable(cmd[0]), bp::args(std::vector<std::string>{cmd.begin() + 1, cmd.end()}), bp::std_out > is);
     while (std::getline(is, line)) {
       while (isspace(line.back()))
         line.pop_back();
-//            std::cout << "line: @"<<line<<"@"<<std::endl;
-            //TODO replace following by proper regex parsing
-      if ((" " + line+" ").find(" " + pid + " ") != std::string::npos) {
+      //            std::cout << "line: @"<<line<<"@"<<std::endl;
+      // TODO replace following by proper regex parsing
+      if ((" " + line + " ").find(" " + pid + " ") != std::string::npos) {
         if (line.back() == '+')
           line.pop_back();
         if (line.back() == 'Z') { // zombie process
@@ -2169,7 +2172,9 @@ unsigned int Project::current_run() const {
 }
 
 void Project::add_backend(const std::string& name, const std::map<std::string, std::string>& fields) {
-  m_backends[name] = static_cast<Backend>(localhost((fields.count("host") > 0 ? fields.at("host") : "localhost")) ? Backend(Backend::local(),name) : Backend(Backend::Linux(),name));
+  m_backends[name] = static_cast<Backend>(localhost((fields.count("host") > 0 ? fields.at("host") : "localhost"))
+                                              ? Backend(Backend::local(), name)
+                                              : Backend(Backend::Linux(), name));
   if (fields.count("host") > 0)
     m_backends[name].host = fields.at("host");
   if (fields.count("cache") > 0)

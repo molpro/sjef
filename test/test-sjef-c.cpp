@@ -93,13 +93,13 @@ TEST(backend, C_values) { // TODO actually implement some of this for C
   const char* projname = strdup(state.testproject("C_project").c_str());
   fs::remove_all(projname);
   sjef_project_open(projname);
+  EXPECT_THROW(sjef_backend_value(projname, "!*@£junk", "name"), std::runtime_error);
+  sjef_project_close(projname);
   EXPECT_THAT(std::string{sjef_project_recent(1, state.suffix().c_str())}, ::testing::HasSubstr(std::string{"C_project."}+state.suffix()));
   EXPECT_EQ(sjef_project_recent_find(sjef_project_recent(1, state.suffix().c_str())), 1);
   auto allBackends = sjef_project_backend_names(projname);
   //  std::cerr << "back from making allBackends"<<std::endl;
   // char** allBackends = NULL;
-  EXPECT_THROW(sjef_backend_value(projname, "!*@£junk", "name"), std::runtime_error);
-  sjef_project_close(projname);
   if (false) {
 
     sjef::Project p("Cpp_project.molpro");

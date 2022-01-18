@@ -11,7 +11,9 @@ if (NOT googletest_POPULATED)
 endif ()
 
 file(COPY He.molpro DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
-find_program(MOLPRO molpro)
+find_program(MOLPRO molpro
+        HINTS "C:\\Program Files\\Molpro\\bin\\molpro.bat"
+        )
 
 include(GoogleTest)
 foreach (t test-sjef test-sjef-c test-Locker test-sjef-molpro)
@@ -34,7 +36,7 @@ endforeach ()
 if (NOT MOLPRO STREQUAL MOLPRO-NOTFOUND)
     if (NOT TARGET Boost::headers)
         find_package(Boost 1.71.0 REQUIRED)
-    endif()
+    endif ()
     target_link_libraries(test-sjef-molpro PRIVATE Boost::headers)
 endif ()
 

@@ -51,7 +51,7 @@ TEST_F(molpro_test, spawn_many_molpro) {
 TEST_F(molpro_test, molpro_workflow) {
 #ifdef WIN32
   // TODO get remote launch working for Windows
-  constexpr bool remote = false;
+  constexpr bool test_remote = false;
 #else
   constexpr bool test_remote = true;
 #endif

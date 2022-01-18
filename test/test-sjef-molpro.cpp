@@ -6,37 +6,34 @@
 #include "sjef.h"
 #include <boost/process/search_path.hpp>
 #include <chrono>
+#include <fstream>
 #include <libgen.h>
 #include <list>
 #include <map>
 #include <memory>
 #include <regex>
 #include <unistd.h>
-#include <fstream>
 
 #include "test-sjef.h"
 #include <Locker.h>
-
 
 namespace {
 
 static std::mutex molpro_mutex;
 class molpro_test : public ::testing::Test {
 protected:
-  sjef::Locker locker=sjef::Locker(".molpro_lock");
-  virtual void SetUp() override
-  {
-//    molpro_mutex.lock();
-//    locker.add_bolt();
-//    std::cout << "Hello from molpro_test "<<&molpro_mutex<<" pid "<<getpid()<<std::endl;
+  sjef::Locker locker = sjef::Locker(".molpro_lock");
+  virtual void SetUp() override {
+    //    molpro_mutex.lock();
+    //    locker.add_bolt();
+    //    std::cout << "Hello from molpro_test "<<&molpro_mutex<<" pid "<<getpid()<<std::endl;
   }
 
-  virtual void TearDown() override
-  { //molpro_mutex.unlock();
-//    locker.remove_bolt();
+  virtual void TearDown() override { // molpro_mutex.unlock();
+    //    locker.remove_bolt();
   }
 };
-}
+} // namespace
 
 TEST_F(molpro_test, spawn_many_molpro) {
   savestate state("molpro");
@@ -52,6 +49,12 @@ TEST_F(molpro_test, spawn_many_molpro) {
 }
 
 TEST_F(molpro_test, molpro_workflow) {
+#ifdef WIN32
+  // TODO get remote launch working for Windows
+  constexpr bool remote = false;
+#else
+  constexpr bool test_remote = true;
+#endif
   savestate state("molpro");
   const auto cache = state.testfile(fs::current_path() / "molpro_workflow-cache");
   std::ofstream(sjef::expand_path(std::string{"~/.sjef/molpro/backends.xml"}))
@@ -60,12 +63,11 @@ TEST_F(molpro_test, molpro_workflow) {
       << "\"/>\n</backends>";
   //  ASSERT_EQ(system("cat ~/.sjef/molpro/backends.xml"),0);
   std::map<std::string, double> energies;
-  for (int repeat = 0; repeat < 1; ++repeat)
-    for (const auto& backend : std::vector<std::string>{
-             "local"
-                                                        ,
-             "test-remote"
-         }) {
+  for (int repeat = 0; repeat < 1; ++repeat) {
+    auto remotes = std::vector<std::string>{"local"};
+    if (test_remote)
+      remotes.push_back("test-remote");
+    for (const auto& backend : remotes) {
       std::map<std::string, std::unique_ptr<sjef::Project>> projects;
       fs::remove_all(cache);
       for (const auto& id : std::map<std::string, std::string>{{"H", "angstrom; geometry={h};rhf"},
@@ -73,11 +75,12 @@ TEST_F(molpro_test, molpro_workflow) {
         std::cout << "backend: " << backend << ", molecule: " << id.first << ", input: " << id.second << std::endl;
         auto file = id.first + "_" + backend + ".molpro";
         //        fs::remove_all(file);
-//        EXPECT_GE(system((std::string{"ls -laR "}+file).c_str()),-1);
-//        EXPECT_GE(system((std::string{"cat "}+file+"/Info.plist").c_str()),-1);
-//        std::cout << "exists("<<file<<")="<<fs::exists(file)<<std::endl;
+        //        EXPECT_GE(system((std::string{"ls -laR "}+file).c_str()),-1);
+        //        EXPECT_GE(system((std::string{"cat "}+file+"/Info.plist").c_str()),-1);
+        //        std::cout << "exists("<<file<<")="<<fs::exists(file)<<std::endl;
         projects.insert({id.first, std::make_unique<sjef::Project>(fs::exists(file) ? file : state.testfile(file))});
-//        std::cout << "created new project, properties "; for (const auto& n : projects[id.first]->property_names()) std::cout << " "<<n; std::cout << std::endl;
+        //        std::cout << "created new project, properties "; for (const auto& n :
+        //        projects[id.first]->property_names()) std::cout << " "<<n; std::cout << std::endl;
         std::ofstream(projects[id.first]->filename("inp")) << id.second;
         projects[id.first]->change_backend(backend);
       }
@@ -115,13 +118,13 @@ TEST_F(molpro_test, molpro_workflow) {
         //      std::cout << p.xml() << std::endl;
         xmldoc.load_string(p.xml().c_str());
         auto results = xmldoc.select_nodes("//jobstep//property[@name='Energy']");
-//        if (results.empty()) {
-//          std::cerr << getpid() << std::endl;
-//          EXPECT_EQ(system((std::string{"ls -lR "} + cache).c_str()), 0);
-//          EXPECT_EQ(system((std::string{"ls -lR "} + p.filename()).c_str()), 0);
-//          kill(getpid(), SIGSTOP);
-//                            goto end;
-//        }
+        //        if (results.empty()) {
+        //          std::cerr << getpid() << std::endl;
+        //          EXPECT_EQ(system((std::string{"ls -lR "} + cache).c_str()), 0);
+        //          EXPECT_EQ(system((std::string{"ls -lR "} + p.filename()).c_str()), 0);
+        //          kill(getpid(), SIGSTOP);
+        //                            goto end;
+        //        }
         ASSERT_GE(results.size(), 1) << "\n xml()=" << p.xml() << "\nxml file contents: " << p.file_contents("xml")
                                      << std::endl;
         //  for (const auto& result:results)
@@ -135,6 +138,7 @@ TEST_F(molpro_test, molpro_workflow) {
         energies[pp.first] = energy;
       }
     }
+  }
   //  end:;
 }
 TEST_F(molpro_test, input_from_output) {
@@ -158,4 +162,3 @@ TEST_F(molpro_test, run_needed) {
   sjef::Project He("He.molpro");
   EXPECT_FALSE(He.run_needed());
 }
-

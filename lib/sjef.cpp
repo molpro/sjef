@@ -1209,13 +1209,16 @@ status Project::status(int verbosity, bool cached) const {
     bp::child c;
     bp::ipstream is;
     std::string line;
-    auto cmd = splitString(be.status_command + " " + pid);
+auto cmdstring=be.status_command.back()=='"' ? be.status_command.substr(0,be.status_command.size()-1)+pid+"\"" : be.status_command + " " + pid;
+    auto cmd = splitString(cmdstring,' ','\"');
+//    std::cout << "status() executing ";for (const auto& c : cmd ) std::cout <<" : "<<c;std::cout<<std::endl;
     c = bp::child(executable(cmd[0]), bp::args(std::vector<std::string>{cmd.begin() + 1, cmd.end()}), bp::std_out > is);
     while (std::getline(is, line)) {
       while (isspace(line.back()))
         line.pop_back();
-      //      std::cout << "line: @"<<line<<"@"<<std::endl;
-      if ((" " + line).find(" " + pid + " ") != std::string::npos) {
+//            std::cout << "line: @"<<line<<"@"<<std::endl;
+            //TODO replace following by proper regex parsing
+      if ((" " + line+" ").find(" " + pid + " ") != std::string::npos) {
         if (line.back() == '+')
           line.pop_back();
         if (line.back() == 'Z') { // zombie process

@@ -11,9 +11,14 @@ if (NOT googletest_POPULATED)
 endif ()
 
 file(COPY He.molpro DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
-find_program(MOLPRO molpro
-        HINTS "C:\\Program Files\\Molpro\\bin\\molpro.bat"
-        )
+if(WIN32)
+    find_program(MOLPRO molpro.bat)
+else()
+    find_program(MOLPRO molpro)
+endif()
+if (NOT MOLPRO STREQUAL MOLPRO-NOTFOUND)
+    message(STATUS "Molpro included in tests")
+endif()
 
 include(GoogleTest)
 foreach (t test-sjef test-sjef-c test-Locker test-sjef-molpro)

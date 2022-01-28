@@ -314,7 +314,7 @@ TEST(project, xmlRepair) {
   EXPECT_EQ(xmlRepair("<root><sub attribute=\"value\">some stuff</"),
             "<root><sub attribute=\"value\">some stuff</sub></root>");
   EXPECT_EQ(xmlRepair("<orbitals>"), "<orbitals></orbitals>");
-  std::map<std::string, std::string> plurals;
+  sjef::mapstringstring_t plurals;
   plurals["orbitals"] = "<orbital a=\"b\"/>";
   EXPECT_EQ(xmlRepair("<orbitals>", plurals), "<orbitals><orbital a=\"b\"/></orbitals>");
 }

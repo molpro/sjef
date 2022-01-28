@@ -19,6 +19,7 @@ struct remote_server;     ///< @private
 struct pugi_xml_document; ///< @private
 static constexpr int recentMax = 128;
 enum status : int { unknown = 0, running = 1, waiting = 2, completed = 3, unevaluated = 4, killed = 5 };
+using mapstringstring_t = std::map<std::string, std::string, std::less<>>;
 class Project {
 private:
   std::string m_project_suffix;
@@ -26,29 +27,26 @@ private:
                           ///< pathname for the directory holding the bundle
   //  std::vector<std::reference_wrapper<const Backend> > m_backend;
   //  int m_jobnumber;
-  std::vector<std::string> m_reserved_files; ///< Files which should never be
-                                             ///< copied back from backend
+  std::vector<std::string> m_reserved_files =
+      std::vector<std::string>{sjef::Project::s_propertyFile}; ///< Files which should never be copied back from backend
   std::string m_writing_thread_file;
   std::unique_ptr<pugi_xml_document> m_properties;
-  std::map<std::string, std::string> m_suffixes; ///< File suffixes for the standard files
+  mapstringstring_t m_suffixes; ///< File suffixes for the standard files
   std::string m_recent_projects_file;
 
 public:
-  std::map<std::string, Backend> m_backends;
+  std::map<std::string, Backend, std::less<>> m_backends;
 
 private:
   std::unique_ptr<pugi_xml_document> m_backend_doc;
   mutable std::shared_ptr<remote_server> m_remote_server;
-  mutable std::chrono::milliseconds m_status_lifetime;
-  mutable std::chrono::time_point<std::chrono::steady_clock> m_status_last;
+  mutable std::chrono::milliseconds m_status_lifetime = std::chrono::milliseconds(0);
+  mutable std::chrono::time_point<std::chrono::steady_clock> m_status_last = std::chrono::steady_clock::now();
   mutable std::thread m_backend_watcher;
   // put the flag into a container to deal conveniently with std:atomic_flag's
   // lack of move constructor
   struct backend_watcher_flag_container {
     std::atomic_flag shutdown_flag;
-    backend_watcher_flag_container() {}
-    backend_watcher_flag_container(const backend_watcher_flag_container& source) {}
-    backend_watcher_flag_container(const backend_watcher_flag_container&& source) {}
     std::mutex m_property_set_mutex;
   };
   mutable backend_watcher_flag_container m_unmovables;
@@ -66,11 +64,11 @@ private:
   ///> @private
   std::shared_ptr<Locker> m_locker;
 
-//  mutable std::mutex m_project_mutex;
-//  std::unique_ptr<std::lock_guard<std::mutex>> m_project_lock;
-//  std::unique_ptr<Lock>
-//  void lock() { m_project_lock.reset(new std::lock_guard<std::mutex>(m_project_mutex)); }
-//  void unlock() { m_project_lock.reset(nullptr); }
+  //  mutable std::mutex m_project_mutex;
+  //  std::unique_ptr<std::lock_guard<std::mutex>> m_project_lock;
+  //  std::unique_ptr<Lock>
+  //  void lock() { m_project_lock.reset(new std::lock_guard<std::mutex>(m_project_mutex)); }
+  //  void unlock() { m_project_lock.reset(nullptr); }
 
 public:
   /*!
@@ -86,7 +84,7 @@ public:
    * @param masterProject For internal use only
    */
   explicit Project(const std::string& filename, bool construct = true, const std::string& default_suffix = "",
-                   const std::map<std::string, std::string>& suffixes = {{"inp", "inp"},
+                   const mapstringstring_t& suffixes = {{"inp", "inp"},
                                                                          {"out", "out"},
                                                                          {"xml", "xml"}},
                    const Project* masterProject = nullptr);
@@ -126,7 +124,7 @@ public:
    * @param overwrite Whether to overwrite an existing file.
    */
   bool import_file(std::string file, bool overwrite = false);
-  bool import_file(const std::vector<std::string> files, bool overwrite = false) {
+  bool import_file(const std::vector<std::string>& files, bool overwrite = false) {
     bool result = true;
     for (const auto& file : files)
       result &= import_file(file, overwrite);
@@ -157,7 +155,6 @@ public:
    */
   bool synchronize(int verbosity = 0, bool nostatus = false, bool force = false) const;
 
-public:
   /*!
    * @brief Start a sjef job
    * @param verbosity If >0, show underlying processing
@@ -168,12 +165,11 @@ public:
    * @return
    */
   bool run(int verbosity = 0, bool force = false, bool wait = false);
-  bool run(std::string name, int verbosity = 0, bool force = false, bool wait = false) {
+  bool run(const std::string& name, int verbosity = 0, bool force = false, bool wait = false) {
     change_backend(name);
     return run(verbosity, force, wait);
   }
 
-public:
   /*!
    * @brief Obtain the status of the job started by run()
    * @param verbosity
@@ -277,7 +273,7 @@ public:
    * @brief Set one or more properties
    * @param properties Key-value pairs of properties to be set
    */
-  void property_set(const std::map<std::string, std::string>& properties);
+  void property_set(const mapstringstring_t& properties);
   /*!
    * @brief Get the value of a property
    * @param property
@@ -289,7 +285,7 @@ public:
    * @param properties
    * @return For each property found, a key-value pair
    */
-  std::map<std::string, std::string> property_get(const std::vector<std::string>& properties) const;
+  mapstringstring_t property_get(const std::vector<std::string>& properties) const;
   /*!
    * @brief Remove a variable
    * @param property
@@ -392,11 +388,11 @@ private:
   std::string get_project_suffix(const std::string& filename, const std::string& default_suffix) const;
   static void recent_edit(const std::string& add, const std::string& remove = "");
   mutable std::filesystem::file_time_type m_property_file_modification_time;
-  mutable std::map<std::string, std::filesystem::file_time_type> m_input_file_modification_time;
+  mutable std::map<std::string, std::filesystem::file_time_type, std::less<>> m_input_file_modification_time;
   //  const bool m_use_control_path;
   //  mutable time_t m_property_file_modification_time;
   //  mutable std::map<std::string, time_t> m_input_file_modification_time;
-  std::set<std::string> m_run_directory_ignore;
+  std::set<std::string, std::less<>> m_run_directory_ignore;
   void property_delete_locked(const std::string& property);
   void check_property_file_locked() const;
   void check_property_file() const;
@@ -474,7 +470,7 @@ public:
    * @return A map where the keys are the parameter names, and the values the
    * defaults.
    */
-  std::map<std::string, std::string> backend_parameters(const std::string& backend, bool doc = false) const;
+  mapstringstring_t backend_parameters(const std::string& backend, bool doc = false) const;
 
   void backend_parameter_set(const std::string& backend, const std::string& name, const std::string& value) {
     property_set("Backend/" + backend + "/" + name, value);
@@ -530,7 +526,7 @@ public:
    * the same name will be overwritten
    * @param fields The backend fields to be specified
    */
-  void add_backend(const std::string& name, const std::map<std::string, std::string>& fields);
+  void add_backend(const std::string& name, const mapstringstring_t& fields);
 
   /*!
    * @brief Remove a backend from the project and from the user's global backend
@@ -627,7 +623,7 @@ std::string expand_path(const std::string& path, const std::string& suffix = "")
  * value the xml to be injected
  * @return The repaired xml
  */
-std::string xmlRepair(const std::string& source, const std::map<std::string, std::string>& injections = {});
+std::string xmlRepair(const std::string& source, const mapstringstring_t& injections = {});
 
 /*!
  * @brief Report the software version

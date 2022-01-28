@@ -196,7 +196,7 @@ void sjef_project_properties_set(const char* project, const char** key, const ch
   try {
     if (projects.count(project) == 0)
       sjef_project_open(project);
-    std::map<std::string, std::string> keyval;
+    std::map<std::string, std::string, std::less<>> keyval;
     for (int i = 0; key[i] != NULL; ++i) {
       keyval[key[i]] = value[i];
     }

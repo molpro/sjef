@@ -129,7 +129,7 @@ Project::Project(const std::string& filename, bool construct, const std::string&
     : m_project_suffix(get_project_suffix(filename, default_suffix)),
       m_filename(expand_path(filename, m_project_suffix)), m_properties(std::make_unique<pugi_xml_document>()),
       m_suffixes(suffixes), m_backend_doc(std::make_unique<pugi_xml_document>()), m_master_instance(masterProject),
-      m_master_of_slave(masterProject == nullptr), m_backend(""), m_locker(make_locker(m_filename)),
+      m_master_of_slave(masterProject == nullptr), m_locker(make_locker(m_filename)),
       m_property_file_modification_time(), m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}) {
   {
     auto lock = m_locker->bolt();
@@ -2046,7 +2046,7 @@ void sjef::Project::change_backend(std::string backend, bool force) {
   }
 }
 
-void sjef::Project::backend_watcher(sjef::Project& project_, const std::string& backend, int min_wait_milliseconds,
+void sjef::Project::backend_watcher(sjef::Project& project_, const std::string_view& backend, int min_wait_milliseconds,
                                     int max_wait_milliseconds, int poll_milliseconds) noexcept {
   //  std::cerr << "Project::backend_watcher starting for " << project_.m_filename << " on thread "
   //            << std::this_thread::get_id() << std::endl;
@@ -2073,7 +2073,7 @@ void sjef::Project::backend_watcher(sjef::Project& project_, const std::string& 
       //      std::cout << "repeats: "<<backend_watcher_wait_milliseconds / poll_milliseconds<<std::endl;
       for (int repeat = 0; repeat < backend_watcher_wait_milliseconds / poll_milliseconds; ++repeat) {
         if (shutdown_flag.test_and_set())
-          goto finished;
+          goto FINISHED;
         shutdown_flag.clear();
         std::this_thread::sleep_for(std::chrono::milliseconds(poll_milliseconds));
       }
@@ -2097,7 +2097,7 @@ void sjef::Project::backend_watcher(sjef::Project& project_, const std::string& 
       //      std::cerr << "... watcher for project "<<&project<<" back from status"<<std::endl;
       //      std::cerr << "sjef::Project::backend_watcher() status " << project.cached_status() << std::endl;
     }
-  finished:;
+  FINISHED:;
   } catch (...) {
   }
   //  std::cerr << "Project::backend_watcher stopping for " << project_.m_filename << " on thread "
@@ -2155,9 +2155,9 @@ unsigned int Project::current_run() const {
 }
 
 void Project::add_backend(const std::string& name, const mapstringstring_t& fields) {
-  m_backends[name] = static_cast<Backend>(localhost((fields.count("host") > 0 ? fields.at("host") : "localhost"))
+  m_backends[name] = localhost((fields.count("host") > 0 ? fields.at("host") : "localhost"))
                                               ? Backend(Backend::local(), name)
-                                              : Backend(Backend::Linux(), name));
+                                              : Backend(Backend::Linux(), name);
   if (fields.count("host") > 0)
     m_backends[name].host = fields.at("host");
   if (fields.count("cache") > 0)
@@ -2176,12 +2176,11 @@ void Project::add_backend(const std::string& name, const mapstringstring_t& fiel
     m_backends[name].kill_command = fields.at("kill_command");
 }
 
-const std::string version() noexcept { return SJEF_VERSION; }
+std::string version() noexcept { return SJEF_VERSION; }
 
 pugi::xpath_node_set Project::select_nodes(const std::string& xpath_query, int run) const {
   auto xml = pugi::xml_document();
   xml.load_string(this->xml(run).c_str());
-  //  xml.load_file(filename("xml", "", run).c_str());
   return xml.select_nodes(xpath_query.c_str());
 }
 
@@ -2189,11 +2188,12 @@ std::vector<std::string> Project::xpath_search(const std::string& xpath_query, c
                                                int run) const {
   auto node_set = select_nodes(xpath_query, run);
   std::vector<std::string> result;
+  result.reserve(node_set.size());
   for (const auto& node : node_set) {
     if (attribute.empty())
-      result.push_back(node.node().child_value());
+      result.emplace_back(node.node().child_value());
     else
-      result.push_back(node.node().attribute(attribute.c_str()).value());
+      result.emplace_back(node.node().attribute(attribute.c_str()).value());
   }
   return result;
 }

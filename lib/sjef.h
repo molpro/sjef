@@ -407,8 +407,8 @@ public:
 private:
   std::string cache(const Backend& backend) const;
   void force_file_names(const std::string& oldname);
-  static void backend_watcher(sjef::Project& project, const std::string& backend, int minimum_wait_milliseconds,
-                              int maximum_wait_milliseconds = 0, int poll_milliseconds = 1) noexcept;
+  static void backend_watcher(sjef::Project& project_, const std::string_view& backend, int min_wait_milliseconds,
+                              int max_wait_milliseconds = 0, int poll_milliseconds = 1) noexcept;
   void shutdown_backend_watcher();
   /*!
    * @brief Take a line from a program input file, and figure out whether it
@@ -629,7 +629,7 @@ std::string xmlRepair(const std::string& source, const mapstringstring_t& inject
  * @brief Report the software version
  * @return
  */
-const std::string version() noexcept;
+std::string version() noexcept;
 
 } // namespace sjef
 

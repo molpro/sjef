@@ -25,7 +25,6 @@
 namespace bp = boost::process;
 namespace fs = std::filesystem;
 
-int backend_watcher_wait_milliseconds;
 
 ///> @private
 struct sjef::pugi_xml_document : public pugi::xml_document {};
@@ -800,7 +799,6 @@ bool Project::run(int verbosity, bool force, bool wait) {
   if (!force && !run_needed())
     return false;
   cached_status(unevaluated);
-  backend_watcher_wait_milliseconds = 0;
   std::string line;
   bp::child c;
   std::string optionstring;
@@ -2055,7 +2053,7 @@ void sjef::Project::backend_watcher(sjef::Project& project_, const std::string_v
   if (max_wait_milliseconds <= 0)
     max_wait_milliseconds = min_wait_milliseconds;
   constexpr auto radix = 2;
-  backend_watcher_wait_milliseconds = std::max(min_wait_milliseconds, poll_milliseconds);
+  auto backend_watcher_wait_milliseconds = std::max(min_wait_milliseconds, poll_milliseconds);
   try {
     //    std::cerr << "sjef::Project::backend_watcher() START for project " << project.name() << " at address " <<
     //    &project

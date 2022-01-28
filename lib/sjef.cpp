@@ -1212,8 +1212,8 @@ status Project::status(int verbosity, bool cached) const {
           waitpid(std::stoi(pid), NULL, WNOHANG);
 #endif
           result = ((be.host + ":" + pid) == property_get("_private_sjef_project_killed_job") ? killed : completed);
-        }
-        result = running;
+        } else
+          result = running;
       }
     }
     c.wait();

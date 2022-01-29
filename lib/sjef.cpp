@@ -1700,12 +1700,12 @@ void sjef::Project::change_backend(std::string backend, bool force) {
         }
       }
       m_unmovables.shutdown_flag.clear();
-      m_backend_watcher = std::thread(backend_watcher, std::ref(*this), backend, 100, 1000, 10);
+      m_backend_watcher = std::thread(backend_watcher, std::ref(*this), 100, 1000, 10);
     }
   }
 }
 
-void sjef::Project::backend_watcher(sjef::Project& project_, const std::string_view& backend, int min_wait_milliseconds,
+void sjef::Project::backend_watcher(sjef::Project& project_, int min_wait_milliseconds,
                                     int max_wait_milliseconds, int poll_milliseconds) {
   project_.m_backend_watcher_instance.reset(new sjef::Project(project_.m_filename, true, "", {{}}, &project_));
   const auto& project = *project_.m_backend_watcher_instance.get();

@@ -25,19 +25,14 @@ private:
   std::string m_project_suffix;
   std::string m_filename; ///< the name of the file bundle, expressed as an absolute
                           ///< pathname for the directory holding the bundle
-  //  std::vector<std::reference_wrapper<const Backend> > m_backend;
-  //  int m_jobnumber;
   std::vector<std::string> m_reserved_files =
       std::vector<std::string>{sjef::Project::s_propertyFile}; ///< Files which should never be copied back from backend
   std::string m_writing_thread_file;
   std::unique_ptr<pugi_xml_document> m_properties;
   mapstringstring_t m_suffixes; ///< File suffixes for the standard files
   std::string m_recent_projects_file;
-
-public:
   std::map<std::string, Backend, std::less<>> m_backends;
 
-private:
   std::unique_ptr<pugi_xml_document> m_backend_doc;
   mutable std::shared_ptr<remote_server> m_remote_server;
   mutable std::chrono::milliseconds m_status_lifetime = std::chrono::milliseconds(0);
@@ -64,12 +59,6 @@ private:
   ///> @private
   std::shared_ptr<Locker> m_locker;
 
-  //  mutable std::mutex m_project_mutex;
-  //  std::unique_ptr<std::lock_guard<std::mutex>> m_project_lock;
-  //  std::unique_ptr<Lock>
-  //  void lock() { m_project_lock.reset(new std::lock_guard<std::mutex>(m_project_mutex)); }
-  //  void unlock() { m_project_lock.reset(nullptr); }
-
 public:
   /*!
    * @brief Construct, or attach to, a Molpro project bundle
@@ -84,9 +73,7 @@ public:
    * @param masterProject For internal use only
    */
   explicit Project(const std::string& filename, bool construct = true, const std::string& default_suffix = "",
-                   const mapstringstring_t& suffixes = {{"inp", "inp"},
-                                                                         {"out", "out"},
-                                                                         {"xml", "xml"}},
+                   const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}},
                    const Project* masterProject = nullptr);
   Project(const Project& source) = delete;
   Project(const Project&& source) = delete;
@@ -380,6 +367,8 @@ public:
    */
   void change_backend(std::string backend = std::string{""}, bool force = false);
 
+  std::map<std::string, Backend, std::less<>>& backends() { return m_backends; }
+
 private:
   Backend default_backend();
   sjef::status cached_status() const;
@@ -389,9 +378,6 @@ private:
   static void recent_edit(const std::string& add, const std::string& remove = "");
   mutable std::filesystem::file_time_type m_property_file_modification_time;
   mutable std::map<std::string, std::filesystem::file_time_type, std::less<>> m_input_file_modification_time;
-  //  const bool m_use_control_path;
-  //  mutable time_t m_property_file_modification_time;
-  //  mutable std::map<std::string, time_t> m_input_file_modification_time;
   std::set<std::string, std::less<>> m_run_directory_ignore;
   void property_delete_locked(const std::string& property);
   void check_property_file_locked() const;
@@ -399,7 +385,7 @@ private:
   void save_property_file_locked() const;
   void save_property_file() const;
   void load_property_file_locked() const;
-  bool properties_last_written_by_me(bool removeFile = false, bool already_locked = false) const;
+  bool properties_last_written_by_me(bool removeFile = false) const;
 
 public:
   std::string propertyFile() const;
@@ -408,7 +394,7 @@ private:
   std::string cache(const Backend& backend) const;
   void force_file_names(const std::string& oldname);
   static void backend_watcher(sjef::Project& project_, const std::string_view& backend, int min_wait_milliseconds,
-                              int max_wait_milliseconds = 0, int poll_milliseconds = 1) noexcept;
+                              int max_wait_milliseconds = 0, int poll_milliseconds = 1);
   void shutdown_backend_watcher();
   /*!
    * @brief Take a line from a program input file, and figure out whether it

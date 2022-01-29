@@ -410,7 +410,7 @@ TEST(backend, backend_parameter_expand2) {
   auto test = [&preambles, &p, &backend](const std::string& run_command, const std::string& expect_resolved,
                                const std::string& expect_documentation) {
     for (const auto& preamble : preambles) {
-      p.m_backends[backend].run_command = preamble + run_command + " more stuff";
+      p.backends()[backend].run_command = preamble + run_command + " more stuff";
       //        std::cout << "run_command set to "<<p.m_backends[backend].run_command<<std::endl;
       //        std::cout << "documentation returned "<<p.backend_parameter_documentation(backend,"n")<<std::endl;
       //        std::cout << "documentation expected "<<expect_documentation<<std::endl;

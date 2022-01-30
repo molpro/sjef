@@ -1,5 +1,6 @@
 #include "sjef.h"
 #include "Locker.h"
+#include "Logger.h"
 #include "sjef-backend.h"
 #include <array>
 #include <boost/process/args.hpp>
@@ -33,6 +34,12 @@ const std::string sjef::Project::s_propertyFile = "Info.plist";
 const std::string writing_object_file = ".Info.plist.writing_object";
 
 ///> @private
+class internal_error : public sjef::runtime_error {
+public:
+  using runtime_error::runtime_error;
+};
+
+///> @private
 inline bool localhost(const std::string& host) { return (host.empty() || host == "localhost" || host == "127.0.0.1"); }
 ///> @private
 inline std::string executable(fs::path command) {
@@ -57,12 +64,13 @@ inline std::string executable(fs::path command) {
 
 ///> @private
 bool copyDir(fs::path const& source, fs::path const& destination, bool delete_source = false, bool recursive = true) {
+  using sjef::runtime_error;
   if (!fs::exists(source) || !fs::is_directory(source))
-    throw std::runtime_error("Source directory " + source.string() + " does not exist or is not a directory.");
+    throw runtime_error("Source directory " + source.string() + " does not exist or is not a directory.");
   if (fs::exists(destination))
-    throw std::runtime_error("Destination directory " + destination.string() + " already exists.");
+    throw runtime_error("Destination directory " + destination.string() + " already exists.");
   if (!fs::create_directory(destination))
-    throw std::runtime_error("Unable to create destination directory " + destination.string());
+    throw runtime_error("Unable to create destination directory " + destination.string());
   sjef::Locker destination_locker(destination);
   auto destination_lock = destination_locker.bolt();
   for (fs::directory_iterator file(source); file != fs::directory_iterator(); ++file) {
@@ -137,9 +145,9 @@ Project::Project(const std::string& filename, bool construct, const std::string&
     if (suffixes.count("inp") > 0)
       m_reserved_files.push_back(this->filename("inp"));
     if (!fs::exists(m_filename))
-      throw std::runtime_error("project does not exist and could not be created: " + m_filename);
+      throw runtime_error("project does not exist and could not be created: " + m_filename);
     if (!fs::is_directory(m_filename))
-      throw std::runtime_error("project should be a directory: " + m_filename);
+      throw runtime_error("project should be a directory: " + m_filename);
 
     if (!construct)
       return;
@@ -150,7 +158,7 @@ Project::Project(const std::string& filename, bool construct, const std::string&
       property_set("_private_sjef_project_backend_inactive", "1");
     } else {
       if (!fs::exists(pf))
-        throw std::runtime_error("Unexpected absence of property file " + pf);
+        throw runtime_error("Unexpected absence of property file " + pf);
       m_property_file_modification_time = fs::last_write_time(propertyFile());
       check_property_file_locked();
     }
@@ -171,9 +179,9 @@ Project::Project(const std::string& filename, bool construct, const std::string&
                            "dummy");
     if (!sjef::check_backends(m_project_suffix)) {
       auto config_file = expand_path(std::string{"~/.sjef/"} + m_project_suffix + "/backends.xml");
-      std::cerr << "contents of " << config_file << ":" << std::endl;
-      std::cerr << std::ifstream(config_file).rdbuf() << std::endl;
-      throw std::runtime_error("sjef backend files are invalid");
+      m_warn.error() << "contents of " << config_file << ":" << std::endl;
+      m_warn.error() << std::ifstream(config_file).rdbuf() << std::endl;
+      throw runtime_error("sjef backend files are invalid");
     }
     for (const auto& config_dir : std::vector<std::string>{"/usr/local/etc/sjef", "~/.sjef"}) {
       const auto config_file = expand_path(config_dir + "/" + m_project_suffix + "/backends.xml");
@@ -215,7 +223,7 @@ Project::Project(const std::string& filename, bool construct, const std::string&
           if ((kVal = getattribute(be, "kill_command")) != "")
             m_backends[kName].kill_command = kVal;
           if (!check_backend(kName))
-            throw std::runtime_error(std::string{"sjef backend "} + kName + " is invalid");
+            throw runtime_error(std::string{"sjef backend "} + kName + " is invalid");
         }
       }
     }
@@ -275,7 +283,7 @@ Project::~Project() {
 std::string Project::get_project_suffix(const std::string& filename, const std::string& default_suffix) const {
   auto suffix = fs::path{expand_path(filename, default_suffix)}.extension().string();
   if (suffix.empty())
-    throw std::runtime_error("Cannot deduce project suffix for \"" + filename + "\" with default suffix \"" +
+    throw runtime_error("Cannot deduce project suffix for \"" + filename + "\" with default suffix \"" +
                              default_suffix + "\"");
   return suffix.substr(1);
 }
@@ -296,7 +304,7 @@ bool Project::import_file(std::string file, bool overwrite) {
   property_set(key, to.filename().string());
   property_set("IMPORTED", std::to_string(nimport + 1));
   if (ec)
-    throw std::runtime_error(ec.message());
+    throw runtime_error(ec.message());
   return true;
 }
 
@@ -304,12 +312,12 @@ void Project::throw_if_backend_invalid(std::string backend) const {
   if (backend.empty())
     backend = property_get("backend");
   if (backend.empty())
-    throw std::runtime_error("No backend specified");
+    throw runtime_error("No backend specified");
   if (m_backends.count(backend) > 0)
     return;
   const std::string& path = expand_path(std::string{"~/.sjef/"} + m_project_suffix + "/backends.xml");
-  std::cerr << "Contents of " << path << ":\n" << std::ifstream(path).rdbuf() << std::endl;
-  throw std::runtime_error("Backend " + backend + " is not registered");
+  m_warn.error() << "Contents of " << path << ":\n" << std::ifstream(path).rdbuf() << std::endl;
+  throw runtime_error("Backend " + backend + " is not registered");
 }
 
 bool Project::export_file(std::string file, bool overwrite) {
@@ -323,7 +331,7 @@ bool Project::export_file(std::string file, bool overwrite) {
     remove(fs::path{file});
   fs::copy_file(from, file, ec);
   if (ec)
-    throw std::runtime_error(ec.message());
+    throw runtime_error(ec.message());
   return true;
 }
 
@@ -464,7 +472,7 @@ void Project::force_file_names(const std::string& oldname) {
         }
       }
     } catch (const std::exception& ex) {
-      throw std::runtime_error(dir_itr->path().string() + " " + ex.what());
+      throw runtime_error(dir_itr->path().string() + " " + ex.what());
     }
   }
 }
@@ -485,15 +493,15 @@ bool Project::move(const std::string& destination_filename, bool force) {
   shutdown_backend_watcher();
   try {
     if (!copyDir(fs::path(m_filename), dest, true))
-      throw std::runtime_error("Failed to copy current project directory");
+      throw runtime_error("Failed to copy current project directory");
     m_filename = dest.string();
     force_file_names(namesave);
     recent_edit(m_filename, filenamesave);
     if (!fs::remove_all(filenamesave))
-      throw std::runtime_error("failed to delete current project directory");
+      throw runtime_error("failed to delete current project directory");
     return true;
   } catch (...) {
-    std::cerr << "move failed to copy " << m_filename << " : " << dest << std::endl;
+    m_warn.warn() << "move failed to copy " << m_filename << " : " << dest << std::endl;
   }
   change_backend(property_get("backend"));
   return false;
@@ -510,7 +518,7 @@ bool Project::copy(const std::string& destination_filename, bool force, bool kee
     if (force)
       fs::remove_all(dest);
     if (fs::exists(dest))
-      throw std::runtime_error("Copy to " + dest.string() + " cannot be done because the destination already exists");
+      throw runtime_error("Copy to " + dest.string() + " cannot be done because the destination already exists");
     auto bolt = m_locker->bolt();
     if (!copyDir(fs::path(m_filename), dest, false, !slave))
       return false;
@@ -598,7 +606,7 @@ std::string Project::backend_parameter_expand(const std::string& backend, std::s
         m = m.substr(0, bang);
       auto percent = m.find_first_of("%");
       if (percent == std::string::npos)
-        throw std::runtime_error("Invalid template: " + templ + "\nMissing % in expression {" + m + "}");
+        throw runtime_error("Invalid template: " + templ + "\nMissing % in expression {" + m + "}");
       auto parameter_name = m.substr(percent + 1);
       auto defpos = parameter_name.find_first_of(":");
       std::string def;
@@ -648,7 +656,7 @@ mapstringstring_t Project::backend_parameters(const std::string& backend, bool d
       }
       auto percent = m.find_first_of("%");
       if (percent == std::string::npos)
-        throw std::runtime_error("Invalid template: " + templ + "\nMissing % in expression {" + m + "}");
+        throw runtime_error("Invalid template: " + templ + "\nMissing % in expression {" + m + "}");
       auto parameter_name = m.substr(percent + 1);
       auto defpos = parameter_name.find_first_of(":");
       std::string def;
@@ -699,7 +707,7 @@ bool Project::run(int verbosity, bool force, bool wait) {
     if (executable(run_command).empty()) {
       for (const auto& p : ::boost::this_process::path())
         std::cerr << "path " << p << std::endl;
-      throw std::runtime_error("Cannot find run command " + run_command);
+      throw runtime_error("Cannot find run command " + run_command);
     }
     if (verbosity > 1)
       std::cerr << "run local job executable=" << executable(run_command) << " " << optionstring << " "
@@ -716,14 +724,13 @@ bool Project::run(int verbosity, bool force, bool wait) {
     fs::current_path(filename("", "", 0));
 
     if (optionstring.empty())
-      c = bp::child(executable(run_command),
-                    fs::relative(filename("inp", "", rundir)).string());
+      c = bp::child(executable(run_command), fs::relative(filename("inp", "", rundir)).string());
     else
       c = bp::child(executable(run_command), bp::args(splitString(optionstring)),
                     fs::relative(filename("inp", "", rundir)).string());
     fs::current_path(current_path_save);
     if (!c.valid())
-      throw std::runtime_error("Spawning run process has failed");
+      throw runtime_error("Spawning run process has failed");
     c.detach();
     property_set("jobnumber", std::to_string(c.id()));
     p_status_mutex.reset();
@@ -796,7 +803,7 @@ void Project::clean(bool oldOutput, bool output, bool unused) {
     fs::remove(fs::path{filename()} / fs::path{name() + "." + m_suffixes["xml"]});
   }
   if (unused)
-    throw std::runtime_error("sjef::project::clean for unused files is not yet implemented");
+    throw runtime_error("sjef::project::clean for unused files is not yet implemented");
 }
 
 void Project::kill() {
@@ -923,9 +930,8 @@ bool Project::run_needed(int verbosity) const {
 }
 
 std::string Project::xml(int run, bool sync) const {
-  constexpr bool use_cache = true;
   const bool localhost = m_backends.at(property_get("backend")).host == "localhost";
-  if ((!use_cache) || (localhost && cached_status() != completed) ||
+  if ((localhost && cached_status() != completed) ||
       ((!localhost) && std::stoi(property_get("_private_sjef_project_backend_inactive_synced")) <= 2)) {
     return xmlRepair(file_contents(m_suffixes.at("xml"), "", run, sync));
   }
@@ -937,9 +943,9 @@ std::string Project::xml(int run, bool sync) const {
 
 std::string Project::file_contents(const std::string& suffix, const std::string& name, int run, bool sync) const {
 
-  auto be = property_get("backend");
-  if (sync && !be.empty() && be != "local" and
-      std::stoi(property_get("_private_sjef_project_backend_inactive_synced")) > 2 && suffix != m_suffixes.at("inp"))
+  if (auto be = property_get("backend"); sync && !be.empty() && be != "local" &&
+                                         std::stoi(property_get("_private_sjef_project_backend_inactive_synced")) > 2 &&
+                                         suffix != m_suffixes.at("inp"))
     synchronize();
   std::ifstream s(filename(suffix, name, run));
   auto result = std::string(std::istreambuf_iterator<char>(s), std::istreambuf_iterator<char>());
@@ -982,12 +988,11 @@ status Project::status(int verbosity, bool cached) const {
   if (verbosity > 1)
     std::cerr << "job number " << pid << std::endl;
   if (pid.empty() || std::stoi(pid) < 0) {
-    auto ih = std::to_string(input_hash());
-    auto rih = property_get("run_input_hash");
-    if (!rih.empty())
-      return (rih == ih)
-                 ? ((be.host + ":" + pid) == property_get("_private_sjef_project_killed_job") ? killed : completed)
-                 : unknown;
+    if (auto rih = property_get("run_input_hash"); !rih.empty()) {
+      if (rih != std::to_string(input_hash()))
+        return unknown;
+      return (be.host + ":" + pid) == property_get("_private_sjef_project_killed_job") ? killed : completed;
+    }
     return (std::regex_replace(file_contents("inp"), std::regex{" *\n\n*"}, "\n") != input_from_output(false))
                ? unknown
                : completed;
@@ -1281,7 +1286,7 @@ std::string Project::run_directory(int run) const {
     return filename(); // covers the case of old projects without run directories
   auto dir = fs::path{filename()} / "run" / (std::to_string(sequence) + "." + m_project_suffix);
   if (!fs::is_directory(dir))
-    throw std::runtime_error("Cannot find directory " + dir.string());
+    throw runtime_error("Cannot find directory " + dir.string());
   return dir.string();
 }
 int Project::run_directory_new() {
@@ -1295,7 +1300,7 @@ int Project::run_directory_new() {
   auto rundir = fs::path{filename()} / "run";
   auto dir = rundir / (std::to_string(sequence) + "." + m_project_suffix);
   if (!fs::exists(rundir) && !fs::create_directories(rundir)) {
-    throw std::runtime_error("Cannot create directory " + rundir.string());
+    throw runtime_error("Cannot create directory " + rundir.string());
   }
   property_delete("jobnumber");
   property_delete("_private_job_submission_time");
@@ -1404,7 +1409,7 @@ constexpr static bool use_writer = false;
 void Project::load_property_file_locked() const {
   auto result = m_properties->load_file(propertyFile().c_str());
   if (!result)
-    throw std::runtime_error("error in loading " + propertyFile() + "\n" + result.description() + "\n" +
+    throw runtime_error("error in loading " + propertyFile() + "\n" + result.description() + "\n" +
                              slurp(propertyFile()));
   m_property_file_modification_time = fs::last_write_time(propertyFile());
 }
@@ -1430,13 +1435,10 @@ void Project::check_property_file() const {
 }
 void Project::check_property_file_locked() const {
   auto lastwrite = fs::last_write_time(propertyFile());
-  if (m_property_file_modification_time == lastwrite) { // tie-breaker
-    if (!properties_last_written_by_me(false))
-      m_property_file_modification_time -=
-          std::chrono::milliseconds(1); // to mark this object's cached properties as out of date
-  }
+  if (m_property_file_modification_time == lastwrite && !properties_last_written_by_me(false))
+    m_property_file_modification_time -= std::chrono::milliseconds(1);
   if (m_property_file_modification_time < lastwrite) {
-    { load_property_file_locked(); }
+    load_property_file_locked();
     m_property_file_modification_time = lastwrite;
   }
 }
@@ -1508,12 +1510,12 @@ size_t sjef::Project::input_hash() const {
 }
 
 ///> @private
-inline std::string environment(std::string key) {
-  char* s = std::getenv(key.c_str());
+inline std::string environment(const std::string& key) {
+  const char* s = std::getenv(key.c_str());
   if (s == nullptr) {
     if (key == "TMPDIR")
       return "/tmp";
-    throw std::runtime_error("Unknown environment variable " + key);
+    throw internal_error("Unknown environment variable " + key);
   }
   return s;
 }
@@ -1627,7 +1629,7 @@ std::string sjef::Project::remote_server_run(const std::string& command, int ver
   if (verbosity > 1)
     std::cerr << "rc=" << rc << std::endl;
   if (rc != 0)
-    throw std::runtime_error("Host " + m_remote_server->host + "; failed remote command: " + command +
+    throw runtime_error("Host " + m_remote_server->host + "; failed remote command: " + command +
                              "\nStandard output:\n" + m_remote_server->last_out + "\nStandard error:\n" +
                              m_remote_server->last_err);
   return m_remote_server->last_out;
@@ -1696,7 +1698,8 @@ void sjef::Project::change_backend(std::string backend, bool force) {
         try {
           remote_server_run(
               std::string{"mkdir -p "} + (fs::path{this->m_backends.at(backend).cache} / m_filename).string(), 0);
-        } catch (...) {
+        } catch (runtime_error const& e) {
+          m_warn.error() << "Error in launching remote job"<<std::endl;
         }
       }
       m_unmovables.shutdown_flag.clear();
@@ -1705,8 +1708,8 @@ void sjef::Project::change_backend(std::string backend, bool force) {
   }
 }
 
-void sjef::Project::backend_watcher(sjef::Project& project_, int min_wait_milliseconds,
-                                    int max_wait_milliseconds, int poll_milliseconds) {
+void sjef::Project::backend_watcher(sjef::Project& project_, int min_wait_milliseconds, int max_wait_milliseconds,
+                                    int poll_milliseconds) {
   project_.m_backend_watcher_instance.reset(new sjef::Project(project_.m_filename, true, "", {{}}, &project_));
   const auto& project = *project_.m_backend_watcher_instance.get();
   if (max_wait_milliseconds <= 0)
@@ -1729,19 +1732,19 @@ void sjef::Project::backend_watcher(sjef::Project& project_, int min_wait_millis
       try {
         project.synchronize(0);
       } catch (const std::exception& ex) {
-        std::cerr << "sjef::Project::backend_watcher() synchronize() has thrown " << ex.what() << std::endl;
+        project.m_warn.warn() << "sjef::Project::backend_watcher() synchronize() has thrown " << ex.what() << std::endl;
         project.cached_status(unknown);
       }
       try {
         project.cached_status(project.status(0, false));
       } catch (const std::exception& ex) {
-        std::cerr << "sjef::Project::backend_watcher() status() has thrown " << ex.what() << std::endl;
+        project.m_warn.warn() << "sjef::Project::backend_watcher() status() has thrown " << ex.what() << std::endl;
         project.cached_status(unknown);
       }
     }
   FINISHED:;
   } catch (const std::exception& ex) {
-    std::cerr << "sjef::Project::backend_watcher() has thrown " << ex.what() << std::endl;
+    project.m_warn.warn() << "sjef::Project::backend_watcher() has thrown " << ex.what() << std::endl;
     project.cached_status(unknown);
   }
 }

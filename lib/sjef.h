@@ -8,6 +8,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include "Logger.h"
 
 namespace pugi {
 struct xpath_node_set; ///< @private
@@ -58,7 +59,10 @@ private:
   static const std::string s_propertyFile;
   ///> @private
   std::shared_ptr<Locker> m_locker;
-
+  Logger m_warn{std::cerr,Logger::Levels::WARNING,{"sjef:: Error: ","sjef:: Warning: ","sjef:: Note:"}};
+  void warnings(std::ostream& stream = std::cout, const Logger::Levels level = Logger::Levels::WARNING,
+      std::vector<std::string> preambles = {"sjef:: Error: ","sjef:: Warning: ","sjef:: Note:"}) { m_warn = Logger{stream,level,preambles};}
+  Logger m_trace{std::cout,Logger::Levels::QUIET};
 public:
   /*!
    * @brief Construct, or attach to, a Molpro project bundle
@@ -616,6 +620,11 @@ std::string xmlRepair(const std::string& source, const mapstringstring_t& inject
  * @return
  */
 std::string version() noexcept;
+
+class runtime_error : public std::runtime_error {
+public:
+  using std::runtime_error::runtime_error;
+};
 
 } // namespace sjef
 

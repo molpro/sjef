@@ -97,7 +97,7 @@ struct remote_server {
   std::string last_err;
 };
 
-inline std::string getattribute(pugi::xpath_node node, std::string name) {
+inline std::string getattribute(pugi::xpath_node node, const std::string& name) {
   return node.node().attribute(name.c_str()).value();
 }
 
@@ -234,7 +234,7 @@ Project::Project(const std::string& filename, bool construct, const std::string&
         std::ofstream(config_file) << "<?xml version=\"1.0\"?>\n<backends>\n</backends>" << std::endl;
       {
         Locker locker{fs::path{config_file}.parent_path()};
-        auto lock = locker.bolt();
+        auto locki = locker.bolt();
         fs::copy_file(config_file, config_file + "-");
         auto in = std::ifstream(config_file + "-");
         auto out = std::ofstream(config_file);
@@ -1636,7 +1636,7 @@ void sjef::Project::change_backend(std::string backend, bool force) {
           remote_server_run(
               std::string{"mkdir -p "} + (fs::path{this->m_backends.at(backend).cache} / m_filename).string(), 0);
         } catch (runtime_error const& e) {
-          m_warn.error() << "Error in launching remote job" << std::endl;
+          m_warn.error() << "Error in launching remote job: " << e.what() << std::endl;
         }
       }
       m_unmovables.shutdown_flag.clear();

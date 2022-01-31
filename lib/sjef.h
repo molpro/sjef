@@ -24,14 +24,12 @@ using mapstringstring_t = std::map<std::string, std::string, std::less<>>;
 class Project {
 private:
   std::string m_project_suffix;
-  std::string m_filename; ///< the name of the file bundle, expressed as an absolute
+  std::filesystem::path m_filename; ///< the name of the file bundle, expressed as an absolute
                           ///< pathname for the directory holding the bundle
-  std::vector<std::string> m_reserved_files =
-      std::vector<std::string>{sjef::Project::s_propertyFile}; ///< Files which should never be copied back from backend
-  std::string m_writing_thread_file;
+  std::vector<std::filesystem::path> m_reserved_files =
+      std::vector<std::filesystem::path>{sjef::Project::s_propertyFile}; ///< Files which should never be copied back from backend
   std::unique_ptr<pugi_xml_document> m_properties;
   mapstringstring_t m_suffixes; ///< File suffixes for the standard files
-  std::string m_recent_projects_file;
   std::map<std::string, Backend, std::less<>> m_backends;
 
   std::unique_ptr<pugi_xml_document> m_backend_doc;
@@ -126,7 +124,7 @@ public:
    * name will be used to locate the file in the project.
    * @param overwrite Whether to overwrite an existing file.
    */
-  bool export_file(std::string file, bool overwrite = false);
+  bool export_file(const std::filesystem::path& file, bool overwrite = false);
   bool export_file(const std::vector<std::string>& files, bool overwrite = false) {
     bool result = true;
     for (const auto& file : files)
@@ -308,7 +306,7 @@ public:
    * run directory.
    * @return the fully-qualified name of the file
    */
-  std::string filename(std::string suffix = "", const std::string& name = "", int run = -1) const;
+  std::filesystem::path filename(std::string suffix = "", const std::string& name = "", int run = -1) const;
   /*!
    * @brief Obtain the path of a run directory
    * @param run
@@ -400,7 +398,7 @@ private:
   bool properties_last_written_by_me(bool removeFile = false) const;
 
 public:
-  std::string propertyFile() const;
+  std::filesystem::path propertyFile() const;
 
 private:
   std::string cache(const Backend& backend) const;
@@ -611,7 +609,7 @@ bool check_backends(const std::string& suffix);
  * suffix, append it
  * @return the expanded and sanitised path
  */
-std::string expand_path(const std::string& path, const std::string& suffix = "");
+std::filesystem::path expand_path(const std::filesystem::path& path, const std::string& suffix = "");
 
 /*!
  * @brief Repair an xml dataset by completing any open tags

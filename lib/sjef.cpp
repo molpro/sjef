@@ -132,33 +132,32 @@ Project::Project(const std::string& filename, bool construct, const std::string&
     } else {
       if (!fs::exists(m_filename))
         fs::create_directories(m_filename);
-      std::ofstream(propertyFile()) << "<?xml version=\"1.0\"?>\n"
-                                       "<plist> <dict/> </plist>"
-                                    << std::endl;
+      std::ofstream(propertyFile().string()) << "<?xml version=\"1.0\"?>\n"
+                                                "<plist> <dict/> </plist>"
+                                             << std::endl;
     }
-    auto recent_projects_directory = expand_path(std::string{"~/.sjef/"} + m_project_suffix);
+    auto recent_projects_directory = expand_path(fs::path{"~"} / ".sjef" / m_project_suffix);
     fs::create_directories(recent_projects_directory);
-    m_recent_projects_file = expand_path(recent_projects_directory + "/projects");
     for (const auto& key : suffix_keys)
       if (m_suffixes.count(key) < 1)
         m_suffixes[key] = key;
     if (suffixes.count("inp") > 0)
       m_reserved_files.push_back(this->filename("inp"));
     if (!fs::exists(m_filename))
-      throw runtime_error("project does not exist and could not be created: " + m_filename);
+      throw runtime_error("project does not exist and could not be created: " + m_filename.string());
     if (!fs::is_directory(m_filename))
-      throw runtime_error("project should be a directory: " + m_filename);
+      throw runtime_error("project should be a directory: " + m_filename.string());
 
     if (!construct)
       return;
-    const std::string& pf = propertyFile();
+    const auto pf = propertyFile();
     if (!fs::exists(pf) && m_master_of_slave) {
       save_property_file();
       m_property_file_modification_time = fs::last_write_time(propertyFile());
       property_set("_private_sjef_project_backend_inactive", "1");
     } else {
       if (!fs::exists(pf))
-        throw runtime_error("Unexpected absence of property file " + pf);
+        throw runtime_error("Unexpected absence of property file " + pf.string());
       m_property_file_modification_time = fs::last_write_time(propertyFile());
       check_property_file_locked();
     }
@@ -178,13 +177,13 @@ Project::Project(const std::string& filename, bool construct, const std::string&
     m_backends.try_emplace(Backend::dummy_name, Backend::local(), sjef::Backend::dummy_name, "localhost", "{$PWD}",
                            "dummy");
     if (!sjef::check_backends(m_project_suffix)) {
-      auto config_file = expand_path(std::string{"~/.sjef/"} + m_project_suffix + "/backends.xml");
+      auto config_file = expand_path(std::filesystem::path{"~"} / ".sjef" / m_project_suffix / "backends.xml");
       m_warn.error() << "contents of " << config_file << ":" << std::endl;
       m_warn.error() << std::ifstream(config_file).rdbuf() << std::endl;
       throw runtime_error("sjef backend files are invalid");
     }
-    for (const auto& config_dir : std::vector<std::string>{"/usr/local/etc/sjef", "~/.sjef"}) {
-      const auto config_file = expand_path(config_dir + "/" + m_project_suffix + "/backends.xml");
+    for (const auto& config_dir : std::vector<std::filesystem::path>{"/usr/local/etc/sjef", "~/.sjef"}) {
+      const auto config_file = expand_path(config_dir / m_project_suffix / "backends.xml");
       if (fs::exists(config_file)) {
         m_backend_doc->load_file(config_file.c_str());
         auto backends = m_backend_doc->select_nodes("/backends/backend");
@@ -229,13 +228,13 @@ Project::Project(const std::string& filename, bool construct, const std::string&
     }
     if (m_backends.count(sjef::Backend::default_name) == 0) {
       m_backends[sjef::Backend::default_name] = default_backend();
-      const auto config_file = expand_path("~/.sjef/" + m_project_suffix + "/backends.xml");
+      const auto config_file = expand_path(fs::path{"~"} / ".sjef" / m_project_suffix / "backends.xml");
       if (!fs::exists(config_file))
         std::ofstream(config_file) << "<?xml version=\"1.0\"?>\n<backends>\n</backends>" << std::endl;
       {
         Locker locker{fs::path{config_file}.parent_path()};
         auto locki = locker.bolt();
-        fs::copy_file(config_file, config_file + "-");
+        fs::copy_file(config_file, config_file + std::filesystem::path{"-"});
         auto in = std::ifstream(config_file + "-");
         auto out = std::ofstream(config_file);
         std::string line;
@@ -320,15 +319,15 @@ void Project::throw_if_backend_invalid(std::string backend) const {
   throw runtime_error("Backend " + backend + " is not registered");
 }
 
-bool Project::export_file(std::string file, bool overwrite) {
+bool Project::export_file(const fs::path& file, bool overwrite) {
   throw_if_backend_invalid();
   if (!property_get("backend").empty())
     synchronize(0);
   auto from = fs::path{m_filename};
-  from /= fs::path{file}.filename();
+  from /= file.filename();
   std::error_code ec;
   if (overwrite && exists(fs::path{file}))
-    remove(fs::path{file});
+    remove(file);
   fs::copy_file(from, file, ec);
   if (ec)
     throw runtime_error(ec.message());
@@ -391,7 +390,7 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
   rsync_options_first.push_back("-a");
   rsync_options_first.push_back("--update");
   //  rsync_options_first.push_back("--mkpath"); // needs rsync >= 3.2.3
-  rsync_options_first.push_back(m_filename + "/");
+  rsync_options_first.push_back(m_filename.string() + "/");
   rsync_options_first.push_back(backend.host + ":" + (fs::path{backend.cache} / m_filename).string());
   m_trace(2 - verbosity) << "Push rsync: " << rsync_command;
   for (const auto& o : rsync_options_first)
@@ -469,7 +468,7 @@ void Project::force_file_names(const std::string& oldname) {
   }
 }
 
-std::string Project::propertyFile() const { return (fs::path{m_filename} / fs::path{s_propertyFile}).string(); }
+fs::path Project::propertyFile() const { return (fs::path{m_filename} / fs::path{s_propertyFile}).string(); }
 
 bool Project::move(const std::string& destination_filename, bool force) {
   auto stat = status(-1);
@@ -1205,7 +1204,7 @@ void Project::recent_edit(const std::string& add, const std::string& remove) {
   }
 }
 
-std::string Project::filename(std::string suffix, const std::string& name, int run) const {
+std::filesystem::path Project::filename(std::string suffix, const std::string& name, int run) const {
   fs::path result{m_filename};
   if (run > -1)
     result = run_directory(run);
@@ -1218,7 +1217,7 @@ std::string Project::filename(std::string suffix, const std::string& name, int r
     result /= name + "." + suffix;
   else if (name != "")
     result /= name;
-  return result.string();
+  return result;
 }
 std::string Project::name() const { return fs::path(m_filename).stem().string(); }
 
@@ -1360,7 +1359,7 @@ constexpr static bool use_writer = false;
 void Project::load_property_file_locked() const {
   auto result = m_properties->load_file(propertyFile().c_str());
   if (!result)
-    throw runtime_error("error in loading " + propertyFile() + "\n" + result.description() + "\n" +
+    throw runtime_error("error in loading " + propertyFile().string() + "\n" + result.description() + "\n" +
                         slurp(propertyFile()));
   m_property_file_modification_time = fs::last_write_time(propertyFile());
 }
@@ -1463,8 +1462,9 @@ inline std::string environment(const std::string& key) {
 }
 
 ///> @private
-std::string expand_path(const std::string& path, const std::string& suffix) {
-  auto text = path;
+std::filesystem::path expand_path(const std::filesystem::path& path, const std::string& suffix) {
+  // TODO use more of std::filesystem in this parsing
+  std::string text = path;
 #ifdef _WIN32
   text = std::regex_replace(text, std::regex{R"--(^\~)--"}, environment("USERPROFILE"));
   text = std::regex_replace(text, std::regex{R"--(^\$\{HOME\})--"}, environment("USERPROFILE"));

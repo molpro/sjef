@@ -1,5 +1,6 @@
 #ifndef SJEF_SJEF_H
 #define SJEF_SJEF_H
+#include "Logger.h"
 #include <filesystem>
 #include <map>
 #include <memory>
@@ -8,7 +9,6 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include "Logger.h"
 
 namespace pugi {
 struct xpath_node_set; ///< @private
@@ -59,10 +59,9 @@ private:
   static const std::string s_propertyFile;
   ///> @private
   std::shared_ptr<Locker> m_locker;
-  Logger m_warn{std::cerr,Logger::Levels::WARNING,{"sjef:: Error: ","sjef:: Warning: ","sjef:: Note:"}};
-  void warnings(std::ostream& stream = std::cout, const Logger::Levels level = Logger::Levels::WARNING,
-      std::vector<std::string> preambles = {"sjef:: Error: ","sjef:: Warning: ","sjef:: Note:"}) { m_warn = Logger{stream,level,preambles};}
-  Logger m_trace{std::cout,Logger::Levels::QUIET};
+  Logger m_warn{std::cerr, Logger::Levels::WARNING, {"sjef:: Error: ", "sjef:: Warning: ", "sjef:: Note:"}};
+  Logger m_trace{std::cout, Logger::Levels::QUIET};
+
 public:
   /*!
    * @brief Construct, or attach to, a Molpro project bundle
@@ -141,10 +140,19 @@ public:
    * will be pulled from the backend.
    * @param verbosity If >0, show underlying processing
    * @param nostatus Not used any more
-   * @param force If true, always do the sync
-   * @return
    */
   bool synchronize(int verbosity = 0, bool nostatus = false, bool force = false) const;
+  /*!
+   * @brief Set the warning/error diagnostic level and destination
+   * @param stream
+   * @param level
+   * @param preambles
+   */
+  void set_warnings(const Logger::Levels level = Logger::Levels::WARNING, std::ostream& stream = std::cerr,
+                std::vector<std::string> preambles = {"sjef:: Error: ", "sjef:: Warning: ", "sjef:: Note:"}) {
+    m_warn = Logger{stream, level, std::move(preambles)};
+  }
+  void set_verbosity(int verbosity, std::ostream& stream = std::cout) { m_trace = Logger(stream, verbosity); }
 
   /*!
    * @brief Start a sjef job
@@ -397,8 +405,8 @@ public:
 private:
   std::string cache(const Backend& backend) const;
   void force_file_names(const std::string& oldname);
-  static void backend_watcher(sjef::Project& project_, int min_wait_milliseconds,
-                              int max_wait_milliseconds = 0, int poll_milliseconds = 1);
+  static void backend_watcher(sjef::Project& project_, int min_wait_milliseconds, int max_wait_milliseconds = 0,
+                              int poll_milliseconds = 1);
   void shutdown_backend_watcher();
   /*!
    * @brief Take a line from a program input file, and figure out whether it

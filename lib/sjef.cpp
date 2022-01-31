@@ -284,7 +284,7 @@ std::string Project::get_project_suffix(const std::string& filename, const std::
   auto suffix = fs::path{expand_path(filename, default_suffix)}.extension().string();
   if (suffix.empty())
     throw runtime_error("Cannot deduce project suffix for \"" + filename + "\" with default suffix \"" +
-                             default_suffix + "\"");
+                        default_suffix + "\"");
   return suffix.substr(1);
 }
 
@@ -337,24 +337,21 @@ bool Project::export_file(std::string file, bool overwrite) {
 
 std::mutex synchronize_mutex;
 bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
-  if (verbosity > 0)
-    std::cerr << "Project::synchronize(" << verbosity << ", " << nostatus << ", " << force << ") "
-              << (m_master_of_slave ? "master" : "slave") << std::endl;
+  m_trace(2 - verbosity) << "Project::synchronize(" << verbosity << ", " << nostatus << ", " << force << ") "
+                         << (m_master_of_slave ? "master" : "slave") << std::endl;
   auto backend_name = property_get("backend");
   auto backend_changed = m_backend != backend_name;
   if (backend_changed)
     const_cast<Project*>(this)->change_backend(backend_name);
   const std::lock_guard lock(synchronize_mutex);
   auto& backend = m_backends.at(backend_name);
-  if (verbosity > 2)
-    std::cerr << "synchronize with " << backend.name << " (" << backend.host << ") master=" << m_master_of_slave
-              << std::endl;
+  m_trace(4 - verbosity) << "synchronize with " << backend.name << " (" << backend.host
+                         << ") master=" << m_master_of_slave << std::endl;
   if (backend.host == "localhost")
     return true;
-  if (verbosity > 2)
-    std::cerr << "synchronize backend_inactive=" << property_get("_private_sjef_project_backend_inactive")
-              << " backend_inactive_synced=" << property_get("_private_sjef_project_backend_inactive_synced")
-              << std::endl;
+  m_trace(4 - verbosity) << "synchronize backend_inactive=" << property_get("_private_sjef_project_backend_inactive")
+                         << " backend_inactive_synced=" << property_get("_private_sjef_project_backend_inactive_synced")
+                         << std::endl;
   bool locally_modified;
   {
     auto locki = m_locker->bolt();
@@ -396,16 +393,14 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
   //  rsync_options_first.push_back("--mkpath"); // needs rsync >= 3.2.3
   rsync_options_first.push_back(m_filename + "/");
   rsync_options_first.push_back(backend.host + ":" + (fs::path{backend.cache} / m_filename).string());
-  if (verbosity > 0) {
-    std::cerr << "Push rsync: " << rsync_command;
-    for (const auto& o : rsync_options_first)
-      std::cerr << " '" << o << "'";
-    std::cerr << std::endl;
-  }
+  m_trace(2 - verbosity) << "Push rsync: " << rsync_command;
+  for (const auto& o : rsync_options_first)
+    m_trace(2 - verbosity) << " '" << o << "'";
+  m_trace(2 - verbosity) << std::endl;
   auto start_time = std::chrono::steady_clock::now();
   bp::child(bp::search_path(rsync), rsync_options_first).wait();
   if (verbosity > 1)
-    std::cerr
+    m_trace(3 - verbosity)
         << "time for first rsync "
         << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
         << "ms" << std::endl;
@@ -423,19 +418,16 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
     }
     rsync_options_second.push_back(backend.host + ":" + (fs::path{backend.cache} / m_filename).string() + "/");
     rsync_options_second.push_back(m_filename);
-    if (verbosity > 0) {
-      std::cerr << "Pull rsync: " << rsync_command;
-      for (const auto& o : rsync_options_second)
-        std::cerr << " '" << o << "'";
-      std::cerr << std::endl;
-    }
+    m_trace(2 - verbosity) << "Pull rsync: " << rsync_command;
+    for (const auto& o : rsync_options_second)
+      m_trace(2 - verbosity) << " '" << o << "'";
+    m_trace(2 - verbosity) << std::endl;
     auto start_time = std::chrono::steady_clock::now();
     bp::child(rsync_command, rsync_options_second).wait();
-    if (verbosity > 1)
-      std::cerr << "time for second rsync "
-                << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time)
-                       .count()
-                << "ms" << std::endl;
+    m_trace(3 - verbosity)
+        << "time for second rsync "
+        << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
+        << "ms" << std::endl;
   }
   if (!nostatus) // to avoid infinite loop with call from status()
     status(0);   // to get backend_inactive
@@ -680,8 +672,7 @@ bool Project::run(int verbosity, bool force, bool wait) {
     return false;
 
   const auto& backend = m_backends.at(property_get("backend"));
-  if (verbosity > 0)
-    std::cerr << "Project::run() run_needed()=" << run_needed(verbosity) << std::endl;
+  m_trace(2 - verbosity) << "Project::run() run_needed()=" << run_needed(verbosity) << std::endl;
   if (!force && !run_needed())
     return false;
   cached_status(unevaluated);
@@ -698,23 +689,20 @@ bool Project::run(int verbosity, bool force, bool wait) {
   if (backend.host == "localhost") {
     property_set("_private_sjef_project_backend_inactive", "0");
     property_set("_private_sjef_project_backend_inactive_synced", "0");
-    if (verbosity > 0)
-      std::cerr << "run local job, backend=" << backend.name << std::endl;
+    m_trace(2 - verbosity) << "run local job, backend=" << backend.name << std::endl;
     auto spl = splitString(run_command);
     run_command = spl.front();
     for (auto sp = spl.rbegin(); sp < spl.rend() - 1; sp++)
       optionstring = "'" + *sp + "' " + optionstring;
     if (executable(run_command).empty()) {
       for (const auto& p : ::boost::this_process::path())
-        std::cerr << "path " << p << std::endl;
+        m_warn.error() << "path " << p << std::endl;
       throw runtime_error("Cannot find run command " + run_command);
     }
-    if (verbosity > 1)
-      std::cerr << "run local job executable=" << executable(run_command) << " " << optionstring << " "
-                << filename("inp", "", rundir) << std::endl;
-    if (verbosity > 2)
-      for (const auto& o : splitString(optionstring))
-        std::cerr << "option " << o << std::endl;
+    m_trace(3 - verbosity) << "run local job executable=" << executable(run_command) << " " << optionstring << " "
+                           << filename("inp", "", rundir) << std::endl;
+    for (const auto& o : splitString(optionstring))
+      m_trace(4 - verbosity) << "option " << o << std::endl;
     fs::path current_path_save;
     try {
       current_path_save = fs::current_path();
@@ -735,50 +723,43 @@ bool Project::run(int verbosity, bool force, bool wait) {
     property_set("jobnumber", std::to_string(c.id()));
     p_status_mutex.reset();
     status(0, false); // to force status cache
-    if (verbosity > 1)
-      std::cerr << "jobnumber " << c.id() << ", running=" << c.running() << std::endl;
+    m_trace(3 - verbosity) << "jobnumber " << c.id() << ", running=" << c.running() << std::endl;
     if (wait)
       this->wait();
     return true;
   } else { // remote host
-    if (verbosity > 0)
-      std::cerr << "run remote job on " << backend.name << std::endl;
+    m_trace(2 - verbosity) << "run remote job on " << backend.name << std::endl;
     bp::ipstream c_err, c_out;
     synchronize(verbosity, false, true);
     cached_status(unknown);
     property_set("_private_sjef_project_backend_inactive", "0");
     property_set("_private_sjef_project_backend_inactive_synced", "0");
-    if (verbosity > 3)
-      std::cerr << "fs::path{backend.cache} / filename("
-                   ","
-                   ",rundir) "
-                << fs::path{backend.cache} / filename("", "", rundir) << std::endl;
+    m_trace(3 - verbosity) << "fs::path{backend.cache} / filename("
+                              ","
+                              ",rundir) "
+                           << fs::path{backend.cache} / filename("", "", rundir) << std::endl;
     auto jobstring = std::string{"cd "} + (fs::path{backend.cache} / filename("", "", rundir)).string() + "; nohup " +
                      run_command + " " + optionstring + fs::path{filename("inp", "", rundir)}.filename().string();
     if (backend.run_jobnumber == "([0-9]+)")
       jobstring += "& echo $! "; // go asynchronous if a straight launch
-    if (verbosity > 3)
-      std::cerr << "backend.run_jobnumber " << backend.run_jobnumber << std::endl;
-    if (verbosity > 3)
-      std::cerr << "jobstring " << jobstring << std::endl;
+    m_trace(5 - verbosity) << "backend.run_jobnumber " << backend.run_jobnumber << std::endl;
+    m_trace(5 - verbosity) << "jobstring " << jobstring << std::endl;
     cached_status(unevaluated);
     std::string run_output;
-    {
-      run_output = remote_server_run(jobstring);
-      cached_status(unevaluated);
-    }
+
+    run_output = remote_server_run(jobstring);
+    cached_status(unevaluated);
+
     property_set("_private_job_submission_time", std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
                                                                     std::chrono::system_clock::now().time_since_epoch())
                                                                     .count()));
     p_status_mutex.reset();
     synchronize(verbosity, false, true);
     status(0, false);
-    if (verbosity > 3)
-      std::cerr << "run_output " << run_output << std::endl;
+    m_trace(5 - verbosity) << "run_output " << run_output << std::endl;
     std::smatch match;
     if (std::regex_search(run_output, match, std::regex{backend.run_jobnumber})) {
-      if (verbosity > 2)
-        std::cerr << "... a match was found: " << match[1] << std::endl;
+      m_trace(5 - verbosity) << "... a match was found: " << match[1] << std::endl;
       if (verbosity > 1)
         status(verbosity - 2);
       property_set("jobnumber", match[1]);
@@ -830,102 +811,82 @@ void Project::kill() {
 
 bool Project::run_needed(int verbosity) const {
   auto start_time = std::chrono::steady_clock::now();
-  if (verbosity > 0)
-    if (verbosity > 1)
-      std::cerr << ", time "
-                << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time)
-                       .count()
-                << std::endl;
+  m_trace(3 - verbosity)
+      << ", time "
+      << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
+      << std::endl;
   auto statuss = cached_status();
   if (statuss == running || statuss == waiting)
     return false;
   auto inpfile = filename("inp");
   auto xmlfile = filename("xml", "", 0);
-  if (verbosity > 1) {
-    std::cout << "inpfile " << inpfile << std::endl;
-    std::cout << "xmlfile " << xmlfile << std::endl;
-    std::cerr
-        << ", time "
-        << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
-        << std::endl;
-  }
-  if (verbosity > 0)
-    std::cerr << "sjef::Project::run_needed, input file exists ?=" << fs::exists(inpfile) << std::endl;
-  if (verbosity > 1)
-    std::cerr
-        << ", time "
-        << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
-        << std::endl;
+  m_trace(3 - verbosity) << "inpfile " << inpfile << std::endl;
+  m_trace(3 - verbosity) << "xmlfile " << xmlfile << std::endl;
+  m_trace(3 - verbosity)
+      << ", time "
+      << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
+      << std::endl;
+  m_trace(2 - verbosity) << "sjef::Project::run_needed, input file exists ?=" << fs::exists(inpfile) << std::endl;
+  m_trace(3 - verbosity)
+      << ", time "
+      << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
+      << std::endl;
   if (!fs::exists(inpfile))
     return false;
-  if (verbosity > 0)
-    std::cerr << "sjef::Project::run_needed, xml file exists ?=" << fs::exists(xmlfile) << std::endl;
-  if (verbosity > 1)
-    std::cerr
-        << ", time "
-        << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
-        << std::endl;
+  m_trace(2 - verbosity) << "sjef::Project::run_needed, xml file exists ?=" << fs::exists(xmlfile) << std::endl;
+  m_trace(3 - verbosity)
+      << ", time "
+      << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
+      << std::endl;
   if (!fs::exists(xmlfile))
     return true;
-  if (verbosity > 1)
-    std::cerr
-        << "sjef::Project::run_needed, time after initial checks "
-        << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
-        << std::endl;
-  if (verbosity > 1)
-    std::cerr
-        << "before property_get, time "
-        << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
-        << std::endl;
+  m_trace(3 - verbosity)
+      << "sjef::Project::run_needed, time after initial checks "
+      << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
+      << std::endl;
+  m_trace(3 - verbosity)
+      << "before property_get, time "
+      << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
+      << std::endl;
   auto run_input_hash = property_get("run_input_hash");
-  if (verbosity > 1)
-    std::cerr
-        << "after property_get, time "
-        << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
-        << std::endl;
+  m_trace(3 - verbosity)
+      << "after property_get, time "
+      << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
+      << std::endl;
   if (run_input_hash.empty()) { // if there's no input hash, look at the xml file instead
-    if (verbosity > 1)
-      std::cerr << "There's no run_input_hash, so compare output and input: "
-                << (std::regex_replace(std::regex_replace(file_contents("inp"), std::regex{"\r"}, ""),
-                                       std::regex{" *\n\n*"}, "\n") != input_from_output())
-                << std::endl;
+    m_trace(3 - verbosity) << "There's no run_input_hash, so compare output and input: "
+                           << (std::regex_replace(std::regex_replace(file_contents("inp"), std::regex{"\r"}, ""),
+                                                  std::regex{" *\n\n*"}, "\n") != input_from_output())
+                           << std::endl;
     return (std::regex_replace(std::regex_replace(std::regex_replace(file_contents("inp"), std::regex{"\r"}, ""),
                                                   std::regex{" *\n\n*"}, "\n"),
                                std::regex{"\n$"}, "") != input_from_output());
   }
   {
-    if (verbosity > 1)
-      std::cerr << "sjef::Project::run_needed, input_hash =" << input_hash() << std::endl;
+    m_trace(3 - verbosity) << "sjef::Project::run_needed, input_hash =" << input_hash() << std::endl;
     std::stringstream sstream(run_input_hash);
     size_t i_run_input_hash;
     sstream >> i_run_input_hash;
-    if (verbosity > 1)
-      std::cerr << "sjef::Project::run_needed, run_input_hash =" << i_run_input_hash << std::endl;
-    if (verbosity > 1) {
-      std::cerr << "sjef::Project::run_needed, input hash matches ?=" << (i_run_input_hash == input_hash())
-                << std::endl;
-    }
+    m_trace(3 - verbosity) << "sjef::Project::run_needed, run_input_hash =" << i_run_input_hash << std::endl;
+    m_trace(3 - verbosity) << "sjef::Project::run_needed, input hash matches ?=" << (i_run_input_hash == input_hash())
+                           << std::endl;
     if (i_run_input_hash != input_hash()) {
-      if (verbosity > 1) {
-        std::cerr << "sjef::Project::run_needed returning true" << std::endl;
-        std::cerr << "ending time "
-                  << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() -
-                                                                           start_time)
-                         .count()
-                  << std::endl;
-        std::cerr << "because i_run_input_hash != input_hash()" << std::endl;
-      }
+      m_trace(3 - verbosity) << "sjef::Project::run_needed returning true" << std::endl;
+      m_trace(3 - verbosity) << "ending time "
+                             << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() -
+                                                                                      start_time)
+                                    .count()
+                             << std::endl;
+      m_trace(3 - verbosity) << "because i_run_input_hash != input_hash()" << std::endl;
       return true;
     }
   }
-  if (verbosity > 1) {
-    std::cerr << "sjef::Project::run_needed returning false" << std::endl;
-    std::cerr
+    m_trace(3 - verbosity) << "sjef::Project::run_needed returning false" << std::endl;
+    m_trace(3-verbosity)
         << "ending"
         << ", time "
         << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
         << std::endl;
-  }
   return false;
 }
 
@@ -966,8 +927,7 @@ status Project::status(int verbosity, bool cached) const {
     bes = sjef::Backend::default_name;
   throw_if_backend_invalid(bes);
   auto be = m_backends.at(bes);
-  if (verbosity > 1)
-    std::cerr << "status() backend:\n====" << be.str() << "\n====" << std::endl;
+  m_trace(3 - verbosity) << "status() backend:\n====" << be.str() << "\n====" << std::endl;
 
   {
     const std::string& job_submission_time = property_get("_private_job_submission_time");
@@ -985,8 +945,7 @@ status Project::status(int verbosity, bool cached) const {
   }
 
   auto pid = property_get("jobnumber");
-  if (verbosity > 1)
-    std::cerr << "job number " << pid << std::endl;
+  m_trace(3 - verbosity) << "job number " << pid << std::endl;
   if (pid.empty() || std::stoi(pid) < 0) {
     if (auto rih = property_get("run_input_hash"); !rih.empty()) {
       if (rih != std::to_string(input_hash()))
@@ -1033,27 +992,22 @@ status Project::status(int verbosity, bool cached) const {
     }
     c.wait();
   } else {
-    if (verbosity > 1)
-      std::cerr << "remote status " << be.host << ":" << be.status_command << ":" << pid << std::endl;
+    m_trace(3 - verbosity) << "remote status " << be.host << ":" << be.status_command << ":" << pid << std::endl;
     ensure_remote_server();
     {
       const std::lock_guard locki(m_remote_server_mutex);
       m_remote_server->in << be.status_command << " " << pid << std::endl;
       m_remote_server->in << "echo '@@@!!EOF'" << std::endl;
-      if (verbosity > 2)
-        std::cerr << "sending " << be.status_command << " " << pid << std::endl;
+      m_trace(4 - verbosity) << "sending " << be.status_command << " " << pid << std::endl;
       std::string line;
       while (std::getline(m_remote_server->out, line) && line != "@@@!!EOF") {
         if (verbosity > 0)
-          std::cerr << "line received: " << line << std::endl;
+          m_trace(4 - verbosity) << "line received: " << line << std::endl;
         if ((" " + line).find(" " + pid + " ") != std::string::npos) {
           std::smatch match;
-          if (verbosity > 2)
-            std::cerr << "line" << line << std::endl;
-          if (verbosity > 2)
-            std::cerr << "status_running " << be.status_running << std::endl;
-          if (verbosity > 2)
-            std::cerr << "status_waiting " << be.status_waiting << std::endl;
+          m_trace(4 - verbosity) << "line" << line << std::endl;
+          m_trace(4 - verbosity) << "status_running " << be.status_running << std::endl;
+          m_trace(4 - verbosity) << "status_waiting " << be.status_waiting << std::endl;
           if (std::regex_search(line, match, std::regex{be.status_waiting})) {
             result = waiting;
           }
@@ -1064,8 +1018,7 @@ status Project::status(int verbosity, bool cached) const {
       }
     }
   }
-  if (verbosity > 2)
-    std::cerr << "received status " << result << std::endl;
+  m_trace(4 - verbosity) << "received status " << result << std::endl;
   if (result == completed || result == killed) {
     const_cast<Project*>(this)->property_set("_private_sjef_project_completed_job", be.host + ":" + pid);
   }
@@ -1077,8 +1030,6 @@ status Project::status(int verbosity, bool cached) const {
                                                (result == completed || result == killed) ? "1" : "0");
     goto return_point;
   }
-  if (verbosity > 2)
-    std::cerr << "fallen through loop" << std::endl;
   synchronize(verbosity, true);
   const_cast<Project*>(this)->property_set(
       "_private_sjef_project_backend_inactive",
@@ -1410,7 +1361,7 @@ void Project::load_property_file_locked() const {
   auto result = m_properties->load_file(propertyFile().c_str());
   if (!result)
     throw runtime_error("error in loading " + propertyFile() + "\n" + result.description() + "\n" +
-                             slurp(propertyFile()));
+                        slurp(propertyFile()));
   m_property_file_modification_time = fs::last_write_time(propertyFile());
 }
 
@@ -1492,20 +1443,11 @@ size_t sjef::Project::project_hash() {
 }
 
 size_t sjef::Project::input_hash() const {
-  constexpr bool debug = false;
-  if (debug) {
-    std::cerr << "input_hash" << filename("inp") << std::endl;
-    std::ifstream ss(filename("inp"));
-    std::cerr << "unmodified file\n"
-              << std::string((std::istreambuf_iterator<char>(ss)), std::istreambuf_iterator<char>()) << std::endl;
-  }
   std::ifstream ss(filename("inp"));
   std::string line;
   std::string input;
   while (std::getline(ss, line))
     input += referenced_file_contents(line) + "\n";
-  if (debug)
-    std::cerr << "rewritten input " << input << std::endl;
   return std::hash<std::string>{}(input);
 }
 
@@ -1602,8 +1544,7 @@ std::vector<std::string> sjef::Project::backend_names() const {
 std::mutex s_remote_server_mutex;
 std::string sjef::Project::remote_server_run(const std::string& command, int verbosity, bool wait) const {
   const std::lock_guard lock(s_remote_server_mutex);
-  if (verbosity > 0)
-    std::cerr << command << std::endl;
+  m_trace(2 - verbosity) << command << std::endl;
   const std::string terminator{"@@@!!EOF"};
   if (!wait) {
     m_remote_server->in << command << " >/dev/null 2>/dev/null &" << std::endl;
@@ -1616,22 +1557,18 @@ std::string sjef::Project::remote_server_run(const std::string& command, int ver
   m_remote_server->last_out.clear();
   while (std::getline(m_remote_server->out, line) && line != terminator)
     m_remote_server->last_out += line + '\n';
-  if (verbosity > 1)
-    std::cerr << "out from remote command " << command << ": " << m_remote_server->last_out << std::endl;
+  m_trace(3 - verbosity) << "out from remote command " << command << ": " << m_remote_server->last_out << std::endl;
   m_remote_server->last_err.clear();
   while (std::getline(m_remote_server->err, line) && line.substr(0, terminator.size()) != terminator)
     m_remote_server->last_err += line + '\n';
-  if (verbosity > 1)
-    std::cerr << "err from remote command " << command << ": " << m_remote_server->last_err << std::endl;
-  if (verbosity > 1)
-    std::cerr << "last line=" << line << std::endl;
+  m_trace(3 - verbosity) << "err from remote command " << command << ": " << m_remote_server->last_err << std::endl;
+  m_trace(3 - verbosity) << "last line=" << line << std::endl;
   auto rc = line.empty() ? -1 : std::stoi(line.substr(terminator.size() + 1));
-  if (verbosity > 1)
-    std::cerr << "rc=" << rc << std::endl;
+  m_trace(3 - verbosity) << "rc=" << rc << std::endl;
   if (rc != 0)
     throw runtime_error("Host " + m_remote_server->host + "; failed remote command: " + command +
-                             "\nStandard output:\n" + m_remote_server->last_out + "\nStandard error:\n" +
-                             m_remote_server->last_err);
+                        "\nStandard output:\n" + m_remote_server->last_out + "\nStandard error:\n" +
+                        m_remote_server->last_err);
   return m_remote_server->last_out;
 }
 void sjef::Project::ensure_remote_server() const {
@@ -1699,7 +1636,7 @@ void sjef::Project::change_backend(std::string backend, bool force) {
           remote_server_run(
               std::string{"mkdir -p "} + (fs::path{this->m_backends.at(backend).cache} / m_filename).string(), 0);
         } catch (runtime_error const& e) {
-          m_warn.error() << "Error in launching remote job"<<std::endl;
+          m_warn.error() << "Error in launching remote job" << std::endl;
         }
       }
       m_unmovables.shutdown_flag.clear();

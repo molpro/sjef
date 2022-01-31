@@ -63,6 +63,7 @@ public:
   int level() const { return m_level; }
   void set_level(int level) { Logger::m_level = level; }
   void set_level(Levels level) { Logger::m_level = static_cast<int>(level); }
+  void set_stream(std::ostream& stream) { m_stream = &stream; }
 };
 
 template <typename Arg>

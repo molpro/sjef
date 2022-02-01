@@ -21,7 +21,7 @@ struct remote_server;     ///< @private
 struct pugi_xml_document; ///< @private
 static constexpr int recentMax = 128;
 enum status : int { unknown = 0, running = 1, waiting = 2, completed = 3, unevaluated = 4, killed = 5 };
-using mapstringstring_t = std::map<std::string, std::string, std::less<>>;
+using mapstringstring_t = std::map<std::string, std::string>;
 
 class Logger {
   std::ostream* m_stream;
@@ -96,7 +96,7 @@ private:
       std::vector<std::filesystem::path>{sjef::Project::s_propertyFile}; ///< Files which should never be copied back from backend
   std::unique_ptr<pugi_xml_document> m_properties;
   mapstringstring_t m_suffixes; ///< File suffixes for the standard files
-  std::map<std::string, Backend, std::less<>> m_backends;
+  std::map<std::string, Backend> m_backends;
 
   std::unique_ptr<pugi_xml_document> m_backend_doc;
   mutable std::shared_ptr<remote_server> m_remote_server;
@@ -142,6 +142,8 @@ public:
   explicit Project(const std::filesystem::path& filename, bool construct = true, const std::string& default_suffix = "",
                    const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}},
                    const Project* masterProject = nullptr);
+//  explicit Project(const std::string& filename, bool construct = true, const std::string& default_suffix = "",
+//                   const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}}) : Project(std::filesystem::path(filename),construct,default_suffix,suffixes) {}
   Project(const Project& source) = delete;
   Project(const Project&& source) = delete;
   virtual ~Project();
@@ -444,7 +446,7 @@ public:
    */
   void change_backend(std::string backend = std::string{""}, bool force = false);
 
-  std::map<std::string, Backend, std::less<>>& backends() { return m_backends; }
+  std::map<std::string, Backend>& backends() { return m_backends; }
 
 private:
   Backend default_backend();

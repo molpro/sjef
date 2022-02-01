@@ -558,12 +558,12 @@ TEST(project, sync_backend) {
   ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{"~/.sjef/"} + suffix)));
   const auto cache = state.testfile(fs::current_path() / "test-remote-cache");
   if (not fs::create_directories(cache))
-    throw std::runtime_error("cannot create " + cache);
-  const auto run_script = state.testfile("light.sh");
+    throw std::runtime_error("cannot create " + cache.string());
+  const auto run_script = state.testfile("light.sh").string();
   std::ofstream(sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml"))
       << "<?xml version=\"1.0\"?>\n<backends>\n <backend name=\"local\" run_command=\"true\"/><backend "
          "name=\"test-remote\" run_command=\"sh "
-      << run_script << "\" host=\"127.0.0.1\" cache=\"" << cache << "\"/>\n</backends>";
+      << run_script << "\" host=\"127.0.0.1\" cache=\"" << cache.string() << "\"/>\n</backends>";
   std::ofstream(run_script) << "while [ ${1#-} != ${1} ]; do shift; done; "
                                "echo dummy > \"${1%.*}.out\";echo '<?xml "
                                "version=\"1.0\"?>\n<root/>' > \"${1%.*}.xml\";";

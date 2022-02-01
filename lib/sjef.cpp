@@ -418,7 +418,7 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
         rsync_options_second.emplace_back("--exclude=" + f);
     }
     rsync_options_second.emplace_back(backend.host + ":" + (fs::path{backend.cache} / m_filename).string() + "/");
-    rsync_options_second.emplace_back(m_filename);
+    rsync_options_second.emplace_back(m_filename.string());
     m_trace(2 - verbosity) << "Pull rsync: " << rsync_command;
     for (const auto& o : rsync_options_second)
       m_trace(2 - verbosity) << " '" << o << "'";

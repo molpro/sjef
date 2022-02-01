@@ -43,6 +43,7 @@ if (NOT MOLPRO STREQUAL MOLPRO-NOTFOUND)
         find_package(Boost 1.71.0 REQUIRED)
     endif ()
     target_link_libraries(test-sjef-molpro PRIVATE Boost::headers)
+    target_link_libraries(test-Locker PRIVATE Boost::headers)
 endif ()
 
 add_executable(logger logger.cpp)

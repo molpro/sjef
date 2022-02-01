@@ -196,7 +196,7 @@ void sjef_project_properties_set(const char* project, const char** key, const ch
   try {
     if (projects.count(project) == 0)
       sjef_project_open(project);
-    std::map<std::string, std::string> keyval;
+    std::map<std::string, std::string, std::less<>> keyval;
     for (int i = 0; key[i] != NULL; ++i) {
       keyval[key[i]] = value[i];
     }
@@ -251,7 +251,7 @@ char* sjef_project_filename(const char* project) {
   try {
     if (projects.count(project) == 0)
       sjef_project_open(project);
-    return strdup(projects.at(project)->filename().c_str());
+    return strdup(projects.at(project)->filename().string().c_str());
   } catch (std::exception& e) {
     error(e);
   } catch (...) {
@@ -443,7 +443,7 @@ char* sjef_project_recent(int number, const char* suffix) {
 }
 char* sjef_expand_path(const char* path, const char* default_suffix) {
   try {
-    return strdup(sjef::expand_path(std::string{path}, std::string{default_suffix}).c_str());
+    return strdup(sjef::expand_path(path, default_suffix).string().c_str());
   } catch (std::exception& e) {
     error(e);
   } catch (...) {
@@ -454,7 +454,7 @@ char* sjef_project_filename_general(const char* project, const char* suffix, con
   try {
     if (projects.count(project) == 0)
       sjef_project_open(project);
-    return strdup(projects.at(project)->filename(suffix, name, run).c_str());
+    return strdup(projects.at(project)->filename(suffix, name, run).string().c_str());
   } catch (std::exception& e) {
     error(e);
   } catch (...) {
@@ -466,7 +466,7 @@ char* sjef_project_run_directory(const char* project, int run) {
   try {
     if (projects.count(project) == 0)
       sjef_project_open(project);
-    return strdup(projects.at(project)->run_directory(run).c_str());
+    return strdup(projects.at(project)->run_directory(run).string().c_str());
   } catch (std::exception& e) {
     error(e);
   } catch (...) {

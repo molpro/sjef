@@ -45,7 +45,7 @@ void sjef::Project::rewrite_input_file(const std::string& input_file_name, const
 void sjef::Project::custom_initialisation() {
   if (m_project_suffix == "molpro") {
     auto molprorc = filename("rc", "molpro");
-    auto lockfile = std::regex_replace(molprorc, std::regex{"molpro.rc"}, ".molpro.rc.lock");
+    auto lockfile=molprorc; lockfile.replace_filename(".moplro.rc.lock");
     sjef::Locker source_lock(lockfile);
     auto lock = source_lock.bolt();
     if (not std::filesystem::exists(molprorc)) {

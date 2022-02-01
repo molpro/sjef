@@ -181,7 +181,7 @@ extern "C" int sjef_program(int argc, char* argv[]) {
       else if (command == "move")
         success = proj.move(extras.front(), forceArg.getValue());
       else if (command == "erase")
-        eraseCandidate = proj.filename();
+        eraseCandidate = proj.filename().string();
       else if (command == "wait") {
         proj.wait();
       } else if (command == "status") {
@@ -208,12 +208,12 @@ extern "C" int sjef_program(int argc, char* argv[]) {
           std::cerr << "Synchronize project " << proj.filename() << std::endl;
         success = proj.synchronize(verboseSwitch.getValue());
       } else if (command == "edit")
-        success = system(("eval ${VISUAL:-${EDITOR:-vi}} \\'" + proj.filename("inp") + "\\'").c_str());
+        success = system(("eval ${VISUAL:-${EDITOR:-vi}} \\'" + proj.filename("inp").string() + "\\'").c_str());
       else if (command == "browse") {
         if (!proj.property_get("backend").empty())
           success = proj.synchronize(verboseSwitch.getValue());
         if (success)
-          success = system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out", "", 0) + "\\'").c_str());
+          success = system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out", "", 0).string() + "\\'").c_str());
       } else if (command == "clean") {
         proj.clean(true, false, false);
       } else if (command == "property") {
@@ -256,11 +256,11 @@ extern "C" int sjef_program(int argc, char* argv[]) {
           } else if (command == "clean") {
             proj.clean(true, false, false);
           } else if (command == "edit") {
-            if (system(("eval ${VISUAL:-${EDITOR:-vi}} \\'" + proj.filename("inp") + "\\'").c_str()) != 0)
+            if (system(("eval ${VISUAL:-${EDITOR:-vi}} \\'" + proj.filename("inp").string() + "\\'").c_str()) != 0)
               throw std::runtime_error("Editor failed");
           } else if (command == "browse") {
             if (!proj.property_get("backend").empty() and proj.synchronize(verboseSwitch.getValue())) {
-              if (system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out", "", 0) + "\\'").c_str()) != 0)
+              if (system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out", "", 0).string() + "\\'").c_str()) != 0)
                 throw std::runtime_error("Editor failed");
             }
           } else

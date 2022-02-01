@@ -80,7 +80,7 @@ public:
     }
   }
   const std::string& suffix() const { return m_default_suffix; }
-  std::string testproject(const std::string& file) { return testfile(std::filesystem::path{file + "." + m_default_suffix}); }
+  std::filesystem::path testproject(const std::string& file) { return testfile(std::filesystem::path{file + "." + m_default_suffix}); }
   std::filesystem::path testfile(const char* file) { return testfile(std::string{file}); }
   std::filesystem::path testfile(const fs::path& file) { return testfile(file.string()); }
   std::filesystem::path testfile(const std::string& file) {

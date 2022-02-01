@@ -1397,7 +1397,7 @@ void Project::save_property_file() const {
 }
 void Project::save_property_file_locked() const {
   struct plist_writer writer;
-  writer.file = propertyFile();
+  writer.file = propertyFile().string();
   if (!fs::exists(propertyFile())) {
     fs::create_directories(m_filename);
     { std::ofstream x(propertyFile()); }

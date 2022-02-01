@@ -25,11 +25,11 @@ const std::string path_environment_separator = ":";
 
 class savestate {
   std::string rf;
-  std::vector<std::string> testfiles;
+  std::vector<std::filesystem::path> testfiles;
   const std::string m_default_suffix;
   std::vector<std::string> m_suffixes;
   std::vector<std::unique_ptr<sjef::Locker>> m_lockers;
-  std::set<std::string, std::less<>> m_not_preexisting;
+  std::set<std::filesystem::path, std::less<>> m_not_preexisting;
 
 public:
   explicit savestate(const std::vector<std::string>& suffixes = {})
@@ -80,10 +80,10 @@ public:
     }
   }
   const std::string& suffix() const { return m_default_suffix; }
-  std::string testproject(const std::string& file) { return testfile(file + "." + m_default_suffix); }
-  std::string testfile(const char* file) { return testfile(std::string{file}); }
-  std::string testfile(const fs::path& file) { return testfile(file.string()); }
-  std::string testfile(const std::string& file) {
+  std::string testproject(const std::string& file) { return testfile(std::filesystem::path{file + "." + m_default_suffix}); }
+  std::filesystem::path testfile(const char* file) { return testfile(std::string{file}); }
+  std::filesystem::path testfile(const fs::path& file) { return testfile(file.string()); }
+  std::filesystem::path testfile(const std::string& file) {
     testfiles.push_back(sjef::expand_path(file));
     fs::remove_all(testfiles.back());
     return testfiles.back();

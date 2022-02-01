@@ -181,7 +181,7 @@ extern "C" int sjef_program(int argc, char* argv[]) {
       else if (command == "move")
         success = proj.move(extras.front(), forceArg.getValue());
       else if (command == "erase")
-        eraseCandidate = proj.filename();
+        eraseCandidate = proj.filename().string();
       else if (command == "wait") {
         proj.wait();
       } else if (command == "status") {

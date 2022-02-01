@@ -358,7 +358,7 @@ public:
    * @param filename
    * @return 0 if failure, otherwise the rank of the project (1 is newest)
    */
-  static int recent_find(const std::string& suffix, const std::string_view& filename);
+  static int recent_find(const std::string& suffix, const std::filesystem::path& filename);
   int recent_find(const std::string& filename) const;
   /*!
    * @brief Look for a project by rank in the user-global recent project list

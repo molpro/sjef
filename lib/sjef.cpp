@@ -1309,14 +1309,14 @@ int Project::run_directory_next() const {
   return dirlist.empty() ? 1 : *(dirlist.begin()) + 1;
 }
 
-int Project::recent_find(const std::string& suffix, const std::string_view& filename) {
+int Project::recent_find(const std::string& suffix, const std::filesystem::path& filename) {
   auto recent_projects_directory = expand_path(std::filesystem::path{"~"} / ".sjef" / suffix);
   fs::create_directories(recent_projects_directory);
   std::ifstream in(expand_path(recent_projects_directory / "projects"));
   std::string line;
   for (int position = 1; std::getline(in, line); ++position) {
     if (fs::exists(line)) {
-      if (line == filename)
+      if (line == filename.string())
         return position;
     } else
       --position;
@@ -1324,7 +1324,7 @@ int Project::recent_find(const std::string& suffix, const std::string_view& file
   return 0;
 }
 
-int Project::recent_find(const std::string& filename) const { return recent_find(m_project_suffix, filename); }
+int Project::recent_find(const std::filesystem::path& filename) const { return recent_find(m_project_suffix, filename); }
 
 std::string Project::recent(const std::string& suffix, int number) {
   auto recent_projects_directory = expand_path(std::filesystem::path{"~"} / ".sjef" / suffix);

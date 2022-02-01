@@ -230,7 +230,7 @@ Project::Project(const std::string& filename, bool construct, const std::string&
       m_backends[sjef::Backend::default_name] = default_backend();
       const auto config_file = expand_path(fs::path{"~"} / ".sjef" / m_project_suffix / "backends.xml");
       auto config_file_ = config_file;
-      config_file_+="-";
+      config_file_ += "-";
       if (!fs::exists(config_file))
         std::ofstream(config_file) << "<?xml version=\"1.0\"?>\n<backends>\n</backends>" << std::endl;
       {
@@ -316,7 +316,7 @@ void Project::throw_if_backend_invalid(std::string backend) const {
     throw runtime_error("No backend specified");
   if (m_backends.count(backend) > 0)
     return;
-  const std::string& path = expand_path(std::string{"~/.sjef/"} + m_project_suffix + "/backends.xml");
+  const auto path = expand_path(std::filesystem::path{"~"} / ".sjef" / m_project_suffix / "backends.xml");
   m_warn.error() << "Contents of " << path << ":\n" << std::ifstream(path).rdbuf() << std::endl;
   throw runtime_error("Backend " + backend + " is not registered");
 }
@@ -423,12 +423,13 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
     for (const auto& o : rsync_options_second)
       m_trace(2 - verbosity) << " '" << o << "'";
     m_trace(2 - verbosity) << std::endl;
-    auto start_time = std::chrono::steady_clock::now();
+    auto start_time_rsync2 = std::chrono::steady_clock::now();
     bp::child(rsync_command, rsync_options_second).wait();
-    m_trace(3 - verbosity)
-        << "time for second rsync "
-        << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
-        << "ms" << std::endl;
+    m_trace(3 - verbosity) << "time for second rsync "
+                           << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() -
+                                                                                    start_time_rsync2)
+                                  .count()
+                           << "ms" << std::endl;
   }
   if (!nostatus) // to avoid infinite loop with call from status()
     status(0);   // to get backend_inactive
@@ -1029,7 +1030,7 @@ status Project::status(int verbosity, bool cached) const {
     if (result == running)
       const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive",
                                                (result == completed || result == killed) ? "1" : "0");
-    goto return_point;
+    goto RETURN_POINT;
   }
   synchronize(verbosity, true);
   const_cast<Project*>(this)->property_set(
@@ -1041,7 +1042,7 @@ status Project::status(int verbosity, bool cached) const {
        )
           ? "1"
           : "0");
-return_point:
+RETURN_POINT:
   auto time_taken =
       std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time);
   if (time_taken < m_status_lifetime)
@@ -1169,9 +1170,9 @@ std::mutex s_recent_edit_mutex;
 void Project::recent_edit(const std::string& add, const std::string& remove) {
   auto project_suffix =
       add.empty() ? fs::path(remove).extension().string().substr(1) : fs::path(add).extension().string().substr(1);
-  const auto recent_projects_file = expand_path(std::string{"~/.sjef/"} + project_suffix + "/projects");
+  const auto recent_projects_file = expand_path(std::filesystem::path{"~"} / ".sjef" / project_suffix / "projects");
   auto recent_projects_file_ = recent_projects_file;
-  recent_projects_file_+="-";
+  recent_projects_file_ += "-";
   bool changed = false;
   auto lock_threads = std::lock_guard(s_recent_edit_mutex);
   Locker locker{fs::path{recent_projects_file}.parent_path()};
@@ -1311,11 +1312,10 @@ Project::run_list_t Project::run_list() const {
 int Project::run_directory_next() const {
   auto dirlist = run_list();
   return dirlist.empty() ? 1 : *(dirlist.begin()) + 1;
-  ;
 }
 
 int Project::recent_find(const std::string& suffix, const std::string_view& filename) {
-  auto recent_projects_directory = expand_path(std::string{"~/.sjef/"} + suffix);
+  auto recent_projects_directory = expand_path(std::filesystem::path{"~"} / ".sjef" / suffix);
   fs::create_directories(recent_projects_directory);
   std::ifstream in(expand_path(recent_projects_directory / "projects"));
   std::string line;
@@ -1715,8 +1715,8 @@ bool sjef::Project::check_all_backends() const {
 }
 
 bool check_backends(const std::string& suffix) {
-  for (const auto& config_dir : std::vector<std::string>{"/usr/local/etc/sjef", "~/.sjef"}) {
-    const auto config_file = expand_path(config_dir + "/" + suffix + "/backends.xml");
+  for (const auto& config_dir : std::vector<std::filesystem::path>{"/usr/local/etc/sjef", "~/.sjef"}) {
+    const auto config_file = expand_path(config_dir / suffix / "backends.xml");
     if (fs::exists(config_file)) {
       std::unique_ptr<pugi_xml_document> backend_doc;
       pugi::xml_document doc;

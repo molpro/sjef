@@ -1161,6 +1161,13 @@ std::vector<std::string> Project::property_names() const {
   return result;
 }
 
+inline std::string slurp(const std::filesystem::path& path) {
+  std::ostringstream buf;
+  std::ifstream input(path);
+  buf << input.rdbuf();
+  return buf.str();
+}
+
 std::mutex s_recent_edit_mutex;
 void Project::recent_edit(const std::filesystem::path& add, const std::filesystem::path& remove) {
   auto project_suffix =
@@ -1182,13 +1189,13 @@ void Project::recent_edit(const std::filesystem::path& add, const std::filesyste
       std::ofstream out(recent_projects_file_);
       size_t lines = 0;
       if (!add.empty()) {
-        out << add << std::endl;
+        out << add.string() << std::endl;
         changed = true;
         ++lines;
       }
       std::string line;
       while (getline(in, line) && lines < recentMax) {
-        if (line != remove && line != add && fs::exists(line)) {
+        if (line != remove.string() && line != add && fs::exists(line)) {
           ++lines;
           out << line << std::endl;
         } else
@@ -1220,13 +1227,6 @@ std::filesystem::path Project::filename(std::string suffix, const std::string& n
   return result;
 }
 std::string Project::name() const { return fs::path(m_filename).stem().string(); }
-
-inline std::string slurp(const std::filesystem::path& path) {
-  std::ostringstream buf;
-  std::ifstream input(path);
-  buf << input.rdbuf();
-  return buf.str();
-}
 
 std::filesystem::path Project::run_directory(int run) const {
   if (run < 0)
@@ -1329,9 +1329,11 @@ int Project::recent_find(const std::filesystem::path& filename) const { return r
 std::string Project::recent(const std::string& suffix, int number) {
   auto recent_projects_directory = expand_path(std::filesystem::path{"~"} / ".sjef" / suffix);
   fs::create_directories(recent_projects_directory);
+  std::cout << "recent_projects_directory "<<recent_projects_directory<<std::endl;
   std::ifstream in(expand_path(recent_projects_directory / "projects"));
   std::string line;
   for (int position = 0; in >> line;) {
+    std::cout << "line "<<line<<std::endl;
     if (fs::exists(line))
       ++position;
     if (position == number)

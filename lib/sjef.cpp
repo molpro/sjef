@@ -120,7 +120,7 @@ inline void prune_lockers(const fs::path& filename) {
     lockers.erase(name);
 }
 const std::vector<std::string> Project::suffix_keys{"inp", "out", "xml"};
-Project::Project(const std::string& filename, bool construct, const std::string& default_suffix,
+Project::Project(const std::filesystem::path& filename, bool construct, const std::string& default_suffix,
                  const mapstringstring_t& suffixes, const Project* masterProject)
     : m_project_suffix(get_project_suffix(filename, default_suffix)),
       m_filename(expand_path(filename, m_project_suffix)), m_properties(std::make_unique<pugi_xml_document>()),

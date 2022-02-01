@@ -73,7 +73,7 @@ public:
    * the project
    * @param masterProject For internal use only
    */
-  explicit Project(const std::string& filename, bool construct = true, const std::string& default_suffix = "",
+  explicit Project(const std::filesystem::path& filename, bool construct = true, const std::string& default_suffix = "",
                    const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}},
                    const Project* masterProject = nullptr);
   Project(const Project& source) = delete;

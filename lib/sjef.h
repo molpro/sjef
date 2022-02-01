@@ -137,7 +137,8 @@ public:
    * will be pushed from the master copy to the backend, and all other files
    * will be pulled from the backend.
    * @param verbosity If >0, show underlying processing
-   * @param nostatus Not used any more
+   * @param nostatus should be set if called from status() to avoid infinite recursion
+   * @param force Force synchronization even if thought not to be needed
    */
   bool synchronize(int verbosity = 0, bool nostatus = false, bool force = false) const;
   /*!
@@ -357,7 +358,7 @@ public:
    * @param filename
    * @return 0 if failure, otherwise the rank of the project (1 is newest)
    */
-  static int recent_find(const std::string& suffix, const std::string& filename);
+  static int recent_find(const std::string& suffix, const std::string_view& filename);
   int recent_find(const std::string& filename) const;
   /*!
    * @brief Look for a project by rank in the user-global recent project list
@@ -628,7 +629,6 @@ std::string xmlRepair(const std::string& source, const mapstringstring_t& inject
 std::string version() noexcept;
 
 class runtime_error : public std::runtime_error {
-public:
   using std::runtime_error::runtime_error;
 };
 

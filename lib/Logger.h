@@ -47,7 +47,7 @@ public:
   std::ostream& stream() const { return *m_stream; }
   std::ostream& operator()(int level, const std::string& message = "") const {
     auto& stream = level > m_level ? m_null : *m_stream;
-    if (level >= 0 && level < m_preambles.size())
+    if (level >= 0 && level < decltype(level)(m_preambles.size()))
       stream << m_preambles[level];
     if (!message.empty())
       stream << message << std::endl;

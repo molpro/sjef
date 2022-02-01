@@ -212,10 +212,12 @@ TEST(project, recent_files) {
   {
     savestate state;
     auto suffix = state.suffix();
-    auto rf = sjef::expand_path("~/.sjef/" + suffix + "/projects");
+    auto rf = sjef::expand_path(std::filesystem::path{"~"} / ".sjef" / suffix / "projects");
+    auto rf_ = rf;
+    rf_+=".save";
     auto oldfile = fs::exists(rf);
     if (oldfile)
-      fs::rename(rf, rf + ".save");
+      fs::rename(rf, rf_);
     std::string probername("prober." + suffix);
     state.testfile(probername);
     sjef::Project prober(probername);
@@ -228,13 +230,7 @@ TEST(project, recent_files) {
       state.testfile(p.back());
       { sjef::Project proj(p.back()); }
     }
-    //  system((std::string{"cat "}+rf).c_str());
-    //    for (const auto& pp : p)
-    //      std::cerr << "p entry " << pp << std::endl;
     size_t i = p.size();
-    //    for (const auto& pp : p)
-    //      std::cerr << "p entry, recent table " << i << " " << sjef::Project(pp).recent(i--) << std::endl;
-    //    i = p.size();
     for (const auto& pp : p)
       ASSERT_EQ(prober.recent(i--), pp);
     i = p.size();
@@ -253,13 +249,12 @@ TEST(project, recent_files) {
     for (const auto& pp : p)
       ASSERT_EQ(prober.recent_find(pp), 0);
     if (oldfile)
-      fs::rename(rf + ".save", rf);
+      fs::rename(rf_, rf);
   }
 }
 
 TEST(project, project_hash) {
   for (int repeat = 0; repeat < 10; ++repeat) {
-    //    std::cerr<<"repeat "<<repeat<<std::endl;
     savestate state;
     sjef::Project x(state.testproject("project_hash_try"));
     ASSERT_GT(fs::file_size(x.propertyFile()), 0);
@@ -408,7 +403,7 @@ TEST(backend, backend_parameter_expand2) {
 #pragma clang diagnostic ignored "-Wunused-lambda-capture"
 #endif
   auto test = [&preambles, &p, &backend](const std::string& run_command, const std::string& expect_resolved,
-                               const std::string& expect_documentation) {
+                                         const std::string& expect_documentation) {
     for (const auto& preamble : preambles) {
       p.backends()[backend].run_command = preamble + run_command + " more stuff";
       //        std::cout << "run_command set to "<<p.m_backends[backend].run_command<<std::endl;
@@ -454,24 +449,25 @@ TEST(sjef, atomic) {
 
 TEST(project, recent) {
   savestate state;
-  std::string fn; std::string suffix=state.suffix();
+  std::string fn;
+  std::string suffix = state.suffix();
   auto fn2 = state.testproject("transient");
-  fs::path recent(fs::path("/Volumes/Home/Users/peterk/.sjef")/suffix/"projects");
+  fs::path recent(fs::path("/Volumes/Home/Users/peterk/.sjef") / suffix / "projects");
   for (auto i = 0; i < 2; ++i) {
     {
       sjef::Project p(state.testproject("completely_new" + std::to_string(i)));
       fn = p.filename();
       suffix = fs::path(fn).extension().string().substr(1);
     }
-    EXPECT_EQ(sjef::Project::recent_find(suffix,fn), 1);
+    EXPECT_EQ(sjef::Project::recent_find(suffix, fn), 1);
     { auto p2 = sjef::Project(fn2); }
-    EXPECT_EQ(sjef::Project::recent(suffix,1), fn2);
-    EXPECT_EQ(sjef::Project::recent_find(suffix,fn), 2);
+    EXPECT_EQ(sjef::Project::recent(suffix, 1), fn2);
+    EXPECT_EQ(sjef::Project::recent_find(suffix, fn), 2);
     sjef::Project::erase(fn2);
-    EXPECT_EQ(sjef::Project::recent(suffix,1), fn);
-    EXPECT_EQ(sjef::Project::recent_find(suffix,fn), 1);
+    EXPECT_EQ(sjef::Project::recent(suffix, 1), fn);
+    EXPECT_EQ(sjef::Project::recent_find(suffix, fn), 1);
   }
-  EXPECT_EQ(sjef::Project::recent_find(suffix,fn), 1);
+  EXPECT_EQ(sjef::Project::recent_find(suffix, fn), 1);
 }
 
 TEST(project, dummy_backend) {

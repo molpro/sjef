@@ -229,13 +229,15 @@ Project::Project(const std::string& filename, bool construct, const std::string&
     if (m_backends.count(sjef::Backend::default_name) == 0) {
       m_backends[sjef::Backend::default_name] = default_backend();
       const auto config_file = expand_path(fs::path{"~"} / ".sjef" / m_project_suffix / "backends.xml");
+      auto config_file_ = config_file;
+      config_file_+="-";
       if (!fs::exists(config_file))
         std::ofstream(config_file) << "<?xml version=\"1.0\"?>\n<backends>\n</backends>" << std::endl;
       {
         Locker locker{fs::path{config_file}.parent_path()};
         auto locki = locker.bolt();
-        fs::copy_file(config_file, config_file + std::filesystem::path{"-"});
-        auto in = std::ifstream(config_file + "-");
+        fs::copy_file(config_file, config_file_);
+        auto in = std::ifstream(config_file_.string());
         auto out = std::ofstream(config_file);
         std::string line;
         auto be_defaults = Backend(Backend::local());
@@ -261,7 +263,7 @@ Project::Project(const std::string& filename, bool construct, const std::string&
           }
         }
       }
-      fs::remove(config_file + "-");
+      fs::remove(config_file_);
     }
   }
   if (!name().empty() && name().front() != '.') {
@@ -880,12 +882,12 @@ bool Project::run_needed(int verbosity) const {
       return true;
     }
   }
-    m_trace(3 - verbosity) << "sjef::Project::run_needed returning false" << std::endl;
-    m_trace(3-verbosity)
-        << "ending"
-        << ", time "
-        << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
-        << std::endl;
+  m_trace(3 - verbosity) << "sjef::Project::run_needed returning false" << std::endl;
+  m_trace(3 - verbosity)
+      << "ending"
+      << ", time "
+      << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
+      << std::endl;
   return false;
 }
 
@@ -1167,7 +1169,9 @@ std::mutex s_recent_edit_mutex;
 void Project::recent_edit(const std::string& add, const std::string& remove) {
   auto project_suffix =
       add.empty() ? fs::path(remove).extension().string().substr(1) : fs::path(add).extension().string().substr(1);
-  auto recent_projects_file = expand_path(std::string{"~/.sjef/"} + project_suffix + "/projects");
+  const auto recent_projects_file = expand_path(std::string{"~/.sjef/"} + project_suffix + "/projects");
+  auto recent_projects_file_ = recent_projects_file;
+  recent_projects_file_+="-";
   bool changed = false;
   auto lock_threads = std::lock_guard(s_recent_edit_mutex);
   Locker locker{fs::path{recent_projects_file}.parent_path()};
@@ -1179,7 +1183,7 @@ void Project::recent_edit(const std::string& add, const std::string& remove) {
     }
     {
       std::ifstream in(recent_projects_file);
-      std::ofstream out(recent_projects_file + "-");
+      std::ofstream out(recent_projects_file_);
       size_t lines = 0;
       if (!add.empty()) {
         out << add << std::endl;
@@ -1198,9 +1202,9 @@ void Project::recent_edit(const std::string& add, const std::string& remove) {
     }
     if (changed) {
       fs::remove(recent_projects_file);
-      fs::rename(recent_projects_file + "-", recent_projects_file);
+      fs::rename(recent_projects_file_, recent_projects_file);
     } else
-      fs::remove(recent_projects_file + "-");
+      fs::remove(recent_projects_file_);
   }
 }
 
@@ -1310,10 +1314,10 @@ int Project::run_directory_next() const {
   ;
 }
 
-int Project::recent_find(const std::string& suffix, const std::string& filename) {
+int Project::recent_find(const std::string& suffix, const std::string_view& filename) {
   auto recent_projects_directory = expand_path(std::string{"~/.sjef/"} + suffix);
   fs::create_directories(recent_projects_directory);
-  std::ifstream in(expand_path(recent_projects_directory + "/projects"));
+  std::ifstream in(expand_path(recent_projects_directory / "projects"));
   std::string line;
   for (int position = 1; std::getline(in, line); ++position) {
     if (fs::exists(line)) {
@@ -1328,9 +1332,9 @@ int Project::recent_find(const std::string& suffix, const std::string& filename)
 int Project::recent_find(const std::string& filename) const { return recent_find(m_project_suffix, filename); }
 
 std::string Project::recent(const std::string& suffix, int number) {
-  auto recent_projects_directory = expand_path(std::string{"~/.sjef/"} + suffix);
+  auto recent_projects_directory = expand_path(std::filesystem::path{"~"} / ".sjef" / suffix);
   fs::create_directories(recent_projects_directory);
-  std::ifstream in(expand_path(recent_projects_directory + "/projects"));
+  std::ifstream in(expand_path(recent_projects_directory / "projects"));
   std::string line;
   for (int position = 0; in >> line;) {
     if (fs::exists(line))
@@ -1346,7 +1350,7 @@ std::string Project::recent(int number) const { return recent(m_project_suffix, 
 ///> @private
 struct plist_writer : pugi::xml_writer {
   std::string file;
-  virtual void write(const void* data, size_t size) {
+  void write(const void* data, size_t size) override {
     std::ofstream s(file);
     s << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
       << "<!DOCTYPE plist SYSTEM '\"-//Apple//DTD PLIST 1.0//EN\" "
@@ -1464,7 +1468,7 @@ inline std::string environment(const std::string& key) {
 ///> @private
 std::filesystem::path expand_path(const std::filesystem::path& path, const std::string& suffix) {
   // TODO use more of std::filesystem in this parsing
-  std::string text = path;
+  auto text = path.string();
 #ifdef _WIN32
   text = std::regex_replace(text, std::regex{R"--(^\~)--"}, environment("USERPROFILE"));
   text = std::regex_replace(text, std::regex{R"--(^\$\{HOME\})--"}, environment("USERPROFILE"));
@@ -1525,9 +1529,9 @@ std::string xmlRepair(const std::string& source, const mapstringstring_t& inject
   if (commentPending)
     result += "-->";
   for (auto node = nodes.rbegin(); node != nodes.rend(); node++) {
-    for (const auto& injection : injections)
-      if (*node == injection.first)
-        result += injection.second;
+    for (const auto& [key, value] : injections)
+      if (*node == key)
+        result += value;
     result += "</" + *node + ">";
   }
   return result;
@@ -1535,9 +1539,9 @@ std::string xmlRepair(const std::string& source, const mapstringstring_t& inject
 
 std::vector<std::string> sjef::Project::backend_names() const {
   std::vector<std::string> result;
-  for (const auto& be : this->m_backends)
-    if (be.first != sjef::Backend::dummy_name)
-      result.push_back(be.first);
+  for (const auto& [key, value] : this->m_backends)
+    if (key != sjef::Backend::dummy_name)
+      result.push_back(key);
   return result;
 }
 

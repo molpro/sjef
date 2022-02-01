@@ -90,7 +90,7 @@ public:
    * the project in recent projects list
    * @return true if the copy was successful
    */
-  bool copy(const std::string& destination_filename, bool force = false, bool keep_hash = false, bool slave = false);
+  bool copy(const std::filesystem::path& destination_filename, bool force = false, bool keep_hash = false, bool slave = false);
   /*!
    * @brief Move the project to another location
    * @param destination_filename
@@ -98,12 +98,12 @@ public:
    * location
    * @return true if the move was successful
    */
-  bool move(const std::string& destination_filename, bool force = false);
+  bool move(const std::filesystem::path& destination_filename, bool force = false);
   /*!
    * @brief Erase a project from the file system, and remove it from the recent
    * projects file
    */
-  static void erase(const std::string& filename, const std::string& default_suffix = "");
+  static void erase(const std::filesystem::path& filename, const std::string& default_suffix = "");
   /*!
    * @brief Import one or more files into the project. In the case of a .xml
    * output file, if the corresponding input file does not exist, it will be

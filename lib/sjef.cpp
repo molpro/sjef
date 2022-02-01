@@ -473,7 +473,7 @@ void Project::force_file_names(const std::string& oldname) {
 
 fs::path Project::propertyFile() const { return (fs::path{m_filename} / fs::path{s_propertyFile}).string(); }
 
-bool Project::move(const std::string& destination_filename, bool force) {
+bool Project::move(const std::filesystem::path& destination_filename, bool force) {
   if (auto stat = status(-1); stat == running || stat == waiting)
     return false;
   auto dest = fs::absolute(expand_path(destination_filename, fs::path{m_filename}.extension().string().substr(1)));
@@ -500,7 +500,7 @@ bool Project::move(const std::string& destination_filename, bool force) {
   return false;
 }
 
-bool Project::copy(const std::string& destination_filename, bool force, bool keep_hash, bool slave) {
+bool Project::copy(const std::filesystem::path& destination_filename, bool force, bool keep_hash, bool slave) {
   auto dest = fs::absolute(expand_path(destination_filename, fs::path{m_filename}.extension().string().substr(1)));
   try { // try to synchronize if we can, but still do the copy if not
     if (!property_get("backend").empty())
@@ -530,7 +530,7 @@ bool Project::copy(const std::string& destination_filename, bool force, bool kee
   return true;
 }
 
-void Project::erase(const std::string& filename, const std::string& default_suffix) {
+void Project::erase(const std::filesystem::path& filename, const std::string& default_suffix) {
   auto filename_ = sjef::expand_path(filename, default_suffix);
   if (fs::remove_all(filename_)) {
     recent_edit("", filename_);

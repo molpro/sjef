@@ -1,6 +1,5 @@
 #include "sjef.h"
 #include "Locker.h"
-#include "Logger.h"
 #include "sjef-backend.h"
 #include <array>
 #include <boost/process/args.hpp>

@@ -17,8 +17,8 @@ namespace fs = std::filesystem;
 
 TEST(project, c_binding) {
   savestate x;
-  const char* projectname = strdup(x.testproject("cproject").c_str());
-  const char* projectname2 = strdup(x.testproject("cproject2").c_str());
+  const char* projectname = strdup(x.testproject("cproject").string().c_str());
+  const char* projectname2 = strdup(x.testproject("cproject2").string().c_str());
   //  sjef_project_erase(projectname);
   //  sjef_project_erase(projectname2);
   char key[] = "testkey";
@@ -83,14 +83,14 @@ TEST(backend, C_keys) {
 }
 TEST(project, C_quick_destroy) {
   savestate state;
-  const char* projname = strdup(state.testproject("C_project").c_str());
+  const char* projname = strdup(state.testproject("C_project").string().c_str());
   sjef_project_open(projname);
   sjef_project_close(projname);
 }
 
 TEST(backend, C_values) { // TODO actually implement some of this for C
   savestate state;
-  const char* projname = strdup(state.testproject("C_project").c_str());
+  const char* projname = strdup(state.testproject("C_project").string().c_str());
   fs::remove_all(projname);
   sjef_project_open(projname);
   EXPECT_THROW(sjef_backend_value(projname, "!*@£junk", "name"), std::runtime_error);

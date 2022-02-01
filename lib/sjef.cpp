@@ -40,9 +40,11 @@ public:
 };
 
 ///> @private
-inline bool localhost(const std::string& host) { return (host.empty() || host == "localhost" || host == "127.0.0.1"); }
+inline bool localhost(const std::string_view& host) {
+  return (host.empty() || host == "localhost" || host == "127.0.0.1");
+}
 ///> @private
-inline std::string executable(fs::path command) {
+inline std::string executable(const fs::path& command) {
   if (command.is_absolute())
     return command.string();
   else {
@@ -124,7 +126,7 @@ Project::Project(const std::string& filename, bool construct, const std::string&
       m_filename(expand_path(filename, m_project_suffix)), m_properties(std::make_unique<pugi_xml_document>()),
       m_suffixes(suffixes), m_backend_doc(std::make_unique<pugi_xml_document>()), m_master_instance(masterProject),
       m_master_of_slave(masterProject == nullptr), m_locker(make_locker(m_filename)),
-      m_property_file_modification_time(), m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}) {
+      m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}) {
   {
     auto lock = m_locker->bolt();
     if (fs::exists(propertyFile())) {
@@ -150,8 +152,7 @@ Project::Project(const std::string& filename, bool construct, const std::string&
 
     if (!construct)
       return;
-    const auto pf = propertyFile();
-    if (!fs::exists(pf) && m_master_of_slave) {
+    if (const auto pf = propertyFile(); !fs::exists(pf) && m_master_of_slave) {
       save_property_file();
       m_property_file_modification_time = fs::last_write_time(propertyFile());
       property_set("_private_sjef_project_backend_inactive", "1");
@@ -169,7 +170,7 @@ Project::Project(const std::string& filename, bool construct, const std::string&
     for (int i = 0; i < nimport; i++) {
       m_reserved_files.push_back(property_get(std::string{"IMPORT"} + std::to_string(i)));
     }
-    if (fs::path{m_filename}.parent_path().filename().string() != "run" and
+    if (fs::path{m_filename}.parent_path().filename().string() != "run" &&
         !fs::exists(fs::path{m_filename}.parent_path().parent_path() /
                     "Info.plist")) // If this is a run-directory project, do not add to recent list
       recent_edit(m_filename);
@@ -189,13 +190,11 @@ Project::Project(const std::string& filename, bool construct, const std::string&
         auto backends = m_backend_doc->select_nodes("/backends/backend");
         for (const auto& be : backends) {
           auto kName = getattribute(be, "name");
-          auto kHost = getattribute(be, "host");
-          if (localhost(kHost))
+          if (auto kHost = getattribute(be, "host"); localhost(kHost))
             m_backends.try_emplace(kName, Backend::local(), kName);
           else
             m_backends.try_emplace(kName, Backend::Linux(), kName);
-          std::string kVal;
-          if ((kVal = getattribute(be, "template")) != "") {
+          if (const auto kVal = getattribute(be, "template"); kVal != "") {
             m_backends[kName].host = m_backends[kVal].host;
             m_backends[kName].cache = m_backends[kVal].cache;
             m_backends[kName].run_command = m_backends[kVal].run_command;
@@ -205,21 +204,21 @@ Project::Project(const std::string& filename, bool construct, const std::string&
             m_backends[kName].status_waiting = m_backends[kVal].status_waiting;
             m_backends[kName].kill_command = m_backends[kVal].kill_command;
           }
-          if ((kVal = getattribute(be, "host")) != "")
+          if (const auto kVal = getattribute(be, "host"); kVal != "")
             m_backends[kName].host = kVal;
-          if ((kVal = getattribute(be, "cache")) != "")
+          if (const auto kVal = getattribute(be, "cache"); kVal != "")
             m_backends[kName].cache = kVal;
-          if ((kVal = getattribute(be, "run_command")) != "")
+          if (const auto kVal = getattribute(be, "run_command"); kVal != "")
             m_backends[kName].run_command = kVal;
-          if ((kVal = getattribute(be, "run_jobnumber")) != "")
+          if (const auto kVal = getattribute(be, "run_jobnumber"); kVal != "")
             m_backends[kName].run_jobnumber = kVal;
-          if ((kVal = getattribute(be, "status_command")) != "")
+          if (const auto kVal = getattribute(be, "status_command"); kVal != "")
             m_backends[kName].status_command = kVal;
-          if ((kVal = getattribute(be, "status_running")) != "")
+          if (const auto kVal = getattribute(be, "status_running"); kVal != "")
             m_backends[kName].status_running = kVal;
-          if ((kVal = getattribute(be, "status_waiting")) != "")
+          if (const auto kVal = getattribute(be, "status_waiting"); kVal != "")
             m_backends[kName].status_waiting = kVal;
-          if ((kVal = getattribute(be, "kill_command")) != "")
+          if (const auto kVal = getattribute(be, "kill_command"); kVal != "")
             m_backends[kName].kill_command = kVal;
           if (!check_backend(kName))
             throw runtime_error(std::string{"sjef backend "} + kName + " is invalid");
@@ -281,16 +280,17 @@ Project::~Project() {
     m_remote_server->process.terminate();
 }
 
-std::string Project::get_project_suffix(const std::string& filename, const std::string& default_suffix) const {
-  auto suffix = fs::path{expand_path(filename, default_suffix)}.extension().string();
+std::string Project::get_project_suffix(const std::filesystem::path& filename,
+                                        const std::string& default_suffix) const {
+  auto suffix = expand_path(filename, default_suffix).extension().string();
   if (suffix.empty())
-    throw runtime_error("Cannot deduce project suffix for \"" + filename + "\" with default suffix \"" +
+    throw runtime_error("Cannot deduce project suffix for \"" + filename.string() + "\" with default suffix \"" +
                         default_suffix + "\"");
   return suffix.substr(1);
 }
 
-bool Project::import_file(std::string file, bool overwrite) {
-  auto to = fs::path{m_filename} / fs::path{file}.filename();
+bool Project::import_file(const std::filesystem::path& file, bool overwrite) {
+  auto to = m_filename / file.filename();
   for (const auto& key : suffix_keys)
     if (fs::path{file}.extension() == m_suffixes[key])
       to = fs::path{m_filename} / fs::path{name()} / m_suffixes[key];
@@ -299,7 +299,7 @@ bool Project::import_file(std::string file, bool overwrite) {
   if (overwrite && exists(to))
     remove(to);
   fs::copy_file(file, to, ec);
-  m_reserved_files.push_back(to.string());
+  m_reserved_files.emplace_back(to.string());
   auto nimport = property_get("IMPORTED").empty() ? 0 : std::stoi(property_get("IMPORTED"));
   std::string key = "IMPORT" + std::to_string(nimport);
   property_set(key, to.filename().string());
@@ -365,7 +365,7 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
       }
     }
   }
-  if (!force && !locally_modified && !backend_changed and
+  if (!force && !locally_modified && !backend_changed &&
       std::stoi(property_get("_private_sjef_project_backend_inactive_synced")) > 2)
     return true;
   // TODO: implement more robust error checking
@@ -376,24 +376,24 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
       "--exclude=*.log_*", "--exclude=*.d",    "--exclude=Info.plist", "--exclude=.Info.plist.writing_object",
       "--inplace"};
   if (true) {
-    rsync_options.push_back("-e");
-    rsync_options.push_back(
+    rsync_options.emplace_back("-e");
+    rsync_options.emplace_back(
         "ssh -o ControlPath=~/.ssh/sjef-control-%h-%p-%r -o ControlMaster=auto -o ControlPersist=yes");
   }
   if (verbosity > 0)
-    rsync_options.push_back("-v");
+    rsync_options.emplace_back("-v");
   auto rsync_options_first = rsync_options;
   auto rsync_options_second = rsync_options;
-  rsync_options_first.push_back("--inplace");
-  rsync_options_first.push_back("--exclude=*.out");
-  rsync_options_first.push_back("--exclude=*.xml");
-  rsync_options_first.push_back("--exclude=*.log");
-  rsync_options_first.push_back("-L");
-  rsync_options_first.push_back("-a");
-  rsync_options_first.push_back("--update");
-  //  rsync_options_first.push_back("--mkpath"); // needs rsync >= 3.2.3
-  rsync_options_first.push_back(m_filename.string() + "/");
-  rsync_options_first.push_back(backend.host + ":" + (fs::path{backend.cache} / m_filename).string());
+  rsync_options_first.emplace_back("--inplace");
+  rsync_options_first.emplace_back("--exclude=*.out");
+  rsync_options_first.emplace_back("--exclude=*.xml");
+  rsync_options_first.emplace_back("--exclude=*.log");
+  rsync_options_first.emplace_back("-L");
+  rsync_options_first.emplace_back("-a");
+  rsync_options_first.emplace_back("--update");
+  //  rsync_options_first.emplace_back("--mkpath"); // needs rsync >= 3.2.3
+  rsync_options_first.emplace_back(m_filename.string() + "/");
+  rsync_options_first.emplace_back(backend.host + ":" + (fs::path{backend.cache} / m_filename).string());
   m_trace(2 - verbosity) << "Push rsync: " << rsync_command;
   for (const auto& o : rsync_options_first)
     m_trace(2 - verbosity) << " '" << o << "'";
@@ -411,14 +411,14 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
   }
   const auto backend_inactive = property_get("_private_sjef_project_backend_inactive");
   {
-    rsync_options_second.push_back("-a");
+    rsync_options_second.emplace_back("-a");
     for (const auto& rf : m_reserved_files) {
       auto f = regex_replace(fs::path{rf}.filename().string(), std::regex(R"--(%)--"), name());
       if (fs::exists(f))
-        rsync_options_second.push_back("--exclude=" + f);
+        rsync_options_second.emplace_back("--exclude=" + f);
     }
-    rsync_options_second.push_back(backend.host + ":" + (fs::path{backend.cache} / m_filename).string() + "/");
-    rsync_options_second.push_back(m_filename);
+    rsync_options_second.emplace_back(backend.host + ":" + (fs::path{backend.cache} / m_filename).string() + "/");
+    rsync_options_second.emplace_back(m_filename);
     m_trace(2 - verbosity) << "Pull rsync: " << rsync_command;
     for (const auto& o : rsync_options_second)
       m_trace(2 - verbosity) << " '" << o << "'";
@@ -474,8 +474,7 @@ void Project::force_file_names(const std::string& oldname) {
 fs::path Project::propertyFile() const { return (fs::path{m_filename} / fs::path{s_propertyFile}).string(); }
 
 bool Project::move(const std::string& destination_filename, bool force) {
-  auto stat = status(-1);
-  if (stat == running || stat == waiting)
+  if (auto stat = status(-1); stat == running || stat == waiting)
     return false;
   auto dest = fs::absolute(expand_path(destination_filename, fs::path{m_filename}.extension().string().substr(1)));
   if (force)
@@ -507,6 +506,7 @@ bool Project::copy(const std::string& destination_filename, bool force, bool kee
     if (!property_get("backend").empty())
       synchronize();
   } catch (...) {
+    // condone
   }
   {
     if (force)
@@ -537,7 +537,7 @@ void Project::erase(const std::string& filename, const std::string& default_suff
   }
 }
 
-static std::vector<std::string> splitString(std::string input, char c = ' ', char quote = '\'') {
+static std::vector<std::string> splitString(const std::string& input, char c = ' ', char quote = '\'') {
   std::vector<std::string> result;
   const char* str0 = strdup(input.c_str());
   const char* str = str0;
@@ -595,8 +595,7 @@ std::string Project::backend_parameter_expand(const std::string& backend, std::s
       m.erase(0, 1);
       if (first != '{')
         m[0] = first;
-      auto bang = m.find_first_of("!");
-      if (bang != std::string::npos)
+      if (auto bang = m.find_first_of("!"); bang != std::string::npos)
         m = m.substr(0, bang);
       auto percent = m.find_first_of("%");
       if (percent == std::string::npos)
@@ -623,7 +622,8 @@ std::string Project::backend_parameter_expand(const std::string& backend, std::s
   };
 
   auto templ_ = std::string{" "} + templ;
-  std::sregex_token_iterator begin(templ_.begin(), templ_.end(), re, {-1, 0}), end;
+  std::sregex_token_iterator begin(templ_.begin(), templ_.end(), re, {-1, 0});
+  std::sregex_token_iterator end;
   std::for_each(begin, end, callback);
   return output_text.substr(1);
 }
@@ -643,8 +643,7 @@ mapstringstring_t Project::backend_parameters(const std::string& backend, bool d
       if (first != '{')
         m[0] = first;
       std::string docu;
-      auto bang = m.find_first_of("!");
-      if (bang != std::string::npos) {
+      if (auto bang = m.find_first_of("!"); bang != std::string::npos) {
         docu = m.substr(bang + 1);
         m = m.substr(0, bang);
       }
@@ -662,7 +661,8 @@ mapstringstring_t Project::backend_parameters(const std::string& backend, bool d
     }
   };
 
-  std::sregex_token_iterator begin(templ.begin(), templ.end(), re, {-1, 0}), end;
+  std::sregex_token_iterator begin(templ.begin(), templ.end(), re, {-1, 0});
+  std::sregex_token_iterator end;
   std::for_each(begin, end, callback);
 
   return result;
@@ -731,7 +731,8 @@ bool Project::run(int verbosity, bool force, bool wait) {
     return true;
   } else { // remote host
     m_trace(2 - verbosity) << "run remote job on " << backend.name << std::endl;
-    bp::ipstream c_err, c_out;
+    bp::ipstream c_err;
+    bp::ipstream c_out;
     synchronize(verbosity, false, true);
     cached_status(unknown);
     property_set("_private_sjef_project_backend_inactive", "0");
@@ -817,8 +818,7 @@ bool Project::run_needed(int verbosity) const {
       << ", time "
       << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
       << std::endl;
-  auto statuss = cached_status();
-  if (statuss == running || statuss == waiting)
+  if (auto statuss = cached_status(); statuss == running || statuss == waiting)
     return false;
   auto inpfile = filename("inp");
   auto xmlfile = filename("xml", "", 0);
@@ -893,14 +893,13 @@ bool Project::run_needed(int verbosity) const {
 }
 
 std::string Project::xml(int run, bool sync) const {
-  const bool localhost = m_backends.at(property_get("backend")).host == "localhost";
-  if ((localhost && cached_status() != completed) ||
+  if (const bool localhost = m_backends.at(property_get("backend")).host == "localhost";
+      (localhost && cached_status() != completed) ||
       ((!localhost) && std::stoi(property_get("_private_sjef_project_backend_inactive_synced")) <= 2)) {
     return xmlRepair(file_contents(m_suffixes.at("xml"), "", run, sync));
   }
   if (m_xml_cached.empty())
-    if (m_xml_cached.empty())
-      m_xml_cached = xmlRepair(file_contents(m_suffixes.at("xml"), "", run, sync));
+    m_xml_cached = xmlRepair(file_contents(m_suffixes.at("xml"), "", run, sync));
   return m_xml_cached;
 }
 
@@ -1082,8 +1081,7 @@ std::string sjef::Project::status_message(int verbosity) const {
 void Project::wait(unsigned int maximum_microseconds) const {
   unsigned int microseconds = 1;
   while (true) {
-    auto stat = status();
-    if (stat == completed || stat == killed)
+    if (auto stat = status(); stat == completed || stat == killed)
       break;
     std::this_thread::sleep_for(std::chrono::microseconds(microseconds));
     if (microseconds < maximum_microseconds)
@@ -1121,10 +1119,7 @@ void Project::property_delete_locked(const std::string& property) {
 void Project::property_set(const mapstringstring_t& properties) {
   auto lock = m_locker->bolt();
   check_property_file_locked();
-  for (const auto& keyval : properties) {
-    const auto& property = keyval.first;
-    const auto& value = keyval.second;
-
+  for (const auto& [property, value] : properties) {
     property_delete_locked(property);
     std::lock_guard guard(m_unmovables.m_property_set_mutex);
     if (!m_properties->child("plist"))
@@ -1361,8 +1356,7 @@ struct plist_writer : pugi::xml_writer {
 
 constexpr static bool use_writer = false;
 void Project::load_property_file_locked() const {
-  auto result = m_properties->load_file(propertyFile().c_str());
-  if (!result)
+  if (auto result = m_properties->load_file(propertyFile().c_str()); !result)
     throw runtime_error("error in loading " + propertyFile().string() + "\n" + result.description() + "\n" +
                         slurp(propertyFile()));
   m_property_file_modification_time = fs::last_write_time(propertyFile());
@@ -1516,8 +1510,8 @@ std::string xmlRepair(const std::string& source, const mapstringstring_t& inject
     } else if (pattern.size() > 1 && pattern[0] == '<' && (pattern[1] != '?') && !commentPending) {
       std::smatch matchnode;
       if (!std::regex_search(pattern, matchnode, std::regex("<([^> /]*)")) || matchnode.size() != 2)
-        throw std::logic_error("bad stuff in parsing xml node");
-      nodes.push_back({matchnode[1].first, matchnode[1].second});
+        throw std::invalid_argument("bad stuff in parsing xml node");
+      nodes.emplace_back(matchnode[1].first, matchnode[1].second);
     }
     s = match0.second;
   }

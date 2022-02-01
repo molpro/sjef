@@ -315,7 +315,7 @@ public:
    * - other: the specified run directory
    * @return the fully-qualified name of the directory
    */
-  std::string run_directory(int run = 0) const;
+  std::filesystem::path run_directory(int run = 0) const;
   /*!
    * @brief Check a run exists, and resolve most recent
    * @param run The run number to check
@@ -359,7 +359,7 @@ public:
    * @return 0 if failure, otherwise the rank of the project (1 is newest)
    */
   static int recent_find(const std::string& suffix, const std::filesystem::path& filename);
-  int recent_find(const std::string& filename) const;
+  int recent_find(const std::filesystem::path& filename) const;
   /*!
    * @brief Look for a project by rank in the user-global recent project list
    * @param suffix the project suffix
@@ -386,7 +386,7 @@ private:
   void cached_status(sjef::status status) const;
   void throw_if_backend_invalid(std::string backend = "") const;
   std::string get_project_suffix(const std::filesystem::path& filename, const std::string& default_suffix) const;
-  static void recent_edit(const std::string& add, const std::string& remove = "");
+  static void recent_edit(const std::filesystem::path& add, const std::filesystem::path& remove = "");
   mutable std::filesystem::file_time_type m_property_file_modification_time;
   mutable std::map<std::string, std::filesystem::file_time_type, std::less<>> m_input_file_modification_time;
   std::set<std::string, std::less<>> m_run_directory_ignore;

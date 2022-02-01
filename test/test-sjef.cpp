@@ -121,12 +121,12 @@ TEST(project, copyMolpro) {
 
 TEST(project, erase) {
   savestate state;
-  std::string filename = state.testproject("sjef-project-test");
+  auto filename = state.testproject("sjef-project-test");
   {
     sjef::Project x(filename);
     filename = x.filename();
     ASSERT_TRUE(fs::exists(fs::path(filename)));
-    ASSERT_TRUE(fs::exists(fs::path(filename + "/Info.plist")));
+    ASSERT_TRUE(fs::exists(filename / "Info.plist"));
     ASSERT_TRUE(fs::is_directory(fs::path(filename)));
   }
   sjef::Project::erase(filename);
@@ -135,7 +135,7 @@ TEST(project, erase) {
 
 TEST(project, import) {
   savestate state;
-  std::string filename = state.testproject("sjef-project-test");
+  auto filename = state.testproject("sjef-project-test");
   sjef::Project x(filename);
   filename = x.filename();
   auto importfile = state.testfile("sjef-project-test.importfile");
@@ -147,10 +147,10 @@ TEST(project, import) {
 
 TEST(project, clean) {
   savestate state;
-  std::string filename = state.testproject("sjef-project-test");
+  auto filename = state.testproject("sjef-project-test");
   sjef::Project x(filename);
   filename = x.filename();
-  ASSERT_FALSE(fs::exists(fs::path(filename) / fs::path(filename + ".out")));
+  ASSERT_FALSE(fs::exists(fs::path(filename) / fs::path(filename.string() + ".out")));
   { std::ofstream s(fs::path(filename) / fs::path(x.name() + ".out")); }
   ASSERT_TRUE(fs::exists(fs::path(filename) / fs::path(x.name() + ".out")));
   x.clean(true, true);
@@ -221,7 +221,7 @@ TEST(project, recent_files) {
     std::string probername("prober." + suffix);
     state.testfile(probername);
     sjef::Project prober(probername);
-    std::list<std::string> p;
+    std::list<std::filesystem::path> p;
     for (size_t i = 0; i < 3; i++) {
       {
         sjef::Project proj("p" + std::to_string(i) + "." + suffix);
@@ -449,7 +449,7 @@ TEST(sjef, atomic) {
 
 TEST(project, recent) {
   savestate state;
-  std::string fn;
+  std::filesystem::path fn;
   std::string suffix = state.suffix();
   auto fn2 = state.testproject("transient");
   fs::path recent(fs::path("/Volumes/Home/Users/peterk/.sjef") / suffix / "projects");

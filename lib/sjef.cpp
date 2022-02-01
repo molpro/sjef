@@ -1162,7 +1162,7 @@ std::vector<std::string> Project::property_names() const {
 }
 
 std::mutex s_recent_edit_mutex;
-void Project::recent_edit(const std::string& add, const std::string& remove) {
+void Project::recent_edit(const std::filesystem::path& add, const std::filesystem::path& remove) {
   auto project_suffix =
       add.empty() ? fs::path(remove).extension().string().substr(1) : fs::path(add).extension().string().substr(1);
   const auto recent_projects_file = expand_path(std::filesystem::path{"~"} / ".sjef" / project_suffix / "projects");
@@ -1221,14 +1221,14 @@ std::filesystem::path Project::filename(std::string suffix, const std::string& n
 }
 std::string Project::name() const { return fs::path(m_filename).stem().string(); }
 
-inline std::string slurp(const std::string& path) {
+inline std::string slurp(const std::filesystem::path& path) {
   std::ostringstream buf;
-  std::ifstream input(path.c_str());
+  std::ifstream input(path);
   buf << input.rdbuf();
   return buf.str();
 }
 
-std::string Project::run_directory(int run) const {
+std::filesystem::path Project::run_directory(int run) const {
   if (run < 0)
     return filename();
   auto sequence = run_verify(run);

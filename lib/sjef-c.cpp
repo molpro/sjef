@@ -466,7 +466,7 @@ char* sjef_project_run_directory(const char* project, int run) {
   try {
     if (projects.count(project) == 0)
       sjef_project_open(project);
-    return strdup(projects.at(project)->run_directory(run).c_str());
+    return strdup(projects.at(project)->run_directory(run).string().c_str());
   } catch (std::exception& e) {
     error(e);
   } catch (...) {

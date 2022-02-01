@@ -59,21 +59,21 @@ TEST_F(molpro_test, molpro_workflow) {
   const auto cache = state.testfile(fs::current_path() / "molpro_workflow-cache");
   std::ofstream(sjef::expand_path(std::string{"~/.sjef/molpro/backends.xml"}))
       << "<?xml version=\"1.0\"?>\n<backends>\n <backend name=\"test-remote\" run_command=\""
-      << boost::process::search_path("molpro").string() << "\" host=\"127.0.0.1\" cache=\"" << cache
+      << boost::process::search_path("molpro").string() << "\" host=\"127.0.0.1\" cache=\"" << cache.string()
       << "\"/>\n</backends>";
   //  ASSERT_EQ(system("cat ~/.sjef/molpro/backends.xml"),0);
   std::map<std::string, double> energies;
   for (int repeat = 0; repeat < 1; ++repeat) {
     auto remotes = std::vector<std::string>{"local"};
     if (test_remote)
-      remotes.push_back("test-remote");
+      remotes.emplace_back("test-remote");
     for (const auto& backend : remotes) {
       std::map<std::string, std::unique_ptr<sjef::Project>> projects;
       fs::remove_all(cache);
       for (const auto& id : std::map<std::string, std::string>{{"H", "angstrom; geometry={h};rhf"},
                                                                {"H2", "angstrom; geometry={h;h,h,0.7};rhf"}}) {
         std::cout << "backend: " << backend << ", molecule: " << id.first << ", input: " << id.second << std::endl;
-        auto file = id.first + "_" + backend + ".molpro";
+        auto file = fs::path{id.first + "_" + backend + ".molpro"};
         //        fs::remove_all(file);
         //        EXPECT_GE(system((std::string{"ls -laR "}+file).c_str()),-1);
         //        EXPECT_GE(system((std::string{"cat "}+file+"/Info.plist").c_str()),-1);

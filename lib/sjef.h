@@ -12,7 +12,7 @@
 #include <iostream>
 
 namespace pugi {
-struct xpath_node_set; ///< @private
+class xpath_node_set; ///< @private
 }
 namespace sjef {
 class Backend;            ///< @private

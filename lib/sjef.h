@@ -10,6 +10,7 @@
 #include <vector>
 #include <ostream>
 #include <iostream>
+#include <atomic>
 
 namespace pugi {
 class xpath_node_set; ///< @private

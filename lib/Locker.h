@@ -31,15 +31,14 @@ public:
   virtual ~Locker();
   const fs::path& path() const { return m_path; }
 
-public:
   void add_bolt();
   void remove_bolt();
 
 private:
   const fs::path m_path;
-  std::unique_ptr<std::lock_guard<std::mutex>> m_lock;
+  std::unique_ptr<std::scoped_lock<std::mutex>> m_lock;
   std::mutex m_mutex;
-  int m_bolts;
+  int m_bolts = 0;
   const std::unique_ptr<boost::interprocess::file_lock> m_file_lock;
   std::thread::id m_owning_thread;
 
@@ -55,7 +54,7 @@ public:
   private:
     Locker& m_locker;
   };
-  const Bolt bolt();
+  Bolt bolt();
 };
 
 } // namespace sjef

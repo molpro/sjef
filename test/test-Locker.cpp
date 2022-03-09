@@ -45,7 +45,7 @@ TEST(Locker, no_permission) {
   std::ofstream(lockdir.string()) << "content" << std::endl;
   fs::path lockfile{lockdir / "file"};
   EXPECT_ANY_THROW(sjef::Locker locker(lockfile); locker.bolt());
-  EXPECT_THROW(sjef::Locker locker(lockfile); locker.bolt(), std::runtime_error);
+  EXPECT_THROW(sjef::Locker locker(lockfile); locker.bolt(), std::domain_error);
   EXPECT_FALSE(fs::exists(lockfile));
   if (fs::exists(lockdir))
     fs::remove_all(lockdir);

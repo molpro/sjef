@@ -1583,7 +1583,7 @@ void sjef::Project::ensure_remote_server() const {
     backend = sjef::Backend::default_name;
   auto oldhost = m_remote_server->host;
   auto newhost = this->backend_get(backend, "host");
-  if (newhost == oldhost)
+  if ( (newhost == oldhost) && m_remote_server->process.running() )
     return;
   if (oldhost != "localhost" && m_remote_server->process.running()) {
     m_remote_server->process.terminate();

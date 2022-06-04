@@ -739,7 +739,7 @@ bool Project::run(int verbosity, bool force, bool wait) {
     m_trace(3 - verbosity) << "backend.cache + / + filename("
                               ","
                               ",rundir) "
-                           << backend.cache + "/" + filename("", "", rundir) << std::endl;
+                           << backend.cache + "/" + filename("", "", rundir).string() << std::endl;
     auto jobstring = std::string{"cd "} + backend.cache + "/" + filename("", "", rundir).string() + "; nohup " +
                      run_command + " " + optionstring + fs::path{filename("inp", "", rundir)}.filename().string();
     if (backend.run_jobnumber == "([0-9]+)")

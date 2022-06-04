@@ -740,7 +740,7 @@ bool Project::run(int verbosity, bool force, bool wait) {
                               ","
                               ",rundir) "
                            << fs::path{backend.cache} / filename("", "", rundir) << std::endl;
-    auto jobstring = std::string{"cd "} + (fs::path{backend.cache} / filename("", "", rundir)).string() + "; nohup " +
+    auto jobstring = std::string{"cd "} + backend.cache +"/" + filename("", "", rundir).string() + "; touch thingummy; nohup " +
                      run_command + " " + optionstring + fs::path{filename("inp", "", rundir)}.filename().string();
     if (backend.run_jobnumber == "([0-9]+)")
       jobstring += "& echo $! "; // go asynchronous if a straight launch
@@ -1330,11 +1330,11 @@ int Project::recent_find(const std::filesystem::path& filename) const {
 std::string Project::recent(const std::string& suffix, int number) {
   auto recent_projects_directory = expand_path(std::filesystem::path{"~"} / ".sjef" / suffix);
   fs::create_directories(recent_projects_directory);
-//  std::cout << "recent_projects_directory " << recent_projects_directory << std::endl;
+  //  std::cout << "recent_projects_directory " << recent_projects_directory << std::endl;
   std::ifstream in(expand_path(recent_projects_directory / "projects"));
   std::string line;
   for (int position = 0; in >> line;) {
-//    std::cout << "line " << line << std::endl;
+    //    std::cout << "line " << line << std::endl;
     if (fs::exists(line))
       ++position;
     if (position == number)
@@ -1544,6 +1544,7 @@ std::vector<std::string> sjef::Project::backend_names() const {
 
 std::mutex s_remote_server_mutex;
 std::string sjef::Project::remote_server_run(const std::string& command, int verbosity, bool wait) const {
+  std::cout << "@@ remote_server_run " << command << std::endl;
   const std::lock_guard lock(s_remote_server_mutex);
   m_trace(2 - verbosity) << command << std::endl;
   const std::string terminator{"@@@!!EOF"};

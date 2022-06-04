@@ -736,11 +736,11 @@ bool Project::run(int verbosity, bool force, bool wait) {
     cached_status(unknown);
     property_set("_private_sjef_project_backend_inactive", "0");
     property_set("_private_sjef_project_backend_inactive_synced", "0");
-    m_trace(3 - verbosity) << "fs::path{backend.cache} / filename("
+    m_trace(3 - verbosity) << "backend.cache + / + filename("
                               ","
                               ",rundir) "
-                           << fs::path{backend.cache} / filename("", "", rundir) << std::endl;
-    auto jobstring = std::string{"cd "} + backend.cache +"/" + filename("", "", rundir).string() + "; touch thingummy; nohup " +
+                           << backend.cache + "/" + filename("", "", rundir) << std::endl;
+    auto jobstring = std::string{"cd "} + backend.cache + "/" + filename("", "", rundir).string() + "; nohup " +
                      run_command + " " + optionstring + fs::path{filename("inp", "", rundir)}.filename().string();
     if (backend.run_jobnumber == "([0-9]+)")
       jobstring += "& echo $! "; // go asynchronous if a straight launch
@@ -1544,7 +1544,6 @@ std::vector<std::string> sjef::Project::backend_names() const {
 
 std::mutex s_remote_server_mutex;
 std::string sjef::Project::remote_server_run(const std::string& command, int verbosity, bool wait) const {
-  std::cout << "@@ remote_server_run " << command << std::endl;
   const std::lock_guard lock(s_remote_server_mutex);
   m_trace(2 - verbosity) << command << std::endl;
   const std::string terminator{"@@@!!EOF"};

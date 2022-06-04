@@ -392,7 +392,7 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
   rsync_options_first.emplace_back("--update");
   //  rsync_options_first.emplace_back("--mkpath"); // needs rsync >= 3.2.3
   rsync_options_first.emplace_back(m_filename.string() + "/");
-  rsync_options_first.emplace_back(backend.host + ":" + (fs::path{backend.cache} / m_filename).string());
+  rsync_options_first.emplace_back(backend.host + ":" + backend.cache + "/" + m_filename.string());
   m_trace(2 - verbosity) << "Push rsync: " << rsync_command;
   for (const auto& o : rsync_options_first)
     m_trace(2 - verbosity) << " '" << o << "'";
@@ -416,7 +416,7 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
       if (fs::exists(f))
         rsync_options_second.emplace_back("--exclude=" + f);
     }
-    rsync_options_second.emplace_back(backend.host + ":" + (fs::path{backend.cache} / m_filename).string() + "/");
+    rsync_options_second.emplace_back(backend.host + ":" + backend.cache + "/" + m_filename.string() + "/");
     rsync_options_second.emplace_back(m_filename.string());
     m_trace(2 - verbosity) << "Pull rsync: " << rsync_command;
     for (const auto& o : rsync_options_second)
@@ -736,11 +736,11 @@ bool Project::run(int verbosity, bool force, bool wait) {
     cached_status(unknown);
     property_set("_private_sjef_project_backend_inactive", "0");
     property_set("_private_sjef_project_backend_inactive_synced", "0");
-    m_trace(3 - verbosity) << "fs::path{backend.cache} / filename("
+    m_trace(3 - verbosity) << "backend.cache + / + filename("
                               ","
                               ",rundir) "
-                           << fs::path{backend.cache} / filename("", "", rundir) << std::endl;
-    auto jobstring = std::string{"cd "} + (fs::path{backend.cache} / filename("", "", rundir)).string() + "; nohup " +
+                           << backend.cache + "/" + filename("", "", rundir).string() << std::endl;
+    auto jobstring = std::string{"cd "} + backend.cache + "/" + filename("", "", rundir).string() + "; nohup " +
                      run_command + " " + optionstring + fs::path{filename("inp", "", rundir)}.filename().string();
     if (backend.run_jobnumber == "([0-9]+)")
       jobstring += "& echo $! "; // go asynchronous if a straight launch
@@ -1323,16 +1323,18 @@ int Project::recent_find(const std::string& suffix, const std::filesystem::path&
   return 0;
 }
 
-int Project::recent_find(const std::filesystem::path& filename) const { return recent_find(m_project_suffix, filename); }
+int Project::recent_find(const std::filesystem::path& filename) const {
+  return recent_find(m_project_suffix, filename);
+}
 
 std::string Project::recent(const std::string& suffix, int number) {
   auto recent_projects_directory = expand_path(std::filesystem::path{"~"} / ".sjef" / suffix);
   fs::create_directories(recent_projects_directory);
-  std::cout << "recent_projects_directory "<<recent_projects_directory<<std::endl;
+  //  std::cout << "recent_projects_directory " << recent_projects_directory << std::endl;
   std::ifstream in(expand_path(recent_projects_directory / "projects"));
   std::string line;
   for (int position = 0; in >> line;) {
-    std::cout << "line "<<line<<std::endl;
+    //    std::cout << "line " << line << std::endl;
     if (fs::exists(line))
       ++position;
     if (position == number)
@@ -1583,7 +1585,7 @@ void sjef::Project::ensure_remote_server() const {
     backend = sjef::Backend::default_name;
   auto oldhost = m_remote_server->host;
   auto newhost = this->backend_get(backend, "host");
-  if ( (newhost == oldhost) && m_remote_server->process.running() )
+  if ((newhost == oldhost) && m_remote_server->process.running())
     return;
   if (oldhost != "localhost" && m_remote_server->process.running()) {
     m_remote_server->process.terminate();
@@ -1632,8 +1634,8 @@ void sjef::Project::change_backend(std::string backend, bool force) {
     if (m_master_of_slave) {
       if (this->m_backends.at(backend).host != "localhost") {
         try {
-          remote_server_run(
-              std::string{"mkdir -p "} + (fs::path{this->m_backends.at(backend).cache} / m_filename).string(), 0);
+          remote_server_run(std::string{"mkdir -p "} + this->m_backends.at(backend).cache + "/" + m_filename.string(),
+                            0);
         } catch (runtime_error const& e) {
           m_warn.error() << "Error in launching remote job: " << e.what() << std::endl;
         }

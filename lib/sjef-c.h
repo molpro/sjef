@@ -7,7 +7,7 @@ extern "C" {
 #include <stddef.h>
 int sjef_project_open(const char* project);
 void sjef_project_close(const char* project);
-int sjef_project_copy(const char* project, const char* destination_filename, int keep_hash);
+int sjef_project_copy(const char* project, const char* destination_filename, int keep_hash, int keep_run_directories);
 int sjef_project_move(const char* project, const char* destination_filename);
 void sjef_project_erase(const char* project);
 void sjef_project_property_erase(const char* project);

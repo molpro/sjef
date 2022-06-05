@@ -157,9 +157,10 @@ public:
    * be generated
    * @param slave if set, (a) omit copying the run directory (b) do not register
    * the project in recent projects list
+   * @param keep_run_directories  Keep up to this number of run directories unless slave is set
    * @return true if the copy was successful
    */
-  bool copy(const std::filesystem::path& destination_filename, bool force = false, bool keep_hash = false, bool slave = false);
+  bool copy(const std::filesystem::path& destination_filename, bool force = false, bool keep_hash = false, bool slave = false, int keep_run_directories=std::numeric_limits<int>::max());
   /*!
    * @brief Move the project to another location
    * @param destination_filename
@@ -268,7 +269,6 @@ public:
   void wait(unsigned int maximum_microseconds = 10000) const;
   /*!
    * @brief Kill the job started by run()
-   * @return
    */
   void kill();
   /*!
@@ -328,8 +328,9 @@ public:
    * @param oldOutput Whether to remove old output files
    * @param output Whether to remove all output files
    * @param unused Whether to remove unused files
+   * @param keep_run_directories Maximum number of run directories to keep
    */
-  void clean(bool oldOutput = true, bool output = false, bool unused = false);
+  void clean(bool oldOutput = true, bool output = false, bool unused = false, int keep_run_directories=0);
   /*!
    * @brief Set a property
    * @param property

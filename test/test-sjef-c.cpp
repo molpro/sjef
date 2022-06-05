@@ -42,7 +42,7 @@ TEST(project, c_binding) {
   ASSERT_EQ(std::string{}, std::string{sjef_project_property_get(projectname, key)});
   ASSERT_EQ(std::string{}, std::string{sjef_project_property_get(projectname, "unknown key")});
   sjef_project_property_set(projectname, key, value);
-  sjef_project_copy(projectname, projectname2, 0);
+  sjef_project_copy(projectname, projectname2, 0, 0);
   //  std::cout << "after copy, from="<<projectname<<std::endl;
   //  if (system((std::string{"ls -ltraR "} + projectname).c_str())) { }
   //  if (system((std::string{"cat "} + projectname+"/Info.plist").c_str())) {}

@@ -102,13 +102,18 @@ TEST(project, copyMolpro) {
   savestate state;
   auto filename_old = state.testfile("copyMolproOld." + state.suffix());
   auto filename_new = state.testfile("copyMolproNew." + state.suffix());
+  sjef::Project::erase(filename_old);
+  sjef::Project::erase(filename_new);
   std::string input;
+  const int nkeep = 3;
   {
     sjef::Project p(filename_old);
     input = "geometry=" + p.name() + ".xyz";
     std::ofstream(p.filename("inp")) << input + "\n";
     std::ofstream(p.filename("xyz")) << "1\n\nHe 0 0 0\n";
-    p.copy(filename_new, true);
+    for (int i = 0; i < 5; ++i)
+      p.run_directory_new();
+    p.copy(filename_new, true, false, false, nkeep);
   }
   sjef::Project::erase(filename_old);
   EXPECT_FALSE(fs::exists(sjef::expand_path(filename_old)));
@@ -117,6 +122,7 @@ TEST(project, copyMolpro) {
   std::string inp;
   std::ifstream(p.filename("inp")) >> inp;
   EXPECT_EQ(inp, input);
+  EXPECT_EQ(p.run_list().size(), nkeep) << std::system((std::string{"ls -lR "} + p.filename().string()).c_str());
 }
 
 TEST(project, erase) {
@@ -160,6 +166,21 @@ TEST(project, clean) {
   ASSERT_TRUE(fs::is_directory(fs::path(filename) / fs::path(x.name() + ".d")));
   x.clean(true);
   ASSERT_FALSE(fs::is_directory(fs::path(filename) / fs::path(x.name() + ".d")));
+  const int ncreate = 5;
+  for (int nkeep = 0; nkeep < ncreate + 2; ++nkeep) {
+    x.clean(true, false, false, 0);
+    ASSERT_EQ(x.run_list().size(), 0);
+    for (int i = 0; i < ncreate; ++i)
+      x.run_directory_new();
+    ASSERT_EQ(x.run_list().size(), ncreate);
+    x.clean(true, false, false, nkeep);
+    ASSERT_EQ(x.run_list().size(), std::max(0, std::min(ncreate, nkeep)))
+        << std::system((std::string{"ls -lR "} + x.filename().string()).c_str());
+    int i = ncreate;
+    auto runlist = x.run_list();
+    for (auto it = runlist.begin(); it != runlist.end(); ++it)
+      ASSERT_EQ(i--, *it);
+  }
 }
 
 TEST(project, properties) {
@@ -214,7 +235,7 @@ TEST(project, recent_files) {
     auto suffix = state.suffix();
     auto rf = sjef::expand_path(std::filesystem::path{"~"} / ".sjef" / suffix / "projects");
     auto rf_ = rf;
-    rf_+=".save";
+    rf_ += ".save";
     auto oldfile = fs::exists(rf);
     if (oldfile)
       fs::rename(rf, rf_);

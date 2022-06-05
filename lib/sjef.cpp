@@ -80,7 +80,7 @@ bool copyDir(fs::path const& source, fs::path const& destination, bool delete_so
       if (recursive && !copyDir(current, destination / current.filename(), delete_source))
         return false;
     } else {
-      if (current.filename() != ".lock")
+      if (current.filename() != ".lock" && current.extension() != ".lock")
         fs::copy_file(current, destination / current.filename());
     }
   }
@@ -499,8 +499,11 @@ bool Project::move(const std::filesystem::path& destination_filename, bool force
   return false;
 }
 
-bool Project::copy(const std::filesystem::path& destination_filename, bool force, bool keep_hash, bool slave) {
+bool Project::copy(const std::filesystem::path& destination_filename, bool force, bool keep_hash, bool slave,
+                   int keep_run_directories) {
   auto dest = fs::absolute(expand_path(destination_filename, fs::path{m_filename}.extension().string().substr(1)));
+  if (slave)
+    keep_run_directories = 0;
   try { // try to synchronize if we can, but still do the copy if not
     if (!property_get("backend").empty())
       synchronize();
@@ -523,7 +526,7 @@ bool Project::copy(const std::filesystem::path& destination_filename, bool force
   dp.property_delete("jobnumber");
   if (slave)
     dp.property_delete("run_directories");
-  dp.clean(true, true);
+  dp.clean(true, true, false, keep_run_directories);
   if (!keep_hash)
     dp.property_delete("project_hash");
   return true;
@@ -773,7 +776,7 @@ bool Project::run(int verbosity, bool force, bool wait) {
   return false;
 }
 
-void Project::clean(bool oldOutput, bool output, bool unused) {
+void Project::clean(bool oldOutput, bool output, bool unused, int keep_run_directories) {
   if (oldOutput || output) {
     fs::remove_all(fs::path{filename()} / fs::path{name() + ".d"});
     for (int i = 0; i < 100; ++i) {
@@ -786,7 +789,9 @@ void Project::clean(bool oldOutput, bool output, bool unused) {
     fs::remove(fs::path{filename()} / fs::path{name() + "." + m_suffixes["xml"]});
   }
   if (unused)
-    throw runtime_error("sjef::project::clean for unused files is not yet implemented");
+    throw std::invalid_argument("sjef::project::clean for unused files is not yet implemented");
+  while (run_list().size() > keep_run_directories)
+    run_delete(*run_list().rbegin());
 }
 
 void Project::kill() {

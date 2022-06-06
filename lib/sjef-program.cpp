@@ -215,7 +215,7 @@ extern "C" int sjef_program(int argc, char* argv[]) {
         if (success)
           success = system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out", "", 0).string() + "\\'").c_str());
       } else if (command == "clean") {
-        proj.clean(true, false, false);
+        proj.clean(true, false, false, extras.empty() ? 0 : std::stoi(extras.front()));
       } else if (command == "property") {
         property_process(extras);
       } else if (command == "interactive") {

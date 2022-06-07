@@ -174,7 +174,7 @@ Project::Project(const std::filesystem::path& filename, bool construct, const st
                     "Info.plist")) // If this is a run-directory project, do not add to recent list
       recent_edit(m_filename);
 
-    m_backends.try_emplace(Backend::dummy_name, Backend::local(), sjef::Backend::dummy_name, "localhost", "{$PWD}",
+    m_backends.try_emplace(Backend::dummy_name, Backend::local(), sjef::Backend::dummy_name, "localhost", "${PWD}",
                            "dummy");
     if (!sjef::check_backends(m_project_suffix)) {
       auto config_file = expand_path(std::filesystem::path{"~"} / ".sjef" / m_project_suffix / "backends.xml");

@@ -43,7 +43,7 @@ extern "C" int sjef_program(int argc, char* argv[]) {
     allowedCommands.push_back("browse");
     description += "\nbrowse: Browse the output file using ${PAGER} (default less)";
     allowedCommands.push_back("clean");
-    description += "\nclean: Remove obsolete files";
+    description += "\nclean: Remove obsolete files, and, optionally old run directories. Normally all but the most recent run directory will be removed, but this can be modified using --run-directories";
     allowedCommands.push_back("run");
     description += "\nrun: Launch a job. Following arguments can specify any options to be given to the command run on "
                    "the backend.";
@@ -95,11 +95,12 @@ extern "C" int sjef_program(int argc, char* argv[]) {
     TCLAP::SwitchArg forceArg("f", "force", "Allow operations that would result in overwriting an existing file",
                               false);
     cmd.add(forceArg);
-    TCLAP::SwitchArg norunSwitch("n", "no-run-directories", "Do not copy run directories", false);
-    cmd.add(norunSwitch);
+    TCLAP::ValueArg<int> run_directories(
+            "r", "run-directories", "Specify the number of run directories to retain in copy or clean", false,
+            1, "integer", cmd);
     TCLAP::SwitchArg waitArg("w", "wait", "Wait for completion of a job launched by run", false);
     cmd.add(waitArg);
-    TCLAP::ValueArg<std::string> repeatArg("r", "repeat", "Just for debugging", false, "1", "integer", cmd);
+    TCLAP::ValueArg<std::string> repeatArg("", "repeat", "Just for debugging", false, "1", "integer", cmd);
     TCLAP::UnlabeledValueArg<std::string> projectArg(
         "project",
         "The file name of the project bundle. If it has no extension and the -s flag has not been used, the extension "
@@ -177,7 +178,7 @@ extern "C" int sjef_program(int argc, char* argv[]) {
       else if (command == "new") {
         success = proj.import_file(extras, forceArg.getValue());
       } else if (command == "copy")
-        proj.copy(extras.front(), forceArg.getValue(), false, norunSwitch.getValue());
+        proj.copy(extras.front(), forceArg.getValue(), false, false, run_directories.getValue());
       else if (command == "move")
         success = proj.move(extras.front(), forceArg.getValue());
       else if (command == "erase")
@@ -215,7 +216,7 @@ extern "C" int sjef_program(int argc, char* argv[]) {
         if (success)
           success = system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out", "", 0).string() + "\\'").c_str());
       } else if (command == "clean") {
-        proj.clean(true, false, false, extras.empty() ? 0 : std::stoi(extras.front()));
+        proj.clean(true, false, false, run_directories.getValue());
       } else if (command == "property") {
         property_process(extras);
       } else if (command == "interactive") {

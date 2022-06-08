@@ -9,9 +9,6 @@ static const auto program_name = std::string("Simple Job Execution Framework");
 #include <string>
 #include <tclap/CmdLine.h>
 #include <vector>
-#include <map>
-#include <string>
-#include <cstdlib>
 
 ///> @private
 extern "C" int sjef_program(int argc, char* argv[]) {
@@ -43,7 +40,8 @@ extern "C" int sjef_program(int argc, char* argv[]) {
     allowedCommands.push_back("browse");
     description += "\nbrowse: Browse the output file using ${PAGER} (default less)";
     allowedCommands.push_back("clean");
-    description += "\nclean: Remove obsolete files, and, optionally old run directories. Normally all but the most recent run directory will be removed, but this can be modified using --run-directories";
+    description += "\nclean: Remove obsolete files, and, optionally old run directories. Normally all but the most "
+                   "recent run directory will be removed, but this can be modified using --run-directories";
     allowedCommands.push_back("run");
     description += "\nrun: Launch a job. Following arguments can specify any options to be given to the command run on "
                    "the backend.";
@@ -95,9 +93,9 @@ extern "C" int sjef_program(int argc, char* argv[]) {
     TCLAP::SwitchArg forceArg("f", "force", "Allow operations that would result in overwriting an existing file",
                               false);
     cmd.add(forceArg);
-    TCLAP::ValueArg<int> run_directories(
-            "r", "run-directories", "Specify the number of run directories to retain in copy or clean", false,
-            1, "integer", cmd);
+    TCLAP::ValueArg<int> run_directories("r", "run-directories",
+                                         "Specify the number of run directories to retain in copy or clean", false, 1,
+                                         "integer", cmd);
     TCLAP::SwitchArg waitArg("w", "wait", "Wait for completion of a job launched by run", false);
     cmd.add(waitArg);
     TCLAP::ValueArg<std::string> repeatArg("", "repeat", "Just for debugging", false, "1", "integer", cmd);
@@ -129,154 +127,160 @@ extern "C" int sjef_program(int argc, char* argv[]) {
     if (extras.size() > 1 and
         (command != "import" and command != "export" and command != "run" and command != "property"))
       throw TCLAP::CmdLineParseException("Too many arguments on command line");
-    Project proj(
-        project, true, suffixSwitch.getValue(),
-        {{"inp", suffixInpSwitch.getValue()}, {"out", suffixOutSwitch.getValue()}, {"xml", suffixXmlSwitch.getValue()}},
-        nullptr);
-
-    auto allowedBackends = proj.backend_names();
-    auto backend = backendSwitch.getValue();
-    if (backend.empty())
-      backend = proj.property_get("backend");
-    if (backend.empty())
-      backend = "local";
-    proj.change_backend(backend);
-    if (verboseSwitch.getValue() > 1 or
-        std::find(allowedBackends.begin(), allowedBackends.end(), backend) == allowedBackends.end()) {
-      std::cout << "Project location: " << proj.filename() << std::endl;
-      std::cout << "Project backend: " << proj.property_get("backend") << std::endl;
-      std::cout << "Defined backends: " << std::endl;
-      for (const auto& n : allowedBackends)
-        std::cout << n << std::endl;
-    }
-    if (std::find(allowedBackends.begin(), allowedBackends.end(), backend) == allowedBackends.end())
-      throw std::runtime_error("Backend " + backend + " not defined or invalid");
-
-    auto property_process = [&proj](std::vector<std::string>& extras) {
-      for (const auto& keyval : extras) {
-        auto pos = keyval.find_first_of("=");
-        auto key = keyval;
-        std::string val;
-        if (pos != std::string::npos) {
-          key = keyval.substr(0, pos);
-          val = keyval.substr(pos + 1);
-          if (val.empty())
-            proj.property_delete(key);
-          else
-            proj.property_set(key, val);
-        }
-        std::cout << "Property " << key << " = " << proj.property_get(key) << std::endl;
-      }
-    };
-
     bool success = true;
-    for (int repeat = 0; repeat < std::stoi(repeatArg.getValue()); ++repeat) {
-      if (command == "import")
-        success = proj.import_file(extras, forceArg.getValue());
-      else if (command == "export")
-        success = proj.export_file(extras, forceArg.getValue());
-      else if (command == "new") {
-        success = proj.import_file(extras, forceArg.getValue());
-      } else if (command == "copy")
-        proj.copy(extras.front(), forceArg.getValue(), false, false, run_directories.getValue());
-      else if (command == "move")
-        success = proj.move(extras.front(), forceArg.getValue());
-      else if (command == "erase")
-        eraseCandidate = proj.filename().string();
-      else if (command == "wait") {
-        proj.wait();
-      } else if (command == "status") {
-        std::cout << proj.status_message(verboseSwitch.getValue()) << std::endl;
-      } else if (command == "kill")
-        proj.kill();
-      else if (command == "run") {
-        for (const auto& kv : backendParameterArg) {
-          auto pos = kv.find_first_of("=");
-          if (pos == std::string::npos)
-            throw std::runtime_error("--parameter value must be of the form key=value");
-          proj.backend_parameter_set(backend, kv.substr(0, pos), kv.substr(pos + 1));
-        }
-        if ((success = proj.run(backend, verboseSwitch.getValue(), forceArg.getValue(), waitArg.getValue())))
-          std::cout << "Job number: " << proj.property_get("jobnumber") << std::endl;
-        else if (proj.run_needed() or forceArg.getValue())
-          std::cerr << "Run failed to start, or job number could not be captured" << std::endl
-                    << "Status: " << proj.status_message(verboseSwitch.getValue()) << std::endl;
-        else
-          std::cerr << "Run not needed, so not started" << std::endl;
-      } else if (command == "sync") {
-        //      Project proj(project);
-        if (verboseSwitch.getValue() > 0)
-          std::cerr << "Synchronize project " << proj.filename() << std::endl;
-        success = proj.synchronize(verboseSwitch.getValue());
-      } else if (command == "edit")
-        success = system(("eval ${VISUAL:-${EDITOR:-vi}} \\'" + proj.filename("inp").string() + "\\'").c_str());
-      else if (command == "browse") {
-        if (!proj.property_get("backend").empty())
-          success = proj.synchronize(verboseSwitch.getValue());
-        if (success)
-          success = system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out", "", 0).string() + "\\'").c_str());
-      } else if (command == "clean") {
-        proj.clean(true, false, false, run_directories.getValue());
-      } else if (command == "property") {
-        property_process(extras);
-      } else if (command == "interactive") {
-        std::cout << "Interactive mode for project " << proj.filename() << std::endl;
-        proj.ensure_remote_server();
-        std::string line;
-        std::string prompt{"? "};
-        for (std::cout << prompt; std::getline(std::cin, line) and line != "exit"; std::cout << prompt) {
-          auto pos = line.find(" ");
-          auto command = (pos != std::string::npos ? line.substr(0, pos) : line);
-          auto arguments = (pos != std::string::npos ? line.substr(pos) : std::string{});
-          while (arguments.front() == ' ')
-            arguments.erase(0, 1);
-          //        std::cout << command << std::endl;
-          //        std::cout << arguments << std::endl;
-          if (command == "?" or command == "help")
-            std::cout << "Allowed commands: status, backend, sync, run, kill, wait, property, clean, edit, browse"
-                      << std::endl;
-          else if (command == "status")
-            std::cout << "Status: " << proj.status_message(verboseSwitch.getValue()) << std::endl;
-          else if (command == "backend") {
-            proj.change_backend(arguments);
-            std::cout << "backend changed to " << proj.property_get("backend") << std::endl;
-          } else if (command == "sync") {
-            proj.synchronize(verboseSwitch.getValue());
-          } else if (command == "run") {
-            if (proj.run(proj.property_get("backend"), verboseSwitch.getValue(), true, false))
-              std::cout << "Job number: " << proj.property_get("jobnumber") << std::endl;
+    { // scope for Project proj
+
+      Project proj(project, true, suffixSwitch.getValue(),
+                   {{"inp", suffixInpSwitch.getValue()},
+                    {"out", suffixOutSwitch.getValue()},
+                    {"xml", suffixXmlSwitch.getValue()}},
+                   nullptr);
+
+      auto allowedBackends = proj.backend_names();
+      auto backend = backendSwitch.getValue();
+      if (backend.empty())
+        backend = proj.property_get("backend");
+      if (backend.empty())
+        backend = "local";
+      proj.change_backend(backend);
+      if (verboseSwitch.getValue() > 1 or
+          std::find(allowedBackends.begin(), allowedBackends.end(), backend) == allowedBackends.end()) {
+        std::cout << "Project location: " << proj.filename() << std::endl;
+        std::cout << "Project backend: " << proj.property_get("backend") << std::endl;
+        std::cout << "Defined backends: " << std::endl;
+        for (const auto& n : allowedBackends)
+          std::cout << n << std::endl;
+      }
+      if (std::find(allowedBackends.begin(), allowedBackends.end(), backend) == allowedBackends.end())
+        throw std::runtime_error("Backend " + backend + " not defined or invalid");
+
+      auto property_process = [&proj](std::vector<std::string>& extras) {
+        for (const auto& keyval : extras) {
+          auto pos = keyval.find_first_of("=");
+          auto key = keyval;
+          std::string val;
+          if (pos != std::string::npos) {
+            key = keyval.substr(0, pos);
+            val = keyval.substr(pos + 1);
+            if (val.empty())
+              proj.property_delete(key);
             else
-              std::cout << "Job submission failed" << std::endl;
-          } else if (command == "kill") {
-            proj.kill();
-          } else if (command == "wait") {
-            proj.wait();
-          } else if (command == "property") {
-            auto argv = std::vector<std::string>{arguments};
-            property_process(argv);
-          } else if (command == "clean") {
-            proj.clean(true, false, false);
-          } else if (command == "edit") {
-            if (system(("eval ${VISUAL:-${EDITOR:-vi}} \\'" + proj.filename("inp").string() + "\\'").c_str()) != 0)
-              throw std::runtime_error("Editor failed");
-          } else if (command == "browse") {
-            if (!proj.property_get("backend").empty() and proj.synchronize(verboseSwitch.getValue())) {
-              if (system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out", "", 0).string() + "\\'").c_str()) != 0)
-                throw std::runtime_error("Editor failed");
-            }
-          } else
-            std::cout << "Unknown command: " << line << std::endl;
+              proj.property_set(key, val);
+          }
+          std::cout << "Property " << key << " = " << proj.property_get(key) << std::endl;
         }
-      } else
-        throw TCLAP::CmdLineParseException("Unknown subcommand: " + command);
+      };
+
+      for (int repeat = 0; repeat < std::stoi(repeatArg.getValue()); ++repeat) {
+        if (command == "import")
+          success = proj.import_file(extras, forceArg.getValue());
+        else if (command == "export")
+          success = proj.export_file(extras, forceArg.getValue());
+        else if (command == "new") {
+          success = proj.import_file(extras, forceArg.getValue());
+        } else if (command == "copy")
+          proj.copy(extras.front(), forceArg.getValue(), false, false, run_directories.getValue());
+        else if (command == "move")
+          success = proj.move(extras.front(), forceArg.getValue());
+        else if (command == "erase")
+          eraseCandidate = proj.filename().string();
+        else if (command == "wait") {
+          proj.wait();
+        } else if (command == "status") {
+          std::cout << proj.status_message(verboseSwitch.getValue()) << std::endl;
+        } else if (command == "kill")
+          proj.kill();
+        else if (command == "run") {
+          for (const auto& kv : backendParameterArg) {
+            auto pos = kv.find_first_of("=");
+            if (pos == std::string::npos)
+              throw std::runtime_error("--parameter value must be of the form key=value");
+            proj.backend_parameter_set(backend, kv.substr(0, pos), kv.substr(pos + 1));
+          }
+          if ((success = proj.run(backend, verboseSwitch.getValue(), forceArg.getValue(), waitArg.getValue())))
+            std::cout << "Job number: " << proj.property_get("jobnumber") << std::endl;
+          else if (proj.run_needed() or forceArg.getValue())
+            std::cerr << "Run failed to start, or job number could not be captured" << std::endl
+                      << "Status: " << proj.status_message(verboseSwitch.getValue()) << std::endl;
+          else
+            std::cerr << "Run not needed, so not started" << std::endl;
+        } else if (command == "sync") {
+          //      Project proj(project);
+          if (verboseSwitch.getValue() > 0)
+            std::cerr << "Synchronize project " << proj.filename() << std::endl;
+          success = proj.synchronize(verboseSwitch.getValue());
+        } else if (command == "edit")
+          success = system(("eval ${VISUAL:-${EDITOR:-vi}} \\'" + proj.filename("inp").string() + "\\'").c_str());
+        else if (command == "browse") {
+          if (!proj.property_get("backend").empty())
+            success = proj.synchronize(verboseSwitch.getValue());
+          if (success)
+            success =
+                system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out", "", 0).string() + "\\'").c_str());
+        } else if (command == "clean") {
+          proj.clean(true, false, false, run_directories.getValue());
+        } else if (command == "property") {
+          property_process(extras);
+        } else if (command == "interactive") {
+          std::cout << "Interactive mode for project " << proj.filename() << std::endl;
+          proj.ensure_remote_server();
+          std::string line;
+          std::string prompt{"? "};
+          for (std::cout << prompt; std::getline(std::cin, line) and line != "exit"; std::cout << prompt) {
+            auto pos = line.find(" ");
+            auto command = (pos != std::string::npos ? line.substr(0, pos) : line);
+            auto arguments = (pos != std::string::npos ? line.substr(pos) : std::string{});
+            while (arguments.front() == ' ')
+              arguments.erase(0, 1);
+            //        std::cout << command << std::endl;
+            //        std::cout << arguments << std::endl;
+            if (command == "?" or command == "help")
+              std::cout << "Allowed commands: status, backend, sync, run, kill, wait, property, clean, edit, browse"
+                        << std::endl;
+            else if (command == "status")
+              std::cout << "Status: " << proj.status_message(verboseSwitch.getValue()) << std::endl;
+            else if (command == "backend") {
+              proj.change_backend(arguments);
+              std::cout << "backend changed to " << proj.property_get("backend") << std::endl;
+            } else if (command == "sync") {
+              proj.synchronize(verboseSwitch.getValue());
+            } else if (command == "run") {
+              if (proj.run(proj.property_get("backend"), verboseSwitch.getValue(), true, false))
+                std::cout << "Job number: " << proj.property_get("jobnumber") << std::endl;
+              else
+                std::cout << "Job submission failed" << std::endl;
+            } else if (command == "kill") {
+              proj.kill();
+            } else if (command == "wait") {
+              proj.wait();
+            } else if (command == "property") {
+              auto argv = std::vector<std::string>{arguments};
+              property_process(argv);
+            } else if (command == "clean") {
+              proj.clean(true, false, false);
+            } else if (command == "edit") {
+              if (system(("eval ${VISUAL:-${EDITOR:-vi}} \\'" + proj.filename("inp").string() + "\\'").c_str()) != 0)
+                throw std::runtime_error("Editor failed");
+            } else if (command == "browse") {
+              if (!proj.property_get("backend").empty() and proj.synchronize(verboseSwitch.getValue())) {
+                if (system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out", "", 0).string() + "\\'")
+                               .c_str()) != 0)
+                  throw std::runtime_error("Editor failed");
+              }
+            } else
+              std::cout << "Unknown command: " << line << std::endl;
+          }
+        } else
+          throw TCLAP::CmdLineParseException("Unknown subcommand: " + command);
+      }
     }
+    if (not eraseCandidate.empty())
+      sjef::Project::erase(eraseCandidate);
     return success ? 0 : 1;
 
   } catch (TCLAP::ArgException& e) // catch any exceptions
   {
     std::cerr << "error: " << e.error() << " for arg " << e.argId() << std::endl;
   }
-  if (not eraseCandidate.empty())
-    sjef::Project::erase(eraseCandidate);
   return 0;
 }

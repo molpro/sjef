@@ -1274,6 +1274,8 @@ void Project::run_delete(int run) {
   if (run == 0)
     return;
   fs::remove_all(run_directory(run));
+  if (m_backend != "localhost")
+    remote_server_run(std::string{"rm -rf "}+m_backends.at(m_backend).cache+filename().string()+"/run/"+std::to_string(run)+"."+m_project_suffix);
   auto dirlist = run_list();
   dirlist.erase(run);
   std::stringstream ss;

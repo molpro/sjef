@@ -538,7 +538,7 @@ void Project::erase(const std::filesystem::path& filename, const std::string& de
     auto project = Project(filename_);
     backend = project.backends().at(project.m_backend);
   }
-  if (backend.host != "localhost")
+  if (backend.host != "localhost" and backend.host != "local")
     bp::child(bp::search_path("ssh"), backend.host, "rm", "-rf", backend.cache + "/" + filename_.string()).wait();
   if (fs::remove_all(filename_))
     recent_edit("", filename_);
@@ -1274,8 +1274,9 @@ void Project::run_delete(int run) {
   if (run == 0)
     return;
   fs::remove_all(run_directory(run));
-  if (m_backend != "localhost")
-    remote_server_run(std::string{"rm -rf "}+m_backends.at(m_backend).cache+filename().string()+"/run/"+std::to_string(run)+"."+m_project_suffix);
+  if (m_backend != "localhost" and m_backend != "local")
+    remote_server_run(std::string{"rm -rf "} + m_backends.at(m_backend).cache + filename().string() + "/run/" +
+                          std::to_string(run) + "." + m_project_suffix);
   auto dirlist = run_list();
   dirlist.erase(run);
   std::stringstream ss;

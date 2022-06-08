@@ -796,6 +796,8 @@ void Project::clean(bool oldOutput, bool output, bool unused, int keep_run_direc
   }
   if (unused)
     throw std::invalid_argument("sjef::project::clean for unused files is not yet implemented");
+  if (auto statuss = cached_status(); statuss == running || statuss == waiting)
+    keep_run_directories = std::max(keep_run_directories, 1);
   while (run_list().size() > keep_run_directories)
     run_delete(*run_list().rbegin());
 }
@@ -1276,7 +1278,7 @@ void Project::run_delete(int run) {
   fs::remove_all(run_directory(run));
   if (m_backend != "localhost" and m_backend != "local")
     remote_server_run(std::string{"rm -rf "} + m_backends.at(m_backend).cache + filename().string() + "/run/" +
-                          std::to_string(run) + "." + m_project_suffix);
+                      std::to_string(run) + "." + m_project_suffix);
   auto dirlist = run_list();
   dirlist.erase(run);
   std::stringstream ss;

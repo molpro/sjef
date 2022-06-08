@@ -129,6 +129,9 @@ extern "C" int sjef_program(int argc, char* argv[]) {
     if (extras.size() > 1 and
         (command != "import" and command != "export" and command != "run" and command != "property"))
       throw TCLAP::CmdLineParseException("Too many arguments on command line");
+    bool success = true;
+    { // scope for Project proj
+
     Project proj(
         project, true, suffixSwitch.getValue(),
         {{"inp", suffixInpSwitch.getValue()}, {"out", suffixOutSwitch.getValue()}, {"xml", suffixXmlSwitch.getValue()}},
@@ -169,7 +172,6 @@ extern "C" int sjef_program(int argc, char* argv[]) {
       }
     };
 
-    bool success = true;
     for (int repeat = 0; repeat < std::stoi(repeatArg.getValue()); ++repeat) {
       if (command == "import")
         success = proj.import_file(extras, forceArg.getValue());
@@ -270,13 +272,14 @@ extern "C" int sjef_program(int argc, char* argv[]) {
       } else
         throw TCLAP::CmdLineParseException("Unknown subcommand: " + command);
     }
+    }
+    if (not eraseCandidate.empty())
+      sjef::Project::erase(eraseCandidate);
     return success ? 0 : 1;
 
   } catch (TCLAP::ArgException& e) // catch any exceptions
   {
     std::cerr << "error: " << e.error() << " for arg " << e.argId() << std::endl;
   }
-  if (not eraseCandidate.empty())
-    sjef::Project::erase(eraseCandidate);
   return 0;
 }

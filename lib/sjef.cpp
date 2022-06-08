@@ -534,9 +534,15 @@ bool Project::copy(const std::filesystem::path& destination_filename, bool force
 
 void Project::erase(const std::filesystem::path& filename, const std::string& default_suffix) {
   auto filename_ = sjef::expand_path(filename, default_suffix);
-  if (fs::remove_all(filename_)) {
-    recent_edit("", filename_);
+  Backend backend;
+  {
+    auto project = Project(filename_);
+    backend = project.backends().at(project.m_backend);
   }
+  if (backend.host != "localhost")
+    bp::child(bp::search_path("ssh"), backend.host, "rm", "-rf", backend.cache + "/" + filename_.string()).wait();
+  if (fs::remove_all(filename_))
+    recent_edit("", filename_);
 }
 
 static std::vector<std::string> splitString(const std::string& input, char c = ' ', char quote = '\'') {

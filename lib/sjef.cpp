@@ -174,8 +174,7 @@ Project::Project(const std::filesystem::path& filename, bool construct, const st
                     "Info.plist")) // If this is a run-directory project, do not add to recent list
       recent_edit(m_filename);
 
-    m_backends.try_emplace(Backend::dummy_name, Backend::local(), sjef::Backend::dummy_name, "localhost", "${PWD}",
-                           "dummy");
+    m_backends.try_emplace(Backend::dummy_name, Backend::local());
     if (!sjef::check_backends(m_project_suffix)) {
       auto config_file = expand_path(std::filesystem::path{"~"} / ".sjef" / m_project_suffix / "backends.xml");
       m_warn.error() << "contents of " << config_file << ":" << std::endl;
@@ -741,7 +740,7 @@ bool Project::run(int verbosity, bool force, bool wait) {
     m_trace(2 - verbosity) << "run remote job on " << backend.name << std::endl;
     bp::ipstream c_err;
     bp::ipstream c_out;
-    synchronize(verbosity, false, true);
+    synchronize(verbosity - 1, false, true);
     cached_status(unknown);
     property_set("_private_sjef_project_backend_inactive", "0");
     property_set("_private_sjef_project_backend_inactive_synced", "0");
@@ -749,8 +748,9 @@ bool Project::run(int verbosity, bool force, bool wait) {
                               ","
                               ",rundir) "
                            << backend.cache + "/" + filename("", "", rundir).string() << std::endl;
-    auto jobstring = std::string{"cd "} + backend.cache + "/" + filename("", "", rundir).string() + "; nohup " +
-                     run_command + " " + optionstring + fs::path{filename("inp", "", rundir)}.filename().string();
+    auto jobstring = std::string{"cd "} + backend.cache + filename("", "", rundir).string() + "; nohup " + run_command +
+                     " " + optionstring + fs::path{filename("inp", "", rundir)}.filename().string() + " >" +
+                     fs::path{filename("joblog", "", rundir)}.filename().string() + " 2>&1 ";
     if (backend.run_jobnumber == "([0-9]+)")
       jobstring += "& echo $! "; // go asynchronous if a straight launch
     m_trace(5 - verbosity) << "backend.run_jobnumber " << backend.run_jobnumber << std::endl;
@@ -765,7 +765,7 @@ bool Project::run(int verbosity, bool force, bool wait) {
                                                                     std::chrono::system_clock::now().time_since_epoch())
                                                                     .count()));
     p_status_mutex.reset();
-    synchronize(verbosity, false, true);
+    synchronize(verbosity - 1, false, true);
     status(0, false);
     m_trace(5 - verbosity) << "run_output " << run_output << std::endl;
     std::smatch match;

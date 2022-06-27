@@ -95,6 +95,12 @@ extern "C" int sjef_program(int argc, char* argv[]) {
     TCLAP::SwitchArg forceArg("f", "force", "Allow operations that would result in overwriting an existing file",
                               false);
     cmd.add(forceArg);
+    TCLAP::SwitchArg nomonitorArg("M", "no-monitor", "Do not attempt to monitor job status or other background activity",
+                              false);
+    cmd.add(nomonitorArg);
+    TCLAP::SwitchArg nosyncArg("S", "no-sync", "Do not attempt to synchronise with remote backend",
+                              false);
+    cmd.add(nosyncArg);
     TCLAP::ValueArg<int> run_directories(
             "r", "run-directories", "Specify the number of run directories to retain in copy or clean", false,
             1, "integer", cmd);
@@ -132,7 +138,7 @@ extern "C" int sjef_program(int argc, char* argv[]) {
     Project proj(
         project, true, suffixSwitch.getValue(),
         {{"inp", suffixInpSwitch.getValue()}, {"out", suffixOutSwitch.getValue()}, {"xml", suffixXmlSwitch.getValue()}},
-        nullptr);
+        nullptr, not nomonitorArg.getValue(), not nosyncArg.getValue());
 
     auto allowedBackends = proj.backend_names();
     auto backend = backendSwitch.getValue();

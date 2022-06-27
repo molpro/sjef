@@ -120,12 +120,13 @@ inline void prune_lockers(const fs::path& filename) {
 }
 const std::vector<std::string> Project::suffix_keys{"inp", "out", "xml"};
 Project::Project(const std::filesystem::path& filename, bool construct, const std::string& default_suffix,
-                 const mapstringstring_t& suffixes, const Project* masterProject)
+                 const mapstringstring_t& suffixes, const Project* masterProject, bool monitor, bool sync)
     : m_project_suffix(get_project_suffix(filename, default_suffix)),
       m_filename(expand_path(filename, m_project_suffix)), m_properties(std::make_unique<pugi_xml_document>()),
       m_suffixes(suffixes), m_backend_doc(std::make_unique<pugi_xml_document>()), m_master_instance(masterProject),
       m_master_of_slave(masterProject == nullptr), m_locker(make_locker(m_filename)),
-      m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}) {
+      m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}), m_monitor(std::move(monitor)),
+      m_sync(std::move(sync)) {
   {
     auto lock = m_locker->bolt();
     if (fs::exists(propertyFile())) {
@@ -337,6 +338,7 @@ bool Project::export_file(const fs::path& file, bool overwrite) {
 
 std::mutex synchronize_mutex;
 bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
+  if (not m_sync) return true;
   m_trace(2 - verbosity) << "Project::synchronize(" << verbosity << ", " << nostatus << ", " << force << ") "
                          << (m_master_of_slave ? "master" : "slave") << std::endl;
   auto backend_name = property_get("backend");
@@ -671,7 +673,6 @@ mapstringstring_t Project::backend_parameters(const std::string& backend, bool d
 }
 
 bool Project::run(int verbosity, bool force, bool wait) {
-
   if (auto stat = status(verbosity); stat == running || stat == waiting)
     return false;
 
@@ -732,6 +733,7 @@ bool Project::run(int verbosity, bool force, bool wait) {
       this->wait();
     return true;
   } else { // remote host
+    if (not m_sync) throw std::logic_error("Cannot start a remote job when Project has been constructed with watch=false");
     m_trace(2 - verbosity) << "run remote job on " << backend.name << std::endl;
     bp::ipstream c_err;
     bp::ipstream c_out;
@@ -810,6 +812,7 @@ void Project::kill() {
     else
       bp::spawn(executable(be.kill_command), pid);
   } else {
+    if (not m_sync) throw std::logic_error("Cannot kill a remote job when Project has been constructed with watch=false");
     ensure_remote_server();
     remote_server_run(be.kill_command + " " + pid, 0, false);
   }
@@ -997,6 +1000,7 @@ status Project::status(int verbosity, bool cached) const {
     }
     c.wait();
   } else {
+    if (not m_monitor) throw std::logic_error("Cannot get status for remote jobs when Project has been constructed with watch=false");
     m_trace(3 - verbosity) << "remote status " << be.host << ":" << be.status_command << ":" << pid << std::endl;
     ensure_remote_server();
     {
@@ -1549,6 +1553,7 @@ std::vector<std::string> sjef::Project::backend_names() const {
 
 std::mutex s_remote_server_mutex;
 std::string sjef::Project::remote_server_run(const std::string& command, int verbosity, bool wait) const {
+  if (not m_monitor) throw std::logic_error("remote_server_run() unavailable when Project created with watch=false");
   const std::lock_guard lock(s_remote_server_mutex);
   m_trace(2 - verbosity) << command << std::endl;
   const std::string terminator{"@@@!!EOF"};
@@ -1578,6 +1583,7 @@ std::string sjef::Project::remote_server_run(const std::string& command, int ver
   return m_remote_server->last_out;
 }
 void sjef::Project::ensure_remote_server() const {
+  if (not m_monitor) return;
   if (m_master_instance != nullptr) {
     m_remote_server = m_master_instance->m_remote_server;
     return;
@@ -1613,7 +1619,7 @@ void sjef::Project::ensure_remote_server() const {
 }
 
 void sjef::Project::shutdown_backend_watcher() {
-  if (!m_master_of_slave)
+  if (!m_master_of_slave or !m_monitor)
     return;
   m_unmovables.shutdown_flag.test_and_set();
   if (m_backend_watcher.joinable())
@@ -1636,7 +1642,7 @@ void sjef::Project::change_backend(std::string backend, bool force) {
     property_set("backend", backend);
     cached_status(unevaluated);
     ensure_remote_server();
-    if (m_master_of_slave) {
+    if (m_monitor and m_master_of_slave) {
       if (this->m_backends.at(backend).host != "localhost") {
         try {
           remote_server_run(std::string{"mkdir -p "} + this->m_backends.at(backend).cache + "/" + m_filename.string(),

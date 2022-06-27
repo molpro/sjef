@@ -678,6 +678,7 @@ mapstringstring_t Project::backend_parameters(const std::string& backend, bool d
 }
 
 bool Project::run(int verbosity, bool force, bool wait) {
+
   if (auto stat = status(verbosity); stat == running || stat == waiting)
     return false;
 

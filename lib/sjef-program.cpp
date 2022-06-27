@@ -102,9 +102,6 @@ extern "C" int sjef_program(int argc, char* argv[]) {
     TCLAP::SwitchArg nosyncArg("S", "no-sync", "Do not attempt to synchronise with remote backend",
                               false);
     cmd.add(nosyncArg);
-    TCLAP::ValueArg<int> run_directories(
-            "r", "run-directories", "Specify the number of run directories to retain in copy or clean", false,
-            1, "integer", cmd);
     TCLAP::SwitchArg waitArg("w", "wait", "Wait for completion of a job launched by run", false);
     cmd.add(waitArg);
     TCLAP::ValueArg<std::string> repeatArg("", "repeat", "Just for debugging", false, "1", "integer", cmd);
@@ -143,11 +140,7 @@ extern "C" int sjef_program(int argc, char* argv[]) {
                    {{"inp", suffixInpSwitch.getValue()},
                     {"out", suffixOutSwitch.getValue()},
                     {"xml", suffixXmlSwitch.getValue()}},
-                   nullptr);
-    Project proj(
-        project, true, suffixSwitch.getValue(),
-        {{"inp", suffixInpSwitch.getValue()}, {"out", suffixOutSwitch.getValue()}, {"xml", suffixXmlSwitch.getValue()}},
-        nullptr, not nomonitorArg.getValue(), not nosyncArg.getValue());
+                   nullptr, not nomonitorArg.getValue(), not nosyncArg.getValue());
 
       auto allowedBackends = proj.backend_names();
       auto backend = backendSwitch.getValue();

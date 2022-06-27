@@ -147,7 +147,7 @@ public:
    */
   explicit Project(const std::filesystem::path& filename, bool construct = true, const std::string& default_suffix = "",
                    const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}},
-                   const Project* masterProject = nullptr, bool monitor = true, bool sync = true);
+                    bool monitor = true, bool sync = true, const Project* masterProject = nullptr);
   //  explicit Project(const std::string& filename, bool construct = true, const std::string& default_suffix = "",
 //                   const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}}) : Project(std::filesystem::path(filename),construct,default_suffix,suffixes) {}
   Project(const Project& source) = delete;

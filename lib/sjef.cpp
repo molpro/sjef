@@ -120,7 +120,7 @@ inline void prune_lockers(const fs::path& filename) {
 }
 const std::vector<std::string> Project::suffix_keys{"inp", "out", "xml"};
 Project::Project(const std::filesystem::path& filename, bool construct, const std::string& default_suffix,
-                 const mapstringstring_t& suffixes, const Project* masterProject, bool monitor, bool sync)
+                 const mapstringstring_t& suffixes, bool monitor, bool sync, const Project* masterProject)
     : m_project_suffix(get_project_suffix(filename, default_suffix)),
       m_filename(expand_path(filename, m_project_suffix)), m_properties(std::make_unique<pugi_xml_document>()),
       m_suffixes(suffixes), m_backend_doc(std::make_unique<pugi_xml_document>()), m_master_instance(masterProject),
@@ -1671,7 +1671,7 @@ void sjef::Project::change_backend(std::string backend, bool force) {
 
 void sjef::Project::backend_watcher(sjef::Project& project_, int min_wait_milliseconds, int max_wait_milliseconds,
                                     int poll_milliseconds) {
-  project_.m_backend_watcher_instance.reset(new sjef::Project(project_.m_filename, true, "", {{}}, &project_));
+  project_.m_backend_watcher_instance.reset(new sjef::Project(project_.m_filename, true, "", {{}}, project_.m_monitor, project_.m_sync, &project_));
   const auto& project = *project_.m_backend_watcher_instance.get();
   if (max_wait_milliseconds <= 0)
     max_wait_milliseconds = min_wait_milliseconds;

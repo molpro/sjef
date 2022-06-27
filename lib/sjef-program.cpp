@@ -140,7 +140,7 @@ extern "C" int sjef_program(int argc, char* argv[]) {
                    {{"inp", suffixInpSwitch.getValue()},
                     {"out", suffixOutSwitch.getValue()},
                     {"xml", suffixXmlSwitch.getValue()}},
-                   nullptr, not nomonitorArg.getValue(), not nosyncArg.getValue());
+                    not nomonitorArg.getValue(), not nosyncArg.getValue(), nullptr);
 
       auto allowedBackends = proj.backend_names();
       auto backend = backendSwitch.getValue();

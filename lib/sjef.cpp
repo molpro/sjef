@@ -175,8 +175,7 @@ Project::Project(const std::filesystem::path& filename, bool construct, const st
                     "Info.plist")) // If this is a run-directory project, do not add to recent list
       recent_edit(m_filename);
 
-    m_backends.try_emplace(Backend::dummy_name, Backend::local(), sjef::Backend::dummy_name, "localhost", "{$PWD}",
-                           "dummy");
+    m_backends.try_emplace(Backend::dummy_name, Backend::local());
     if (!sjef::check_backends(m_project_suffix)) {
       auto config_file = expand_path(std::filesystem::path{"~"} / ".sjef" / m_project_suffix / "backends.xml");
       m_warn.error() << "contents of " << config_file << ":" << std::endl;
@@ -536,9 +535,15 @@ bool Project::copy(const std::filesystem::path& destination_filename, bool force
 
 void Project::erase(const std::filesystem::path& filename, const std::string& default_suffix) {
   auto filename_ = sjef::expand_path(filename, default_suffix);
-  if (fs::remove_all(filename_)) {
-    recent_edit("", filename_);
+  Backend backend;
+  {
+    auto project = Project(filename_);
+    backend = project.backends().at(project.m_backend);
   }
+  if (backend.host != "localhost" and backend.host != "local")
+    bp::child(bp::search_path("ssh"), backend.host, "rm", "-rf", backend.cache + "/" + filename_.string()).wait();
+  if (fs::remove_all(filename_))
+    recent_edit("", filename_);
 }
 
 static std::vector<std::string> splitString(const std::string& input, char c = ' ', char quote = '\'') {
@@ -737,7 +742,7 @@ bool Project::run(int verbosity, bool force, bool wait) {
     m_trace(2 - verbosity) << "run remote job on " << backend.name << std::endl;
     bp::ipstream c_err;
     bp::ipstream c_out;
-    synchronize(verbosity, false, true);
+    synchronize(verbosity - 1, false, true);
     cached_status(unknown);
     property_set("_private_sjef_project_backend_inactive", "0");
     property_set("_private_sjef_project_backend_inactive_synced", "0");
@@ -745,8 +750,9 @@ bool Project::run(int verbosity, bool force, bool wait) {
                               ","
                               ",rundir) "
                            << backend.cache + "/" + filename("", "", rundir).string() << std::endl;
-    auto jobstring = std::string{"cd "} + backend.cache + "/" + filename("", "", rundir).string() + "; nohup " +
-                     run_command + " " + optionstring + fs::path{filename("inp", "", rundir)}.filename().string();
+    auto jobstring = std::string{"cd "} + backend.cache + filename("", "", rundir).string() + "; nohup " + run_command +
+                     " " + optionstring + fs::path{filename("inp", "", rundir)}.filename().string() + " >" +
+                     fs::path{filename("joblog", "", rundir)}.filename().string() + " 2>&1 ";
     if (backend.run_jobnumber == "([0-9]+)")
       jobstring += "& echo $! "; // go asynchronous if a straight launch
     m_trace(5 - verbosity) << "backend.run_jobnumber " << backend.run_jobnumber << std::endl;
@@ -761,7 +767,7 @@ bool Project::run(int verbosity, bool force, bool wait) {
                                                                     std::chrono::system_clock::now().time_since_epoch())
                                                                     .count()));
     p_status_mutex.reset();
-    synchronize(verbosity, false, true);
+    synchronize(verbosity - 1, false, true);
     status(0, false);
     m_trace(5 - verbosity) << "run_output " << run_output << std::endl;
     std::smatch match;
@@ -792,6 +798,8 @@ void Project::clean(bool oldOutput, bool output, bool unused, int keep_run_direc
   }
   if (unused)
     throw std::invalid_argument("sjef::project::clean for unused files is not yet implemented");
+  if (auto statuss = cached_status(); statuss == running || statuss == waiting)
+    keep_run_directories = std::max(keep_run_directories, 1);
   while (run_list().size() > keep_run_directories)
     run_delete(*run_list().rbegin());
 }
@@ -1272,6 +1280,9 @@ void Project::run_delete(int run) {
   if (run == 0)
     return;
   fs::remove_all(run_directory(run));
+  if (m_backend != "localhost" and m_backend != "local")
+    remote_server_run(std::string{"rm -rf "} + m_backends.at(m_backend).cache + filename().string() + "/run/" +
+                      std::to_string(run) + "." + m_project_suffix);
   auto dirlist = run_list();
   dirlist.erase(run);
   std::stringstream ss;

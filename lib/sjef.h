@@ -114,6 +114,8 @@ private:
   std::unique_ptr<Project> m_backend_watcher_instance;
   const Project* m_master_instance;
   bool m_master_of_slave;
+  bool m_monitor;
+  bool m_sync;
   mutable std::mutex m_status_mutex;
   mutable std::mutex m_remote_server_mutex;
   mutable std::mutex m_synchronize_mutex;
@@ -139,11 +141,14 @@ public:
    * @param suffixes The file suffixes for special (input, output) files within
    * the project
    * @param masterProject For internal use only
+   * @param monitor Whether to spawn threads that continuously monitor state. If false, no attempt is made to monitor
+   * the status of local or remote jobs, and submission of remote jobs is not allowed
+   * @param sync Whether to synchronise with remote backend
    */
   explicit Project(const std::filesystem::path& filename, bool construct = true, const std::string& default_suffix = "",
                    const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}},
-                   const Project* masterProject = nullptr);
-//  explicit Project(const std::string& filename, bool construct = true, const std::string& default_suffix = "",
+                    bool monitor = true, bool sync = true, const Project* masterProject = nullptr);
+  //  explicit Project(const std::string& filename, bool construct = true, const std::string& default_suffix = "",
 //                   const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}}) : Project(std::filesystem::path(filename),construct,default_suffix,suffixes) {}
   Project(const Project& source) = delete;
   Project(const Project&& source) = delete;

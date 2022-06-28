@@ -739,7 +739,7 @@ bool Project::run(int verbosity, bool force, bool wait) {
       this->wait();
     return true;
   } else { // remote host
-    if (not m_sync) throw std::logic_error("Cannot start a remote job when Project has been constructed with watch=false");
+    if (not m_sync) throw std::logic_error("Cannot start a remote job when Project has been constructed with sync=false");
     m_trace(2 - verbosity) << "run remote job on " << backend.name << std::endl;
     bp::ipstream c_err;
     bp::ipstream c_out;
@@ -821,7 +821,7 @@ void Project::kill() {
     else
       bp::spawn(executable(be.kill_command), pid);
   } else {
-    if (not m_sync) throw std::logic_error("Cannot kill a remote job when Project has been constructed with watch=false");
+    if (not m_sync) throw std::logic_error("Cannot kill a remote job when Project has been constructed with sync=false");
     ensure_remote_server();
     remote_server_run(be.kill_command + " " + pid, 0, false);
   }

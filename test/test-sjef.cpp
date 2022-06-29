@@ -367,6 +367,30 @@ TEST(project, spawn_many_dummy) {
   }
 }
 
+TEST(project, many_projects) {
+  constexpr int n_projects = 500;
+  constexpr int n_projects_with_jobs = 10;
+  savestate state;
+  std::vector<std::unique_ptr<sjef::Project>> projects;
+  projects.reserve(n_projects);
+  for (int i = 0; i < n_projects; ++i)
+    projects.emplace_back(new sjef::Project(state.testproject(std::string{"many_projects_"} + std::to_string(i)),true,"molpro",{},i<n_projects_with_jobs,i<n_projects_with_jobs));
+  const auto& backend = sjef::Backend::dummy_name;
+  for (auto& p : projects)
+    EXPECT_EQ(p->status(), sjef::status::completed);
+  for (int i = 0; i < n_projects_with_jobs; ++i) {
+    const auto& p = projects[i];
+    { std::ofstream(p->filename("inp")) << ""; }
+    ASSERT_TRUE(p->run(backend, -1, true, false));
+    EXPECT_NE(p->property_get("jobnumber"), "-1");
+  }
+  for (int i = 0; i < n_projects_with_jobs; ++i) {
+    const auto& p = projects[i];
+    p->wait();
+    EXPECT_EQ(p->status(false), sjef::completed);
+  }
+}
+
 #ifndef WIN32
 TEST(project, early_change_backend) {
   savestate state;

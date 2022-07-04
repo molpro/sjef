@@ -124,9 +124,8 @@ Project::Project(const std::filesystem::path& filename, bool construct, const st
     : m_project_suffix(get_project_suffix(filename, default_suffix)),
       m_filename(expand_path(filename, m_project_suffix)), m_properties(std::make_unique<pugi_xml_document>()),
       m_suffixes(suffixes), m_backend_doc(std::make_unique<pugi_xml_document>()), m_master_instance(masterProject),
-      m_master_of_slave(masterProject == nullptr), m_locker(make_locker(m_filename)),
-      m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}), m_monitor(std::move(monitor)),
-      m_sync(std::move(sync)) {
+      m_master_of_slave(masterProject == nullptr), m_monitor(std::move(monitor)), m_sync(std::move(sync)),
+      m_locker(make_locker(m_filename)), m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}) {
   {
     auto lock = m_locker->bolt();
     if (fs::exists(propertyFile())) {

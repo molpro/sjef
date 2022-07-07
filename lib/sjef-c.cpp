@@ -47,7 +47,7 @@ int sjef_project_copy(const char* project, const char* destination_filename, int
   try {
     if (projects.count(project) == 0)
       sjef_project_open(project);
-    return (projects.at(project)->copy(destination_filename, keep_hash != 0, keep_run_directories) ? 1 : 0);
+    return (projects.at(project)->copy(destination_filename, false, keep_hash != 0, false, keep_run_directories) ? 1 : 0);
   } catch (std::exception& e) {
     error(e);
   } catch (...) {

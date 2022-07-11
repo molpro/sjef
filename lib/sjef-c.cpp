@@ -71,7 +71,8 @@ void sjef_project_erase(const char* project) {
   try {
     if (projects.count(project) != 0)
       sjef_project_close(project);
-    fs::remove_all(sjef::Project(project, false).filename());
+    const auto& path = sjef::Project(project, false).filename();
+    sjef::Project::erase(path);
   } catch (std::exception& e) {
     error(e);
   } catch (...) {

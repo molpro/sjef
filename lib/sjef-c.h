@@ -26,6 +26,7 @@ char* sjef_project_property_get(const char* project, const char* key);
 char** sjef_project_properties_get(const char* project, const char** key);
 void sjef_project_property_delete(const char* project, const char* key);
 char* sjef_project_filename(const char* project);
+const char* sjef_project_backend_cache(const char* project);
 /*!
  * @brief Get the file name of the bundle, or a primary file of particular type, or a general file in the bundle
  * @param project The project

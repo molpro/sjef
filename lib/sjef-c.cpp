@@ -552,4 +552,16 @@ unsigned int sjef_project_current_run(const char* project) {
   }
   return 0;
 }
+
+const char* sjef_project_backend_cache(const char* project) {
+  try {
+    if (projects.count(project) == 0)
+      sjef_project_open(project);
+    return strdup(projects.at(project)->backend_cache().c_str());
+  } catch (std::exception& e) {
+    error(e);
+  } catch (...) {
+  }
+  return nullptr;
+}
 }

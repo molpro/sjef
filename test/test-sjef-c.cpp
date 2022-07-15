@@ -42,6 +42,8 @@ TEST(project, c_binding) {
   ASSERT_EQ(std::string{}, std::string{sjef_project_property_get(projectname, key)});
   ASSERT_EQ(std::string{}, std::string{sjef_project_property_get(projectname, "unknown key")});
   sjef_project_property_set(projectname, key, value);
+  ASSERT_NE(sjef_project_backend_cache(projectname),nullptr);
+  EXPECT_NE(std::string{sjef_project_backend_cache(projectname)},"");
   sjef_project_copy(projectname, projectname2, 0, 0);
   //  std::cout << "after copy, from="<<projectname<<std::endl;
   //  if (system((std::string{"ls -ltraR "} + projectname).c_str())) { }

@@ -367,6 +367,17 @@ TEST(project, spawn_many_dummy) {
   }
 }
 
+TEST(project, backend_cache) {
+  savestate state;
+  sjef::Project p(state.testproject("backend_cache"));
+  { std::ofstream(p.filename("inp")) << ""; }
+  const auto& backend = sjef::Backend::dummy_name;
+  ASSERT_TRUE(p.run(backend, -1, true, true));
+  auto host = p.backends().at(backend).host;
+  auto cache = p.backends().at(backend).cache + std::filesystem::path::preferred_separator + p.filename().string();
+  EXPECT_EQ(p.backend_cache(), host + ":" + cache);
+}
+
 TEST(project, many_projects) {
   constexpr int n_projects = 500;
   constexpr int n_projects_with_jobs = 10;

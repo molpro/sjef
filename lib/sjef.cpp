@@ -1803,4 +1803,9 @@ std::vector<std::string> Project::xpath_search(const std::string& xpath_query, c
   return result;
 }
 
+const std::string Project::backend_cache() const {
+  auto& backend = m_backends.at(m_backend);
+  return backend.host + ":" + backend.cache + "/" + m_filename.string();
+}
+
 } // namespace sjef

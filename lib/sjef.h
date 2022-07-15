@@ -475,6 +475,11 @@ private:
 
 public:
   std::filesystem::path propertyFile() const;
+  /*!
+   * @brief Get the location of the backend cache
+   * @return host, path
+   */
+  const std::string backend_cache() const;
 
 private:
   std::string cache(const Backend& backend) const;

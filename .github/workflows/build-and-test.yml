@@ -15,7 +15,7 @@ jobs:
   cmake-build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       packages: write
     container:
       # relies on repository name being all lower case

@@ -26,11 +26,8 @@ jobs:
         run: |
           git config --global --add safe.directory ${{github.workspace}}
           cmake --build ${{github.workspace}}/build --target sjef-doc
-          rsync -av ${{github.workspace}}/build/docs/${{ github.event.repository.name }}/html .
           mkdir -p html/DoxygenTagFiles
           find ${{github.workspace}}/build/docs -name '*.tag' -exec cp {} html/DoxygenTagFiles \;
-          find ${{github.workspace}}/build/docs -name 'iostream*.html' -exec cat {} \;
-          ls -ltRa html
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3.8.0

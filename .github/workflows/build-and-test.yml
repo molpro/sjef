@@ -47,7 +47,9 @@ jobs:
 
     - name: Test
       if: steps.check_configuration.outputs.files_exists == 'true'
-      run: cd ${{github.workspace}}/build && ctest -C ${{env.CMAKE_BUILD_TYPE}} -V
+      run: |
+        ssh -v localhost hostname
+        cd ${{github.workspace}}/build && ctest -C ${{env.CMAKE_BUILD_TYPE}}
 
     - name: Build doxygen
       run: cmake --build ${{github.workspace}}/build --target sjef-doc

@@ -27,7 +27,8 @@ jobs:
           git config --global --add safe.directory ${{github.workspace}}
           cmake --build ${{github.workspace}}/build --target sjef-doc
           mkdir -p html/DoxygenTagFiles
-          find ${{github.workspace}}/build/docs -name '*.tag' -exec cp {} html/DoxygenTagFiles \;
+          find ${{github.workspace}}/build -name '*.tag' -exec ls -l {} \;
+          find ${{github.workspace}}/build -name '*.tag' -exec cp {} html/DoxygenTagFiles \;
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3.8.0

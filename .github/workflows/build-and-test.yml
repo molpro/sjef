@@ -23,6 +23,7 @@ jobs:
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
+    timeout-minutes: 20
 
     steps:
     - uses: actions/checkout@v3

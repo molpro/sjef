@@ -28,6 +28,7 @@ jobs:
         run: |
           git config --global --add safe.directory ${{github.workspace}}
           cmake --build ${{github.workspace}}/build --target sjef-doc
+          rsync -av ${{github.workspace}}/build/html .
           mkdir -p html/DoxygenTagFiles
           find ${{github.workspace}}/build -name '*.tag' -exec cp {} html/DoxygenTagFiles \;
 

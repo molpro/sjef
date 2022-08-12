@@ -49,6 +49,7 @@ jobs:
       if: steps.check_configuration.outputs.files_exists == 'true'
       run: |
         service --status-all
+        service ssh restart
         service ssh status
         ssh -v localhost hostname
         cd ${{github.workspace}}/build && ctest -C ${{env.CMAKE_BUILD_TYPE}}

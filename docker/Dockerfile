@@ -1,8 +1,6 @@
-FROM ubuntu:focal
-
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
-cmake g++ gfortran libxml2-dev git doxygen libboost-all-dev wget tar binutils file util-linux bash rsync openssh-server procps \
-  && apt-get clean
+FROM ubuntu:jammy-20220531
+RUN apt update
+RUN DEBIAN_FRONTEND=noninteractive apt install -y cmake git g++ doxygen bash rsync curl clang ccache libboost-all-dev libxml2-dev texlive-font-utils openssh-server procps
 
 RUN ( \
     echo 'LogLevel DEBUG2'; \

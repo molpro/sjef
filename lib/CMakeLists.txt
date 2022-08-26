@@ -4,6 +4,7 @@ add_library(${LIB_NAME}
         sjef.cpp
         sjef-customization.cpp sjef-c.cpp sjef-c.h Locker.h Locker.cpp
         sjef-program.cpp
+        util/Job_server.cpp
         )
 target_compile_features(${LIB_NAME} PUBLIC cxx_std_17)
 target_compile_options(${LIB_NAME} PUBLIC -fPIC)

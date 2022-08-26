@@ -453,6 +453,7 @@ public:
    */
   void change_backend(std::string backend = std::string{""}, bool force = false);
 
+  const std::map<std::string, Backend>& backends() const { return m_backends; }
   std::map<std::string, Backend>& backends() { return m_backends; }
 
 private:

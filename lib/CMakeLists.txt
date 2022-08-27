@@ -11,7 +11,7 @@ set_target_properties(${LIB_NAME} PROPERTIES PUBLIC_HEADER "sjef.h;sjef-c.h;sjef
 set_target_properties(${LIB_NAME} PROPERTIES OUTPUT_NAME "${LIB_FILENAME}")
 
 include(FetchContent)
-FetchContent_Declare(tclap GIT_REPOSITORY https://gitlab+deploy-token-103300:HKsBK8FZcZZshqAa_yyx@gitlab.com/molpro/tclap.git)
+FetchContent_Declare(tclap GIT_REPOSITORY https://github.com/molpro/tclap.git GIT_TAG v1.2.5)
 FetchContent_GetProperties(tclap)
 if (NOT tclap_POPULATED)
     FetchContent_Populate(tclap)

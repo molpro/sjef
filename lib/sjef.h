@@ -11,82 +11,24 @@
 #include <ostream>
 #include <iostream>
 #include <atomic>
+#include "util/Logger.h"
 
 namespace pugi {
 class xpath_node_set; ///< @private
 }
 namespace sjef {
+namespace util {
+class Job_server;
+}
 class Backend;            ///< @private
 class Locker;             ///< @private
-struct remote_server;     ///< @private
+using util::Logger;
+struct Remote_server;     ///< @private
 struct pugi_xml_document; ///< @private
 static constexpr int recentMax = 128;
 enum status : int { unknown = 0, running = 1, waiting = 2, completed = 3, unevaluated = 4, killed = 5 };
 using mapstringstring_t = std::map<std::string, std::string>;
 
-class Logger {
-  std::ostream* m_stream;
-  int m_level;
-
-  class NullBuffer : public std::streambuf {
-  public:
-    int overflow(int c) override { return c; }
-  };
-  NullBuffer m_null_buffer;
-  mutable std::ostream m_null{&m_null_buffer};
-  std::vector<std::string> m_preambles;
-
-public:
-  enum class Levels : int { QUIET = -1, ERROR = 0, WARNING = 1, NOTIFICATION = 2, DETAIL = 3 };
-  explicit Logger(std::ostream& stream, int level) : m_stream(&stream), m_level(level) {}
-  explicit Logger(std::ostream& stream = std::cout, const Levels level = Levels::ERROR,
-                  std::vector<std::string> preambles = {})
-      : m_stream(&stream), m_level(static_cast<int>(level)), m_preambles(std::move(preambles)) {}
-  explicit Logger(const Logger& source)
-      : m_stream(source.m_stream), m_level(source.m_level), m_preambles(source.m_preambles) {}
-  explicit Logger(Logger&& source) noexcept
-      : m_stream(std::move(source.m_stream)), m_level(std::move(source.m_level)),
-        m_preambles(std::move(source.m_preambles)) {}
-  Logger& operator=(const Logger& source) {
-    m_stream = source.m_stream;
-    m_level = source.m_level;
-    m_preambles = source.m_preambles;
-    return *this;
-  }
-  Logger& operator=(Logger&& source) noexcept {
-    m_stream = source.m_stream;
-    m_level = source.m_level;
-    m_preambles = std::move(source.m_preambles);
-    return *this;
-  }
-  ~Logger() = default;
-  std::ostream& stream() const { return *m_stream; }
-  std::ostream& operator()(int level, const std::string& message = "") const {
-    auto& stream = level > m_level ? m_null : *m_stream;
-    if (level >= 0 && level < decltype(level)(m_preambles.size()))
-      stream << m_preambles[level];
-    if (!message.empty())
-      stream << message << std::endl;
-    return stream;
-  }
-  std::ostream& operator()(const Levels level, const std::string& message = "") const {
-    return ((*this)(static_cast<int>(level), message));
-  }
-  std::ostream& detail(const std::string& message = "") const { return ((*this)(Levels::DETAIL, message)); }
-  std::ostream& notify(const std::string& message = "") const { return ((*this)(Levels::NOTIFICATION, message)); }
-  std::ostream& warn(const std::string& message = "") const { return ((*this)(Levels::WARNING, message)); }
-  std::ostream& error(const std::string& message = "") const { return ((*this)(Levels::ERROR, message)); }
-  int level() const { return m_level; }
-  void set_level(int level) { Logger::m_level = level; }
-  void set_level(Levels level) { Logger::m_level = static_cast<int>(level); }
-  void set_stream(std::ostream& stream) { m_stream = &stream; }
-};
-
-template <typename Arg>
-std::ostream& operator<<(const Logger& l, Arg arg) {
-  l.stream() << arg;
-  return l.stream();
-}
 
 class Project {
 private:
@@ -100,7 +42,7 @@ private:
   std::map<std::string, Backend> m_backends;
 
   std::unique_ptr<pugi_xml_document> m_backend_doc;
-  mutable std::shared_ptr<remote_server> m_remote_server;
+  mutable std::shared_ptr<Remote_server> m_remote_server;
   mutable std::chrono::milliseconds m_status_lifetime = std::chrono::milliseconds(0);
   mutable std::chrono::time_point<std::chrono::steady_clock> m_status_last = std::chrono::steady_clock::now();
   mutable std::thread m_backend_watcher;
@@ -126,8 +68,9 @@ private:
   static const std::string s_propertyFile;
   ///> @private
   std::shared_ptr<Locker> m_locker;
-  Logger m_warn{std::cerr, Logger::Levels::WARNING, {"sjef:: Error: ", "sjef:: Warning: ", "sjef:: Note:"}};
-  Logger m_trace{std::cout, Logger::Levels::QUIET};
+  mutable Logger m_warn{std::cerr, Logger::Levels::WARNING, {"sjef:: Error: ", "sjef:: Warning: ", "sjef:: Note:"}};
+  mutable Logger m_trace{std::cout, Logger::Levels::QUIET};
+  friend class util::Job_server;
 
 public:
   /*!

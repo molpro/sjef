@@ -1,9 +1,13 @@
 #ifndef SJEF_JOB_SERVER_H
 #define SJEF_JOB_SERVER_H
 #include "../sjef.h"
+#include "sjef-backend.h"
 #include <future>
 
+
+
 namespace sjef::util {
+class Command;     ///< @private
 /*!
  * Class instance manages polling and service of local and remote jobs
  *
@@ -22,21 +26,33 @@ namespace sjef::util {
  * The property "status" of project is updated
  */
 class Job_server {
+public:
+  /*!
+   * @brief Initiate job server
+   * @param project Although marked const, server will update property status
+   * @param new_job If true, and a remote backend, initialise remote run directory
+   */
   Job_server(const Project& project, bool new_job=true);
   Job_server() = delete;
   Job_server(const Job_server&) = delete;
   Job_server(Job_server&&) = delete;
   ~Job_server();
-  std::future<void> m_poll_task;
+  std::string run(const std::string& command, int verbosity = 0, bool wait = true) ;
+protected:
   const Project& m_project;
+  const sjef::Backend& m_backend;
+  const std::string m_remote_cache_directory;
+  std::future<void> m_poll_task;
   sjef::status m_status;
+  mutable std::shared_ptr<Command> m_remote_server;
+  int m_job_number;
   /*!
    *
    * @return The path on the remote backend that will be synchronized with run directory
    */
-  std::string remote_cache_directory() const;
-  bool push_rundir();
-  bool pull_rundir();
+  bool push_rundir( int verbosity=0);
+  bool pull_rundir(int verbosity=0);
+  const bool localhost() const;
   void end_job();
   void poll_job();
 };

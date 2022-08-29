@@ -88,7 +88,7 @@ bool copyDir(fs::path const& source, fs::path const& destination, bool delete_so
 }
 
 namespace sjef {
-struct remote_server {
+struct Remote_server {
   bp::child process;
   bp::opstream in;
   bp::ipstream out;
@@ -1601,7 +1601,7 @@ void sjef::Project::ensure_remote_server() const {
   }
   const std::lock_guard lock(m_remote_server_mutex);
   if (m_remote_server == nullptr)
-    m_remote_server.reset(new remote_server());
+    m_remote_server.reset(new Remote_server());
   auto backend = property_get("backend");
   if (backend.empty())
     backend = sjef::Backend::default_name;
@@ -1612,7 +1612,7 @@ void sjef::Project::ensure_remote_server() const {
   if (oldhost != "localhost" && m_remote_server->process.running()) {
     m_remote_server->process.terminate();
   }
-  m_remote_server.reset(new remote_server());
+  m_remote_server.reset(new Remote_server());
   m_remote_server->host = newhost;
   if (newhost == "localhost")
     return;
@@ -1621,7 +1621,7 @@ void sjef::Project::ensure_remote_server() const {
                 bp::std_in<m_remote_server->in, bp::std_err> m_remote_server->err, bp::std_out > m_remote_server->out);
   // TODO error checking
   //  std::cerr << "ensure_remote_server has started server on " << m_remote_server->host << std::endl;
-  //  std::cerr << "started remote_server " << std::endl;
+  //  std::cerr << "started Remote_server " << std::endl;
   //  std::cerr << "ensure_remote_server() remote server process created : " << m_remote_server->process.id() << ",
   //  master="
   //            << m_master_of_slave << std::endl;

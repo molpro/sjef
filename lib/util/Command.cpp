@@ -1,11 +1,17 @@
 #include "Command.h"
+#include <chrono>
+#include <regex>
+#include <thread>
 
 namespace sjef::util {
 
 Command::Command(std::string host, std::string shell) : m_host(std::move(host)) {
-  if (!localhost())
-    m_process = bp::child(bp::search_path("ssh"), m_host, std::move(shell), bp::std_in<m_in, bp::std_err> m_err,
-                          bp::std_out > m_out);
+  if (!localhost()) {
+    m_out.reset(new bp::ipstream);
+    m_err.reset(new bp::ipstream);
+    m_process = bp::child(bp::search_path("ssh"), m_host, std::move(shell), bp::std_in<m_in, bp::std_err> * m_err,
+                          bp::std_out > *m_out);
+  }
   // TODO error checking
 }
 
@@ -79,11 +85,10 @@ std::string Command::operator()(const std::string& command, bool wait, std::stri
     }
     fs::current_path(directory);
 
-    //  m_process = bp::child(bp::search_path("ssh"), m_host, std::move(shell), bp::std_in<m_in, bp::std_err> m_err,
-    //                        bp::std_out > m_out);
-    m_process = optionstring.empty() ? bp::child(executable(run_command), bp::std_out > m_out, bp::std_err > m_err)
-                                     : bp::child(executable(run_command), bp::args(splitString(optionstring)),
-                                                 bp::std_out > m_out, bp::std_err > m_err);
+    m_out.reset(new bp::ipstream);
+    m_err.reset(new bp::ipstream);
+    m_process = bp::child(executable(run_command), bp::args(splitString(optionstring)), bp::std_out > *m_out,
+                          bp::std_err > *m_err);
     fs::current_path(current_path_save);
     if (!m_process.valid())
       throw std::runtime_error("Spawning run process has failed");
@@ -93,29 +98,41 @@ std::string Command::operator()(const std::string& command, bool wait, std::stri
     if (!wait)
       return "";
     std::string line;
-    while (m_process.running() && std::getline(m_out, line)) {
-      m_trace(4 - verbosity) << "out line from remote command " << command << ": " << line << std::endl;
+    while (m_process.running() && std::getline(*m_out, line)) {
+      m_trace(4 - verbosity) << "out line from local command " << command << ": " << line << std::endl;
       m_last_out += line + '\n';
     }
-    m_trace(3 - verbosity) << "out from remote command " << command << ": " << m_last_out << std::endl;
+    m_trace(3 - verbosity) << "out from local command " << command << ": " << m_last_out << std::endl;
     m_process.wait();
   } else {
-    if (!wait) {
-      m_in << command << " >/dev/null 2>/dev/null &" << std::endl;
-      return "";
-    }
+    //    if (!wait) {
+    //      m_in << command << " >/dev/null 2>/dev/null & echo $!" << std::endl;
+    //      return "";
+    //    }
     const std::string terminator{"@@@!!EOF"};
-    m_in << command << std::endl;
+    const std::string jobnumber_tag{"@@@!!JOBNUMBER"};
+    m_in << std::string{"(cd "} + directory + "; " + command +
+                (wait ? ")" : std::string{")& echo "} + jobnumber_tag + " $! 1>&2")
+         << std::endl;
     m_in << ">&2 echo '" << terminator << "' $?" << std::endl;
     m_in << "echo '" << terminator << "'" << std::endl;
     std::string line;
-    while (std::getline(m_out, line) && line != terminator)
+    while (std::getline(*m_out, line) && line != terminator) {
+      m_trace(4 - verbosity) << "out line from remote command " << line << std::endl;
       m_last_out += line + '\n';
-    m_trace(3 - verbosity) << "out from remote command " << command << ": " << m_last_out << std::endl;
+    }
+    m_trace(3 - verbosity) << "out from remote command\n" << command << ": " << m_last_out << std::endl;
     m_last_err.clear();
-    while (std::getline(m_err, line) && line.substr(0, terminator.size()) != terminator)
-      m_last_err += line + '\n';
-    m_trace(3 - verbosity) << "err from remote command " << command << ": " << m_last_err << std::endl;
+    while (std::getline(*m_err, line) && line.substr(0, terminator.size()) != terminator) {
+      m_trace(4 - verbosity) << "err line from remote command " << line << std::endl;
+      std::smatch match;
+      if (std::regex_search(line, match, std::regex{jobnumber_tag + "\\s*(\\d+)"})) {
+        m_trace(5 - verbosity) << "... a match was found: " << match[1] << std::endl;
+        m_job_number = std::stoi(match[1]);
+      } else
+        m_last_err += line + '\n';
+    }
+    m_trace(3 - verbosity) << "err from remote command " << command << ":\n" << m_last_err << std::endl;
     m_trace(3 - verbosity) << "last line=" << line << std::endl;
     auto rc = line.empty() ? -1 : std::stoi(line.substr(terminator.size() + 1));
     m_trace(3 - verbosity) << "rc=" << rc << std::endl;
@@ -128,4 +145,15 @@ std::string Command::operator()(const std::string& command, bool wait, std::stri
   return m_last_out;
 }
 
+void Command::wait() const {
+  using namespace std::chrono_literals;
+  while (running())
+    std::this_thread::sleep_for(100ms); // TODO more sophisticated interval
+}
+
+bool Command::running() const {
+  if (localhost())
+    return m_process.running();
+  return (*this)(std::string{"ps -p "} + std::to_string(m_job_number) + " > /dev/null 2>/dev/null; echo $?") == "0";
+}
 } // namespace sjef::util

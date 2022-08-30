@@ -1,6 +1,8 @@
 #ifndef SJEF_LIB_UTIL_LOGGER_H_
 #define SJEF_LIB_UTIL_LOGGER_H_
 #include <iostream>
+#include <vector>
+#include <string>
 
 namespace sjef::util {
 

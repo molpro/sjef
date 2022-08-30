@@ -2,6 +2,7 @@
 #include <chrono>
 #include <regex>
 #include <thread>
+#include <filesystem>
 
 namespace sjef::util {
 

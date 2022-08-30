@@ -32,6 +32,7 @@ foreach (t test-sjef test-sjef-c test-Locker test-sjef-molpro test-Command)
         endif ()
     endif ()
 endforeach ()
+set_property(TARGET test-Command PROPERTY CXX_STANDARD 17)
 
 foreach (t test-c-sjef-backend)
     add_executable(${t} ${t}.c)

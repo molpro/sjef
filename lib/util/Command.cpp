@@ -111,7 +111,7 @@ std::string Command::operator()(const std::string& command, bool wait, std::stri
     //    }
     const std::string terminator{"@@@!!EOF"};
     const std::string jobnumber_tag{"@@@!!JOBNUMBER"};
-    m_in << std::string{"(cd "} + directory + "; " + command +
+    m_in << std::string{"(cd \""} + directory + "\"; " + command +
                 (wait ? ")" : std::string{")& echo "} + jobnumber_tag + " $! 1>&2")
          << std::endl;
     m_in << ">&2 echo '" << terminator << "' $?" << std::endl;

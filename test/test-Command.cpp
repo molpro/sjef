@@ -38,11 +38,13 @@ TEST(Command, remote_asynchronous) {
   char hostname[HOST_NAME_MAX];
   gethostname(hostname, HOST_NAME_MAX);
   sjef::util::Command comm(hostname);
-  std::string testfile{"test_remote_asynchronous"};
+  fs::path testdir{fs::current_path()/"test directory"};
+  fs::path testfile{testdir/"test_remote_asynchronous"};
 
+  fs::create_directory(testdir);
   if (fs::exists(testfile))
     fs::remove(testfile);
-  comm("sleep 0; touch " + fs::current_path().string() + "/" + testfile, false, ".", 0);
+  comm("sleep 0; touch \"" +  testfile.string()+"\"", false, ".", 0);
   EXPECT_NE(comm.job_number(), 0);
   comm.wait();
   EXPECT_FALSE(comm.running());
@@ -52,11 +54,12 @@ TEST(Command, remote_asynchronous) {
 
   if (fs::exists(testfile))
     fs::remove(testfile);
-  comm("sleep 0; touch " + testfile, false, fs::current_path().string(), 0);
+  comm("sleep 0; touch " + fs::relative(testfile,testdir).string(), false, testdir.string(), 0);
   EXPECT_NE(comm.job_number(), 0);
   comm.wait();
   EXPECT_FALSE(comm.running());
   EXPECT_TRUE(fs::exists(testfile));
   if (fs::exists(testfile))
     fs::remove(testfile);
+  fs::remove(testdir);
 }

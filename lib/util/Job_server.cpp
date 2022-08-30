@@ -22,7 +22,7 @@ sjef::util::Job_server::Job_server(const sjef::Project& project, bool new_job)
     : m_project(project), m_backend(m_project.backends().at(m_project.property_get("backend"))),
       m_remote_cache_directory(m_backend.cache + "/" +
                                std::to_string(std::hash<std::string>{}(m_project.filename("", "", 0).string()))),
-      m_remote_server(localhost() ? nullptr : new Command(m_backend.host)) {}
+      m_remote_server(new Command(m_backend.host)) {}
 
 bool sjef::util::Job_server::push_rundir(int verbosity) {
   if (localhost())

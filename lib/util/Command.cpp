@@ -11,8 +11,9 @@ Command::Command(std::string host, std::string shell) : m_host(std::move(host)) 
     m_err.reset(new bp::ipstream);
     m_process = bp::child(bp::search_path("ssh"), m_host, std::move(shell), bp::std_in<m_in, bp::std_err> * m_err,
                           bp::std_out > *m_out);
+    if (!m_process.valid())
+      throw std::runtime_error("Spawning run process has failed");
   }
-  // TODO error checking
 }
 
 static std::vector<std::string> splitString(const std::string& input, char c = ' ', char quote = '\'') {
@@ -57,21 +58,22 @@ static std::string executable(const fs::path& command) {
   }
 }
 
-std::string Command::operator()(const std::string& command, bool wait, std::string directory, int verbosity) const {
+std::string Command::operator()(const std::string& command, bool wait, const std::string& directory,
+                                int verbosity) const {
   std::lock_guard lock(m_run_mutex);
   m_trace(2 - verbosity) << command << std::endl;
   m_last_out.clear();
   if (localhost()) {
     m_trace(2 - verbosity) << "run local command: " << command << std::endl;
     auto spl = splitString(command);
-    auto run_command = spl.front();
+    fs::path run_command = spl.front();
     std::string optionstring;
     for (auto sp = spl.rbegin(); sp < spl.rend() - 1; sp++)
       optionstring = "'" + *sp + "' " + optionstring;
     if (executable(run_command).empty()) {
       for (const auto& p : ::boost::this_process::path())
         m_warn.error() << "path " << p << std::endl;
-      throw std::runtime_error("Cannot find run command " + run_command);
+      throw std::runtime_error("Cannot find run command " + run_command.string());
     }
     m_trace(3 - verbosity) << "run local job executable=" << executable(run_command) << " " << optionstring << " "
                            << std::endl;
@@ -105,10 +107,6 @@ std::string Command::operator()(const std::string& command, bool wait, std::stri
     m_trace(3 - verbosity) << "out from local command " << command << ": " << m_last_out << std::endl;
     m_process.wait();
   } else {
-    //    if (!wait) {
-    //      m_in << command << " >/dev/null 2>/dev/null & echo $!" << std::endl;
-    //      return "";
-    //    }
     const std::string terminator{"@@@!!EOF"};
     const std::string jobnumber_tag{"@@@!!JOBNUMBER"};
     m_in << std::string{"(cd \""} + directory + "\"; " + command +

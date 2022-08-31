@@ -21,6 +21,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #endif
+#include "util/Command.h"
+#include "util/Job.h"
 
 namespace bp = boost::process;
 namespace fs = std::filesystem;
@@ -88,15 +90,6 @@ bool copyDir(fs::path const& source, fs::path const& destination, bool delete_so
 }
 
 namespace sjef {
-struct Remote_server {
-  bp::child process;
-  bp::opstream in;
-  bp::ipstream out;
-  bp::ipstream err;
-  std::string host;
-  std::string last_out;
-  std::string last_err;
-};
 
 inline std::string getattribute(pugi::xpath_node node, const std::string& name) {
   return node.node().attribute(name.c_str()).value();
@@ -154,15 +147,13 @@ Project::Project(const std::filesystem::path& filename, bool construct, const st
     if (const auto pf = propertyFile(); !fs::exists(pf) && m_master_of_slave) {
       save_property_file();
       m_property_file_modification_time = fs::last_write_time(propertyFile());
-      property_set("_private_sjef_project_backend_inactive", "1");
+      property_set("_status", "4");
     } else {
       if (!fs::exists(pf))
         throw runtime_error("Unexpected absence of property file " + pf.string());
       m_property_file_modification_time = fs::last_write_time(propertyFile());
       check_property_file_locked();
     }
-    property_set("_private_sjef_project_backend_inactive_synced", "0");
-    cached_status(unevaluated);
     custom_initialisation();
 
     auto nimport = property_get("IMPORTED").empty() ? 0 : std::stoi(property_get("IMPORTED"));
@@ -271,12 +262,7 @@ Project::Project(const std::filesystem::path& filename, bool construct, const st
   }
 }
 
-Project::~Project() {
-  if (m_master_of_slave)
-    shutdown_backend_watcher();
-  if (m_remote_server != nullptr && m_remote_server->process.running())
-    m_remote_server->process.terminate();
-}
+Project::~Project() {}
 
 std::string Project::get_project_suffix(const std::filesystem::path& filename,
                                         const std::string& default_suffix) const {
@@ -336,7 +322,8 @@ bool Project::export_file(const fs::path& file, bool overwrite) {
 
 std::mutex synchronize_mutex;
 bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
-  if (not m_sync) return true;
+  if (not m_sync)
+    return true;
   m_trace(2 - verbosity) << "Project::synchronize(" << verbosity << ", " << nostatus << ", " << force << ") "
                          << (m_master_of_slave ? "master" : "slave") << std::endl;
   auto backend_name = property_get("backend");
@@ -430,8 +417,6 @@ bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
                                   .count()
                            << "ms" << std::endl;
   }
-  if (!nostatus) // to avoid infinite loop with call from status()
-    status(0);   // to get backend_inactive
   if (backend_inactive != "0") {
     const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", backend_inactive);
     auto n = std::stoi(property_get("_private_sjef_project_backend_inactive_synced"));
@@ -473,7 +458,7 @@ void Project::force_file_names(const std::string& oldname) {
 fs::path Project::propertyFile() const { return (fs::path{m_filename} / fs::path{s_propertyFile}).string(); }
 
 bool Project::move(const std::filesystem::path& destination_filename, bool force) {
-  if (auto stat = status(-1); stat == running || stat == waiting)
+  if (auto stat = status(); stat == running || stat == waiting)
     return false;
   auto dest = fs::absolute(expand_path(destination_filename, fs::path{m_filename}.extension().string().substr(1)));
   if (force)
@@ -482,7 +467,6 @@ bool Project::move(const std::filesystem::path& destination_filename, bool force
     synchronize();
   auto namesave = name();
   auto filenamesave = m_filename;
-  shutdown_backend_watcher();
   try {
     if (!copyDir(fs::path(m_filename), dest, true))
       throw runtime_error("Failed to copy current project directory");
@@ -678,14 +662,14 @@ mapstringstring_t Project::backend_parameters(const std::string& backend, bool d
 
 bool Project::run(int verbosity, bool force, bool wait) {
 
-  if (auto stat = status(verbosity); stat == running || stat == waiting)
+  if (auto stat = status(); stat == running || stat == waiting)
     return false;
 
   const auto& backend = m_backends.at(property_get("backend"));
   m_trace(2 - verbosity) << "Project::run() run_needed()=" << run_needed(verbosity) << std::endl;
   if (!force && !run_needed())
     return false;
-  cached_status(unevaluated);
+  //  status(unevaluated);
   std::string line;
   bp::child c;
   std::string optionstring;
@@ -695,93 +679,19 @@ bool Project::run(int verbosity, bool force, bool wait) {
   auto run_command = backend_parameter_expand(backend.name, backend.run_command);
   custom_run_preface();
   auto rundir = run_directory_new();
-  auto p_status_mutex = std::make_unique<std::lock_guard<std::mutex>>(m_status_mutex);
-  if (backend.host == "localhost") {
-    property_set("_private_sjef_project_backend_inactive", "0");
-    property_set("_private_sjef_project_backend_inactive_synced", "0");
-    m_trace(2 - verbosity) << "run local job, backend=" << backend.name << std::endl;
-    auto spl = splitString(run_command);
-    run_command = spl.front();
-    for (auto sp = spl.rbegin(); sp < spl.rend() - 1; sp++)
-      optionstring = "'" + *sp + "' " + optionstring;
-    if (executable(run_command).empty()) {
-      for (const auto& p : ::boost::this_process::path())
-        m_warn.error() << "path " << p << std::endl;
-      throw runtime_error("Cannot find run command " + run_command);
-    }
-    m_trace(3 - verbosity) << "run local job executable=" << executable(run_command) << " " << optionstring << " "
-                           << filename("inp", "", rundir) << std::endl;
-    for (const auto& o : splitString(optionstring))
-      m_trace(4 - verbosity) << "option " << o << std::endl;
-    fs::path current_path_save;
-    try {
-      current_path_save = fs::current_path();
-    } catch (...) {
-      current_path_save = "";
-    }
-    fs::current_path(filename("", "", 0));
-
-    if (optionstring.empty())
-      c = bp::child(executable(run_command), fs::relative(filename("inp", "", rundir)).string());
-    else
-      c = bp::child(executable(run_command), bp::args(splitString(optionstring)),
-                    fs::relative(filename("inp", "", rundir)).string());
-    fs::current_path(current_path_save);
-    if (!c.valid())
-      throw runtime_error("Spawning run process has failed");
-    c.detach();
-    property_set("jobnumber", std::to_string(c.id()));
-    p_status_mutex.reset();
-    status(0, false); // to force status cache
-    m_trace(3 - verbosity) << "jobnumber " << c.id() << ", running=" << c.running() << std::endl;
-    if (wait)
-      this->wait();
-    return true;
-  } else { // remote host
-    if (not m_sync) throw std::logic_error("Cannot start a remote job when Project has been constructed with sync=false");
-    m_trace(2 - verbosity) << "run remote job on " << backend.name << std::endl;
-    bp::ipstream c_err;
-    bp::ipstream c_out;
-    synchronize(verbosity - 1, false, true);
-    cached_status(unknown);
-    property_set("_private_sjef_project_backend_inactive", "0");
-    property_set("_private_sjef_project_backend_inactive_synced", "0");
-    m_trace(3 - verbosity) << "backend.cache + / + filename("
-                              ","
-                              ",rundir) "
-                           << backend.cache + "/" + filename("", "", rundir).string() << std::endl;
-    auto jobstring = std::string{"cd "} + backend.cache + filename("", "", rundir).string() + "; nohup " + run_command +
-                     " " + optionstring + fs::path{filename("inp", "", rundir)}.filename().string() + " >" +
-                     fs::path{filename("joblog", "", rundir)}.filename().string() + " 2>&1 ";
-    if (backend.run_jobnumber == "([0-9]+)")
-      jobstring += "& echo $! "; // go asynchronous if a straight launch
-    m_trace(5 - verbosity) << "backend.run_jobnumber " << backend.run_jobnumber << std::endl;
-    m_trace(5 - verbosity) << "jobstring " << jobstring << std::endl;
-    cached_status(unevaluated);
-    std::string run_output;
-
-    run_output = remote_server_run(jobstring);
-    cached_status(unevaluated);
-
-    property_set("_private_job_submission_time", std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
-                                                                    std::chrono::system_clock::now().time_since_epoch())
-                                                                    .count()));
-    p_status_mutex.reset();
-    synchronize(verbosity - 1, false, true);
-    status(0, false);
-    m_trace(5 - verbosity) << "run_output " << run_output << std::endl;
-    std::smatch match;
-    if (std::regex_search(run_output, match, std::regex{backend.run_jobnumber})) {
-      m_trace(5 - verbosity) << "... a match was found: " << match[1] << std::endl;
-      if (verbosity > 1)
-        status(verbosity - 2);
-      property_set("jobnumber", match[1]);
-      if (wait)
-        this->wait();
-      return true;
-    }
-  }
-  return false;
+  //  auto p_status_mutex = std::make_unique<std::lock_guard<std::mutex>>(m_status_mutex);
+  m_trace(2 - verbosity) << "run job, backend=" << backend.name << std::endl;
+  auto spl = splitString(run_command);
+  run_command = spl.front();
+  for (auto sp = spl.rbegin(); sp < spl.rend() - 1; sp++)
+    optionstring = "'" + *sp + "' " + optionstring;
+  m_trace(3 - verbosity) << "run job " << run_command << " " << optionstring << " " << filename("inp", "", rundir)
+                         << std::endl;
+  m_job->run(run_command + " " + optionstring + fs::relative(filename("inp", "", rundir)).string(), verbosity, wait);
+  property_set("jobnumber", std::to_string(m_job->job_number()));
+  //    p_status_mutex.reset(); // TODO probably not necessary
+  m_trace(3 - verbosity) << "jobnumber " << m_job->job_number() << std::endl;
+  return true;
 }
 
 void Project::clean(bool oldOutput, bool output, bool unused, int keep_run_directories) {
@@ -798,33 +708,15 @@ void Project::clean(bool oldOutput, bool output, bool unused, int keep_run_direc
   }
   if (unused)
     throw std::invalid_argument("sjef::project::clean for unused files is not yet implemented");
-  if (auto statuss = cached_status(); statuss == running || statuss == waiting)
+  if (auto statuss = status(); statuss == running || statuss == waiting)
     keep_run_directories = std::max(keep_run_directories, 1);
   while (run_list().size() > size_t(keep_run_directories))
     run_delete(*run_list().rbegin());
 }
 
 void Project::kill() {
-  if (property_get("backend").empty())
-    return;
-  throw_if_backend_invalid();
-  auto be = m_backends.at(property_get("backend"));
-  auto pid = property_get("jobnumber");
-  if (pid.empty())
-    return;
-  if (be.host == "localhost") {
-    auto spacepos = be.kill_command.find_first_of(" ");
-    if (spacepos != std::string::npos)
-      bp::spawn(executable(be.kill_command.substr(0, spacepos)),
-                be.kill_command.substr(spacepos + 1, std::string::npos), pid);
-    else
-      bp::spawn(executable(be.kill_command), pid);
-  } else {
-    if (not m_sync) throw std::logic_error("Cannot kill a remote job when Project has been constructed with sync=false");
-    ensure_remote_server();
-    remote_server_run(be.kill_command + " " + pid, 0, false);
-  }
-  property_set("_private_sjef_project_killed_job", be.host + ":" + pid);
+  if (m_job != nullptr)
+    m_job->kill();
 }
 
 bool Project::run_needed(int verbosity) const {
@@ -833,7 +725,7 @@ bool Project::run_needed(int verbosity) const {
       << ", time "
       << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
       << std::endl;
-  if (auto statuss = cached_status(); statuss == running || statuss == waiting)
+  if (auto statuss = status(); statuss == running || statuss == waiting)
     return false;
   auto inpfile = filename("inp");
   auto xmlfile = filename("xml", "", 0);
@@ -909,7 +801,7 @@ bool Project::run_needed(int verbosity) const {
 
 std::string Project::xml(int run, bool sync) const {
   if (const bool localhost = m_backends.at(property_get("backend")).host == "localhost";
-      (localhost && cached_status() != completed) ||
+      (localhost && status() != completed) ||
       ((!localhost) && std::stoi(property_get("_private_sjef_project_backend_inactive_synced")) <= 2)) {
     return xmlRepair(file_contents(m_suffixes.at("xml"), "", run, sync));
   }
@@ -931,152 +823,9 @@ std::string Project::file_contents(const std::string& suffix, const std::string&
   return result;
 }
 
-status Project::status(int verbosity, bool cached) const {
-  if (cached && cached_status() != unevaluated && m_master_of_slave)
-    return cached_status();
-  const std::lock_guard lock(m_status_mutex);
-  if (property_get("backend").empty())
-    return unknown;
-  auto start_time = std::chrono::steady_clock::now();
-  auto bes = property_get("backend");
-  if (bes.empty())
-    bes = sjef::Backend::default_name;
-  throw_if_backend_invalid(bes);
-  auto be = m_backends.at(bes);
-  m_trace(3 - verbosity) << "status() backend:\n====" << be.str() << "\n====" << std::endl;
-
-  {
-    const std::string& job_submission_time = property_get("_private_job_submission_time");
-    if (!job_submission_time.empty()) {
-      std::stringstream ss;
-      ss << job_submission_time;
-      std::chrono::milliseconds::rep iob_submission_time;
-      ss >> iob_submission_time;
-      auto now =
-          std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
-              .count();
-      if (now - iob_submission_time < 1000)
-        return unknown; // don't do any status parsing until this much time has elapsed since job submission started
-    }
-  }
-
-  auto pid = property_get("jobnumber");
-  m_trace(3 - verbosity) << "job number " << pid << std::endl;
-  if (pid.empty() || std::stoi(pid) < 0) {
-    if (auto rih = property_get("run_input_hash"); !rih.empty()) {
-      if (rih != std::to_string(input_hash()))
-        return unknown;
-      return (be.host + ":" + pid) == property_get("_private_sjef_project_killed_job") ? killed : completed;
-    }
-    return (std::regex_replace(file_contents("inp"), std::regex{" *\n\n*"}, "\n") != input_from_output(false))
-               ? unknown
-               : completed;
-  }
-  const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", "0");
-  if (property_get("_private_sjef_project_completed_job") == be.host + ":" + pid && cached_status() != unevaluated) {
-    const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", "1");
-    return ((be.host + ":" + pid) == property_get("_private_sjef_project_killed_job") ? killed : completed);
-  }
-  this->m_xml_cached.clear();
-  auto result = pid == ""
-                    ? unknown
-                    : ((be.host + ":" + pid) == property_get("_private_sjef_project_killed_job") ? killed : completed);
-  if (be.host == "localhost") {
-    bp::child c;
-    bp::ipstream is;
-    std::string line;
-    auto cmdstring = be.status_command.back() == '"'
-                         ? be.status_command.substr(0, be.status_command.size() - 1) + pid + "\""
-                         : be.status_command + " " + pid;
-    auto cmd = splitString(cmdstring, ' ', '\"');
-    c = bp::child(executable(cmd[0]), bp::args(std::vector<std::string>{cmd.begin() + 1, cmd.end()}), bp::std_out > is);
-    while (std::getline(is, line)) {
-      while (isspace(line.back()))
-        line.pop_back();
-      // TODO replace following by proper regex parsing
-      if ((" " + line + " ").find(" " + pid + " ") != std::string::npos) {
-        if (line.back() == '+')
-          line.pop_back();
-        if (line.back() == 'Z') { // zombie process
-#if defined(__linux__) || defined(__APPLE__)
-          waitpid(std::stoi(pid), NULL, WNOHANG);
-#endif
-          result = ((be.host + ":" + pid) == property_get("_private_sjef_project_killed_job") ? killed : completed);
-        } else
-          result = running;
-      }
-    }
-    c.wait();
-  } else {
-    if (not m_monitor) throw std::logic_error("Cannot get status for remote jobs when Project has been constructed with watch=false");
-    m_trace(3 - verbosity) << "remote status " << be.host << ":" << be.status_command << ":" << pid << std::endl;
-    ensure_remote_server();
-    {
-      const std::lock_guard locki(m_remote_server_mutex);
-      m_remote_server->in << be.status_command << " " << pid << std::endl;
-      m_remote_server->in << "echo '@@@!!EOF'" << std::endl;
-      m_trace(4 - verbosity) << "sending " << be.status_command << " " << pid << std::endl;
-      std::string line;
-      while (std::getline(m_remote_server->out, line) && line != "@@@!!EOF") {
-        if (verbosity > 0)
-          m_trace(4 - verbosity) << "line received: " << line << std::endl;
-        if ((" " + line).find(" " + pid + " ") != std::string::npos) {
-          std::smatch match;
-          m_trace(4 - verbosity) << "line" << line << std::endl;
-          m_trace(4 - verbosity) << "status_running " << be.status_running << std::endl;
-          m_trace(4 - verbosity) << "status_waiting " << be.status_waiting << std::endl;
-          if (std::regex_search(line, match, std::regex{be.status_waiting})) {
-            result = waiting;
-          }
-          if (std::regex_search(line, match, std::regex{be.status_running})) {
-            result = running;
-          }
-        }
-      }
-    }
-  }
-  m_trace(4 - verbosity) << "received status " << result << std::endl;
-  if (result == completed || result == killed) {
-    const_cast<Project*>(this)->property_set("_private_sjef_project_completed_job", be.host + ":" + pid);
-  }
-  if (result != unknown) {
-    if (result == running)
-      const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced", "0");
-    if (result == running)
-      const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive",
-                                               (result == completed || result == killed) ? "1" : "0");
-    goto RETURN_POINT;
-  }
-  synchronize(verbosity, true);
-  const_cast<Project*>(this)->property_set(
-      "_private_sjef_project_backend_inactive",
-      ((result != completed && result != killed) ||
-       fs::exists(filename("xml", "", 0)) // there may be a race, where the job status is completed, but the output
-                                          // file is not yet there. This is an imperfect test for that .. just whether
-                                          // the .xml exists at all. TODO: improve test for complete output file
-       )
-          ? "1"
-          : "0");
-RETURN_POINT:
-  auto time_taken =
-      std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time);
-  if (time_taken < m_status_lifetime)
-    m_status_lifetime = time_taken;
-  m_status_last = std::chrono::steady_clock::now();
-  cached_status(result);
-  return result;
-}
-
-sjef::status Project::cached_status() const {
+sjef::status Project::status() const {
   auto current_status = property_get("_status");
   return current_status.empty() ? unevaluated : static_cast<sjef::status>(std::stoi(current_status));
-}
-
-void Project::cached_status(sjef::status status) const {
-  auto current_status = property_get("_status");
-  if (current_status.empty() || status != std::stoi(current_status)) {
-    const_cast<Project*>(this)->property_set("_status", std::to_string(static_cast<int>(status)));
-  }
 }
 
 std::string sjef::Project::status_message(int verbosity) const {
@@ -1087,23 +836,24 @@ std::string sjef::Project::status_message(int verbosity) const {
   message[sjef::status::completed] = "Completed";
   message[sjef::status::unevaluated] = "Unevaluated";
   message[sjef::status::killed] = "Killed";
-  auto statu = this->status(verbosity);
+  auto statu = this->status();
   auto result = message[statu];
   if (statu != sjef::status::unknown && !property_get("jobnumber").empty())
     result += ", job number " + property_get("jobnumber") + " on backend " + property_get("backend");
   return result;
 }
 
-void Project::wait(unsigned int maximum_microseconds) const {
-  unsigned int microseconds = 1;
-  while (true) {
-    if (auto stat = status(); stat == completed || stat == killed)
-      break;
-    std::this_thread::sleep_for(std::chrono::microseconds(microseconds));
-    if (microseconds < maximum_microseconds)
-      microseconds *= 2;
-  }
-}
+// TODO use this in Command/Job
+// void Project::wait(unsigned int maximum_microseconds) const {
+//  unsigned int microseconds = 1;
+//  while (true) {
+//    if (auto stat = status(); stat == completed || stat == killed)
+//      break;
+//    std::this_thread::sleep_for(std::chrono::microseconds(microseconds));
+//    if (microseconds < maximum_microseconds)
+//      microseconds *= 2;
+//  }
+//}
 
 void Project::property_delete(const std::vector<std::string>& properties) {
   auto lock = m_locker->bolt();
@@ -1276,13 +1026,12 @@ int Project::run_directory_new() {
 }
 
 void Project::run_delete(int run) {
+  if (status() == running or status() == waiting)
+    throw runtime_error("Cannot delete run directory when job is running or waiting");
   run = run_verify(run);
   if (run == 0)
     return;
   fs::remove_all(run_directory(run));
-  if (m_backend != "localhost" and m_backend != "local")
-    remote_server_run(std::string{"rm -rf "} + m_backends.at(m_backend).cache + filename().string() + "/run/" +
-                      std::to_string(run) + "." + m_project_suffix);
   auto dirlist = run_list();
   dirlist.erase(run);
   std::stringstream ss;
@@ -1562,82 +1311,10 @@ std::vector<std::string> sjef::Project::backend_names() const {
   return result;
 }
 
-std::mutex s_remote_server_mutex;
-std::string sjef::Project::remote_server_run(const std::string& command, int verbosity, bool wait) const {
-  if (not m_monitor) throw std::logic_error("remote_server_run() unavailable when Project created with watch=false");
-  const std::lock_guard lock(s_remote_server_mutex);
-  m_trace(2 - verbosity) << command << std::endl;
-  const std::string terminator{"@@@!!EOF"};
-  if (!wait) {
-    m_remote_server->in << command << " >/dev/null 2>/dev/null &" << std::endl;
-    return "";
-  }
-  m_remote_server->in << command << std::endl;
-  m_remote_server->in << ">&2 echo '" << terminator << "' $?" << std::endl;
-  m_remote_server->in << "echo '" << terminator << "'" << std::endl;
-  std::string line;
-  m_remote_server->last_out.clear();
-  while (std::getline(m_remote_server->out, line) && line != terminator)
-    m_remote_server->last_out += line + '\n';
-  m_trace(3 - verbosity) << "out from remote command " << command << ": " << m_remote_server->last_out << std::endl;
-  m_remote_server->last_err.clear();
-  while (std::getline(m_remote_server->err, line) && line.substr(0, terminator.size()) != terminator)
-    m_remote_server->last_err += line + '\n';
-  m_trace(3 - verbosity) << "err from remote command " << command << ": " << m_remote_server->last_err << std::endl;
-  m_trace(3 - verbosity) << "last line=" << line << std::endl;
-  auto rc = line.empty() ? -1 : std::stoi(line.substr(terminator.size() + 1));
-  m_trace(3 - verbosity) << "rc=" << rc << std::endl;
-  if (rc != 0)
-    throw runtime_error("Host " + m_remote_server->host + "; failed remote command: " + command +
-                        "\nStandard output:\n" + m_remote_server->last_out + "\nStandard error:\n" +
-                        m_remote_server->last_err);
-  return m_remote_server->last_out;
-}
-void sjef::Project::ensure_remote_server() const {
-  if (not m_monitor) return;
-  if (m_master_instance != nullptr) {
-    m_remote_server = m_master_instance->m_remote_server;
-    return;
-  }
-  const std::lock_guard lock(m_remote_server_mutex);
-  if (m_remote_server == nullptr)
-    m_remote_server.reset(new Remote_server());
-  auto backend = property_get("backend");
-  if (backend.empty())
-    backend = sjef::Backend::default_name;
-  auto oldhost = m_remote_server->host;
-  auto newhost = this->backend_get(backend, "host");
-  if ((newhost == oldhost) && m_remote_server->process.running())
-    return;
-  if (oldhost != "localhost" && m_remote_server->process.running()) {
-    m_remote_server->process.terminate();
-  }
-  m_remote_server.reset(new Remote_server());
-  m_remote_server->host = newhost;
-  if (newhost == "localhost")
-    return;
-  m_remote_server->process =
-      bp::child(bp::search_path("ssh"), m_remote_server->host, "/bin/sh",
-                bp::std_in<m_remote_server->in, bp::std_err> m_remote_server->err, bp::std_out > m_remote_server->out);
-  // TODO error checking
-  //  std::cerr << "ensure_remote_server has started server on " << m_backend_command_server->host << std::endl;
-  //  std::cerr << "started Remote_server " << std::endl;
-  //  std::cerr << "ensure_remote_server() remote server process created : " << m_backend_command_server->process.id() << ",
-  //  master="
-  //            << m_master_of_slave << std::endl;
-  //  std::cerr << "ensure_remote_server finishing on thread " << std::this_thread::get_id() << ", master_of_slave="
-  //            << m_master_of_slave << std::endl;
-}
-
-void sjef::Project::shutdown_backend_watcher() {
-  if (!m_master_of_slave or !m_monitor)
-    return;
-  m_unmovables.shutdown_flag.test_and_set();
-  if (m_backend_watcher.joinable())
-    m_backend_watcher.join();
-}
 
 void sjef::Project::change_backend(std::string backend, bool force) {
+  if (status() == running or status() == waiting)
+    throw runtime_error("Cannot change backend when job is running or waiting");
   if (backend.empty())
     backend = sjef::Backend::default_name;
   bool unchanged = property_get("backend") == backend && m_backend == backend;
@@ -1648,66 +1325,52 @@ void sjef::Project::change_backend(std::string backend, bool force) {
   m_backend = backend;
   if (!unchanged) {
     throw_if_backend_invalid(backend);
-    if (m_master_of_slave)
-      shutdown_backend_watcher();
     property_set("backend", backend);
-    cached_status(unevaluated);
-    ensure_remote_server();
-    if (m_monitor and m_master_of_slave) {
-      if (this->m_backends.at(backend).host != "localhost") {
-        try {
-          remote_server_run(std::string{"mkdir -p "} + this->m_backends.at(backend).cache + "/" + m_filename.string(),
-                            0);
-        } catch (runtime_error const& e) {
-          m_warn.error() << "Error in launching remote job: " << e.what() << std::endl;
-        }
-      }
-      m_unmovables.shutdown_flag.clear();
-      m_backend_watcher = std::thread(backend_watcher, std::ref(*this), 100, 1000, 10);
-    }
   }
 }
 
-void sjef::Project::backend_watcher(sjef::Project& project_, int min_wait_milliseconds, int max_wait_milliseconds,
-                                    int poll_milliseconds) {
-  project_.m_backend_watcher_instance.reset(new sjef::Project(project_.m_filename, true, "", {{}}, project_.m_monitor, project_.m_sync, &project_));
-  const auto& project = *project_.m_backend_watcher_instance.get();
-  if (max_wait_milliseconds <= 0)
-    max_wait_milliseconds = min_wait_milliseconds;
-  constexpr auto radix = 2;
-  auto backend_watcher_wait_milliseconds = std::max(min_wait_milliseconds, poll_milliseconds);
-  try {
-    project.ensure_remote_server();
-    auto& shutdown_flag = const_cast<sjef::Project*>(project.m_master_instance)->m_unmovables.shutdown_flag;
-    for (auto iter = 0; true; ++iter) {
-      for (int repeat = 0; repeat < backend_watcher_wait_milliseconds / poll_milliseconds; ++repeat) {
-        if (shutdown_flag.test_and_set())
-          goto FINISHED;
-        shutdown_flag.clear();
-        std::this_thread::sleep_for(std::chrono::milliseconds(poll_milliseconds));
-      }
-      backend_watcher_wait_milliseconds =
-          std::max(std::min(backend_watcher_wait_milliseconds * radix, max_wait_milliseconds),
-                   min_wait_milliseconds <= 0 ? 1 : min_wait_milliseconds);
-      try {
-        project.synchronize(0);
-      } catch (const std::exception& ex) {
-        project.m_warn.warn() << "sjef::Project::backend_watcher() synchronize() has thrown " << ex.what() << std::endl;
-        project.cached_status(unknown);
-      }
-      try {
-        project.cached_status(project.status(0, false));
-      } catch (const std::exception& ex) {
-        project.m_warn.warn() << "sjef::Project::backend_watcher() status() has thrown " << ex.what() << std::endl;
-        project.cached_status(unknown);
-      }
-    }
-  FINISHED:;
-  } catch (const std::exception& ex) {
-    project.m_warn.warn() << "sjef::Project::backend_watcher() has thrown " << ex.what() << std::endl;
-    project.cached_status(unknown);
-  }
-}
+// TODO maybe use the stuff here about wait interval
+//void sjef::Project::backend_watcher(sjef::Project& project_, int min_wait_milliseconds, int max_wait_milliseconds,
+//                                    int poll_milliseconds) {
+//  project_.m_backend_watcher_instance.reset(
+//      new sjef::Project(project_.m_filename, true, "", {{}}, project_.m_monitor, project_.m_sync, &project_));
+//  const auto& project = *project_.m_backend_watcher_instance.get();
+//  if (max_wait_milliseconds <= 0)
+//    max_wait_milliseconds = min_wait_milliseconds;
+//  constexpr auto radix = 2;
+//  auto backend_watcher_wait_milliseconds = std::max(min_wait_milliseconds, poll_milliseconds);
+//  try {
+//    project.ensure_remote_server();
+//    auto& shutdown_flag = const_cast<sjef::Project*>(project.m_master_instance)->m_unmovables.shutdown_flag;
+//    for (auto iter = 0; true; ++iter) {
+//      for (int repeat = 0; repeat < backend_watcher_wait_milliseconds / poll_milliseconds; ++repeat) {
+//        if (shutdown_flag.test_and_set())
+//          goto FINISHED;
+//        shutdown_flag.clear();
+//        std::this_thread::sleep_for(std::chrono::milliseconds(poll_milliseconds));
+//      }
+//      backend_watcher_wait_milliseconds =
+//          std::max(std::min(backend_watcher_wait_milliseconds * radix, max_wait_milliseconds),
+//                   min_wait_milliseconds <= 0 ? 1 : min_wait_milliseconds);
+//      try {
+//        project.synchronize(0);
+//      } catch (const std::exception& ex) {
+//        project.m_warn.warn() << "sjef::Project::backend_watcher() synchronize() has thrown " << ex.what() << std::endl;
+//        project.cached_status(unknown);
+//      }
+//      try {
+//        project.cached_status(project.status(0, false));
+//      } catch (const std::exception& ex) {
+//        project.m_warn.warn() << "sjef::Project::backend_watcher() status() has thrown " << ex.what() << std::endl;
+//        project.cached_status(unknown);
+//      }
+//    }
+//  FINISHED:;
+//  } catch (const std::exception& ex) {
+//    project.m_warn.warn() << "sjef::Project::backend_watcher() has thrown " << ex.what() << std::endl;
+//    project.cached_status(unknown);
+//  }
+//}
 
 bool sjef::Project::check_backend(const std::string& name) const {
   auto be = m_backends.at(name);

@@ -71,6 +71,7 @@ private:
   mutable Logger m_warn{std::cerr, Logger::Levels::WARNING, {"sjef:: Error: ", "sjef:: Warning: ", "sjef:: Note:"}};
   mutable Logger m_trace{std::cout, Logger::Levels::QUIET};
   friend class util::Job;
+  std::unique_ptr<util::Job> m_job;
 
 public:
   /*!
@@ -202,7 +203,7 @@ public:
    * - 4 unevaluated
    * - 5 killed
    */
-  sjef::status status(int verbosity = 0, bool cached = true) const;
+  sjef::status status() const;
   /*!
    *
    * @return An informative string about job status
@@ -401,8 +402,6 @@ public:
 
 private:
   Backend default_backend();
-  sjef::status cached_status() const;
-  void cached_status(sjef::status status) const;
   void throw_if_backend_invalid(std::string backend = "") const;
   std::string get_project_suffix(const std::filesystem::path& filename, const std::string& default_suffix) const;
   static void recent_edit(const std::filesystem::path& add, const std::filesystem::path& remove = "");

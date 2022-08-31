@@ -45,6 +45,8 @@ public:
    * @return
    */
   std::string run(const std::string& command, int verbosity = 0, bool wait = true);
+  int job_number() const { return m_job_number;}
+  void kill(int verbosity = 0);
 
 protected:
   const Project& m_project;
@@ -57,13 +59,12 @@ protected:
   mutable Logger m_trace;
   bool m_killed = false;
   bool m_closing = false; //!< set to signal that polling should be stopped
-  std::mutex m_closing_mutex; // TODO retire m_closing if not needed
+  std::mutex m_closing_mutex;
   bool push_rundir(int verbosity = 0);
   bool pull_rundir(int verbosity = 0);
   const bool localhost() const;
   void poll_job(int verbosity = 0);
   status get_status(int verbosity = 0);
-  void kill(int verbosity = 0);
   void set_status(status stat);
 };
 } // namespace sjef::util

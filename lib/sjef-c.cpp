@@ -149,7 +149,7 @@ static int sjef_project_status_asynchronous(const char* project, int verbosity, 
   try {
     if (projects.count(project) == 0)
       sjef_project_open(project);
-    return static_cast<int>(projects.at(project)->status(verbosity, wait != 0));
+    return static_cast<int>(projects.at(project)->status());
   } catch (std::exception& e) {
     error(e);
   } catch (...) {

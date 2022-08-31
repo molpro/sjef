@@ -229,7 +229,6 @@ extern "C" int sjef_program(int argc, char* argv[]) {
           property_process(extras);
         } else if (command == "interactive") {
           std::cout << "Interactive mode for project " << proj.filename() << std::endl;
-          proj.ensure_remote_server();
           std::string line;
           std::string prompt{"? "};
           for (std::cout << prompt; std::getline(std::cin, line) and line != "exit"; std::cout << prompt) {

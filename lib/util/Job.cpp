@@ -14,7 +14,7 @@ const bool Job::localhost() const {
   return (m_backend.host.empty() || m_backend.host == "localhost" || m_backend.host == "127.0.0.1");
 }
 
-sjef::util::Job::Job(const sjef::Project& project, bool new_job)
+sjef::util::Job::Job(const sjef::Project& project)
     : m_project(project), m_backend(m_project.backends().at(m_project.property_get("backend"))),
       m_remote_cache_directory(m_backend.cache + "/" +
                                std::to_string(std::hash<std::string>{}(m_project.filename("", "", 0).string()))),

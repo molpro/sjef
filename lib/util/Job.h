@@ -31,7 +31,7 @@ public:
    * @param project Although marked const, server will update property status
    * @param new_job If true, and a remote backend, initialise remote run directory
    */
-  Job(const Project& project, bool new_job = true);
+  Job(const Project& project);
   Job() = delete;
   Job(const Job&) = delete;
   Job(Job&&) = delete;
@@ -52,7 +52,6 @@ protected:
   const std::string
       m_remote_cache_directory; //!< The path on the remote backend that will be synchronized with run directory
   std::future<void> m_poll_task;
-  sjef::status m_status;
   mutable std::shared_ptr<Command> m_backend_command_server;
   int m_job_number;
   mutable Logger m_trace;

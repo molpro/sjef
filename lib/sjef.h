@@ -18,7 +18,7 @@ class xpath_node_set; ///< @private
 }
 namespace sjef {
 namespace util {
-class Job_server;
+class Job;
 }
 class Backend;            ///< @private
 class Locker;             ///< @private
@@ -70,7 +70,7 @@ private:
   std::shared_ptr<Locker> m_locker;
   mutable Logger m_warn{std::cerr, Logger::Levels::WARNING, {"sjef:: Error: ", "sjef:: Warning: ", "sjef:: Note:"}};
   mutable Logger m_trace{std::cout, Logger::Levels::QUIET};
-  friend class util::Job_server;
+  friend class util::Job;
 
 public:
   /*!

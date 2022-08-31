@@ -1620,9 +1620,9 @@ void sjef::Project::ensure_remote_server() const {
       bp::child(bp::search_path("ssh"), m_remote_server->host, "/bin/sh",
                 bp::std_in<m_remote_server->in, bp::std_err> m_remote_server->err, bp::std_out > m_remote_server->out);
   // TODO error checking
-  //  std::cerr << "ensure_remote_server has started server on " << m_remote_server->host << std::endl;
+  //  std::cerr << "ensure_remote_server has started server on " << m_backend_command_server->host << std::endl;
   //  std::cerr << "started Remote_server " << std::endl;
-  //  std::cerr << "ensure_remote_server() remote server process created : " << m_remote_server->process.id() << ",
+  //  std::cerr << "ensure_remote_server() remote server process created : " << m_backend_command_server->process.id() << ",
   //  master="
   //            << m_master_of_slave << std::endl;
   //  std::cerr << "ensure_remote_server finishing on thread " << std::this_thread::get_id() << ", master_of_slave="

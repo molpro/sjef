@@ -19,7 +19,7 @@ sjef::util::Job::Job(const sjef::Project& project, bool new_job)
       m_remote_cache_directory(m_backend.cache + "/" +
                                std::to_string(std::hash<std::string>{}(m_project.filename("", "", 0).string()))),
       m_backend_command_server(new Command(m_backend.host)) {
-  auto poll = std::async(std::launch::async, [this]() { this->poll_job(); });
+  m_poll_task = std::async(std::launch::async, [this]() { this->poll_job(); });
 }
 bool sjef::util::Job::push_rundir(int verbosity) {
   if (localhost())

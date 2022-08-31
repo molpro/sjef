@@ -55,8 +55,6 @@ extern "C" int sjef_program(int argc, char* argv[]) {
     description += "\nkill: Kill the job launched by run";
     allowedCommands.push_back("erase");
     description += "\nerase: Erase the project";
-    allowedCommands.push_back("sync");
-    description += "\nsync: Synchronize the project with the backend";
     allowedCommands.push_back("get");
     description += "\nget: Obtain the values of one or more parameters, whose names are given as additional arguments "
                    "at the end of the command line";
@@ -210,17 +208,9 @@ extern "C" int sjef_program(int argc, char* argv[]) {
                       << "Status: " << proj.status_message(verboseSwitch.getValue()) << std::endl;
           else
             std::cerr << "Run not needed, so not started" << std::endl;
-        } else if (command == "sync") {
-          //      Project proj(project);
-          if (verboseSwitch.getValue() > 0)
-            std::cerr << "Synchronize project " << proj.filename() << std::endl;
-          success = proj.synchronize(verboseSwitch.getValue());
         } else if (command == "edit")
           success = system(("eval ${VISUAL:-${EDITOR:-vi}} \\'" + proj.filename("inp").string() + "\\'").c_str());
         else if (command == "browse") {
-          if (!proj.property_get("backend").empty())
-            success = proj.synchronize(verboseSwitch.getValue());
-          if (success)
             success =
                 system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out", "", 0).string() + "\\'").c_str());
         } else if (command == "clean") {
@@ -240,15 +230,13 @@ extern "C" int sjef_program(int argc, char* argv[]) {
             //        std::cout << command << std::endl;
             //        std::cout << arguments << std::endl;
             if (command == "?" or command == "help")
-              std::cout << "Allowed commands: status, backend, sync, run, kill, wait, property, clean, edit, browse"
+              std::cout << "Allowed commands: status, backend, run, kill, wait, property, clean, edit, browse"
                         << std::endl;
             else if (command == "status")
               std::cout << "Status: " << proj.status_message(verboseSwitch.getValue()) << std::endl;
             else if (command == "backend") {
               proj.change_backend(arguments);
               std::cout << "backend changed to " << proj.property_get("backend") << std::endl;
-            } else if (command == "sync") {
-              proj.synchronize(verboseSwitch.getValue());
             } else if (command == "run") {
               if (proj.run(proj.property_get("backend"), verboseSwitch.getValue(), true, false))
                 std::cout << "Job number: " << proj.property_get("jobnumber") << std::endl;
@@ -267,7 +255,7 @@ extern "C" int sjef_program(int argc, char* argv[]) {
               if (system(("eval ${VISUAL:-${EDITOR:-vi}} \\'" + proj.filename("inp").string() + "\\'").c_str()) != 0)
                 throw std::runtime_error("Editor failed");
             } else if (command == "browse") {
-              if (!proj.property_get("backend").empty() and proj.synchronize(verboseSwitch.getValue())) {
+              if (!proj.property_get("backend").empty()) {
                 if (system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out", "", 0).string() + "\\'")
                                .c_str()) != 0)
                   throw std::runtime_error("Editor failed");

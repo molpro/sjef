@@ -32,7 +32,7 @@ public:
   struct Linux {};
   Backend(Linux x, std::string name = Backend::default_name, std::string host = "localhost",
           std::string cache = ".sjef/cache", std::string run_command = "dummy", std::string run_jobnumber = "([0-9]+)",
-          std::string status_command = "/bin/ps -o pid,state -p", std::string status_running = "^ *[0-9][0-9]* ",
+          std::string status_command = "/bin/ps -o pid,state -p", std::string status_running = "^ *[0-9][0-9]* *[DIRSTtWx]",
           std::string status_waiting = " [Tt]", std::string kill_command = "pkill -P")
       : Backend(std::move(name), std::move(host), std::move(cache), std::move(run_command), std::move(run_jobnumber),
                 std::move(status_command), std::move(status_running), std::move(status_waiting),
@@ -42,7 +42,7 @@ public:
   Backend(Windows x, std::string name = Backend::default_name, std::string host = "localhost",
           std::string cache = "sjef\\cache", std::string run_command = "dummy", std::string run_jobnumber = "([0-9]+)",
           std::string status_command = "tasklist /FO LIST /FI \"PID eq \"",
-          std::string status_running = "^PID: *[0-9][0-9]*", std::string status_waiting = " ",
+          std::string status_running = "^PID: *[0-9][0-9]* *[DIRSTtWx]", std::string status_waiting = " ",
           std::string kill_command = "taskkill /f /PID ")
       : Backend(std::move(name), std::move(host), std::move(cache), std::move(run_command), std::move(run_jobnumber),
                 std::move(status_command), std::move(status_running), std::move(status_waiting),

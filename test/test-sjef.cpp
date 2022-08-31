@@ -363,7 +363,7 @@ TEST(project, spawn_many_dummy) {
     //    std::cerr << "run number " << i << std::endl;
     ASSERT_TRUE(p.run(backend, -1, true, true));
     EXPECT_NE(p.property_get("jobnumber"), "-1");
-    EXPECT_EQ(p.status(false), sjef::completed);
+    EXPECT_EQ(p.status(), sjef::completed);
   }
 }
 
@@ -398,7 +398,7 @@ TEST(project, many_projects) {
   for (int i = 0; i < n_projects_with_jobs; ++i) {
     const auto& p = projects[i];
     p->wait();
-    EXPECT_EQ(p->status(false), sjef::completed);
+    EXPECT_EQ(p->status(), sjef::completed);
   }
 }
 

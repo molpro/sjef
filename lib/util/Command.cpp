@@ -1,8 +1,8 @@
 #include "Command.h"
 #include <chrono>
+#include <filesystem>
 #include <regex>
 #include <thread>
-#include <filesystem>
 
 namespace sjef::util {
 
@@ -62,10 +62,11 @@ static std::string executable(const fs::path& command) {
 std::string Command::operator()(const std::string& command, bool wait, const std::string& directory,
                                 int verbosity) const {
   std::lock_guard lock(m_run_mutex);
-  m_trace(2 - verbosity) << command << std::endl;
+  m_trace(2 - verbosity) << "Command::operator() " << command << std::endl;
   m_last_out.clear();
   if (localhost()) {
     m_trace(2 - verbosity) << "run local command: " << command << std::endl;
+    m_trace(2 - verbosity) << "wait: " << wait << std::endl;
     auto spl = splitString(command);
     fs::path run_command = spl.front();
     std::string optionstring;
@@ -76,8 +77,8 @@ std::string Command::operator()(const std::string& command, bool wait, const std
         m_warn.error() << "path " << p << std::endl;
       throw std::runtime_error("Cannot find run command " + run_command.string());
     }
-    m_trace(3 - verbosity) << "run local job executable=" << executable(run_command) << " " << optionstring << " "
-                           << std::endl;
+    m_trace(3 - verbosity) << "run local job executable=" << executable(run_command) << " options=" << optionstring
+                           << " " << std::endl;
     for (const auto& o : splitString(optionstring))
       m_trace(4 - verbosity) << "option " << o << std::endl;
     fs::path current_path_save;
@@ -90,6 +91,7 @@ std::string Command::operator()(const std::string& command, bool wait, const std
 
     m_out.reset(new bp::ipstream);
     m_err.reset(new bp::ipstream);
+    m_trace(4 - verbosity) << "current directory for bp::child=" << fs::current_path() << std::endl;
     m_process = bp::child(executable(run_command), bp::args(splitString(optionstring)), bp::std_out > *m_out,
                           bp::std_err > *m_err);
     fs::current_path(current_path_save);

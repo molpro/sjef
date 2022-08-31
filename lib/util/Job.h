@@ -55,7 +55,7 @@ protected:
       m_remote_cache_directory; //!< The path on the remote backend that will be synchronized with run directory
   std::future<void> m_poll_task;
   mutable std::shared_ptr<Command> m_backend_command_server;
-  int m_job_number;
+  int m_job_number=0;
   mutable Logger m_trace;
   bool m_killed = false;
   bool m_closing = false; //!< set to signal that polling should be stopped

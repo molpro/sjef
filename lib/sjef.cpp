@@ -307,8 +307,6 @@ void Project::throw_if_backend_invalid(std::string backend) const {
 
 bool Project::export_file(const fs::path& file, bool overwrite) {
   throw_if_backend_invalid();
-  if (!property_get("backend").empty())
-    synchronize(0);
   auto from = fs::path{m_filename};
   from /= file.filename();
   std::error_code ec;
@@ -317,114 +315,6 @@ bool Project::export_file(const fs::path& file, bool overwrite) {
   fs::copy_file(from, file, ec);
   if (ec)
     throw runtime_error(ec.message());
-  return true;
-}
-
-std::mutex synchronize_mutex;
-bool Project::synchronize(int verbosity, bool nostatus, bool force) const {
-  if (not m_sync)
-    return true;
-  m_trace(2 - verbosity) << "Project::synchronize(" << verbosity << ", " << nostatus << ", " << force << ") "
-                         << (m_master_of_slave ? "master" : "slave") << std::endl;
-  auto backend_name = property_get("backend");
-  auto backend_changed = m_backend != backend_name;
-  if (backend_changed)
-    const_cast<Project*>(this)->change_backend(backend_name);
-  const std::lock_guard lock(synchronize_mutex);
-  auto& backend = m_backends.at(backend_name);
-  m_trace(4 - verbosity) << "synchronize with " << backend.name << " (" << backend.host
-                         << ") master=" << m_master_of_slave << std::endl;
-  if (backend.host == "localhost")
-    return true;
-  m_trace(4 - verbosity) << "synchronize backend_inactive=" << property_get("_private_sjef_project_backend_inactive")
-                         << " backend_inactive_synced=" << property_get("_private_sjef_project_backend_inactive_synced")
-                         << std::endl;
-  bool locally_modified;
-  {
-    auto locki = m_locker->bolt();
-    locally_modified = m_property_file_modification_time != fs::last_write_time(propertyFile());
-    for (const auto& suffix : {"inp", "xyz"}) {
-      if (fs::exists(filename(suffix))) {
-        auto lm = fs::last_write_time(filename(suffix));
-        locally_modified = locally_modified || lm > m_input_file_modification_time[suffix];
-        m_input_file_modification_time[suffix] = lm;
-      }
-    }
-  }
-  if (!force && !locally_modified && !backend_changed &&
-      std::stoi(property_get("_private_sjef_project_backend_inactive_synced")) > 2)
-    return true;
-  // TODO: implement more robust error checking
-  std::string rsync = "rsync";
-  auto rsync_command = bp::search_path("rsync");
-  std::vector<std::string> rsync_options{
-      "--timeout=5",       "--exclude=backup", "--exclude=*.out_*",    "--exclude=*.xml_*",
-      "--exclude=*.log_*", "--exclude=*.d",    "--exclude=Info.plist", "--exclude=.Info.plist.writing_object",
-      "--inplace"};
-  if (true) {
-    rsync_options.emplace_back("-e");
-    rsync_options.emplace_back(
-        "ssh -o ControlPath=~/.ssh/sjef-control-%h-%p-%r -o ControlMaster=auto -o ControlPersist=yes");
-  }
-  if (verbosity > 0)
-    rsync_options.emplace_back("-v");
-  auto rsync_options_first = rsync_options;
-  auto rsync_options_second = rsync_options;
-  rsync_options_first.emplace_back("--inplace");
-  rsync_options_first.emplace_back("--exclude=*.out");
-  rsync_options_first.emplace_back("--exclude=*.xml");
-  rsync_options_first.emplace_back("--exclude=*.log");
-  rsync_options_first.emplace_back("-L");
-  rsync_options_first.emplace_back("-a");
-  rsync_options_first.emplace_back("--update");
-  //  rsync_options_first.emplace_back("--mkpath"); // needs rsync >= 3.2.3
-  rsync_options_first.emplace_back(m_filename.string() + "/");
-  rsync_options_first.emplace_back(backend.host + ":" + backend.cache + "/" + m_filename.string());
-  m_trace(2 - verbosity) << "Push rsync: " << rsync_command;
-  for (const auto& o : rsync_options_first)
-    m_trace(2 - verbosity) << " '" << o << "'";
-  m_trace(2 - verbosity) << std::endl;
-  auto start_time = std::chrono::steady_clock::now();
-  bp::child(bp::search_path(rsync), rsync_options_first).wait();
-  if (verbosity > 1)
-    m_trace(3 - verbosity)
-        << "time for first rsync "
-        << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
-        << "ms" << std::endl;
-  // fetch all newer files from backend
-  if (std::stoi(property_get("_private_sjef_project_backend_inactive_synced")) > 2) {
-    return true;
-  }
-  const auto backend_inactive = property_get("_private_sjef_project_backend_inactive");
-  {
-    rsync_options_second.emplace_back("-a");
-    for (const auto& rf : m_reserved_files) {
-      auto f = regex_replace(fs::path{rf}.filename().string(), std::regex(R"--(%)--"), name());
-      if (fs::exists(f))
-        rsync_options_second.emplace_back("--exclude=" + f);
-    }
-    rsync_options_second.emplace_back(backend.host + ":" + backend.cache + "/" + m_filename.string() + "/");
-    rsync_options_second.emplace_back(m_filename.string());
-    m_trace(2 - verbosity) << "Pull rsync: " << rsync_command;
-    for (const auto& o : rsync_options_second)
-      m_trace(2 - verbosity) << " '" << o << "'";
-    m_trace(2 - verbosity) << std::endl;
-    auto start_time_rsync2 = std::chrono::steady_clock::now();
-    bp::child(rsync_command, rsync_options_second).wait();
-    m_trace(3 - verbosity) << "time for second rsync "
-                           << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() -
-                                                                                    start_time_rsync2)
-                                  .count()
-                           << "ms" << std::endl;
-  }
-  if (backend_inactive != "0") {
-    const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", backend_inactive);
-    auto n = std::stoi(property_get("_private_sjef_project_backend_inactive_synced"));
-    const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced", std::to_string(n + 1));
-  } else {
-    const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive", "0");
-    const_cast<Project*>(this)->property_set("_private_sjef_project_backend_inactive_synced", "0");
-  }
   return true;
 }
 
@@ -463,8 +353,6 @@ bool Project::move(const std::filesystem::path& destination_filename, bool force
   auto dest = fs::absolute(expand_path(destination_filename, fs::path{m_filename}.extension().string().substr(1)));
   if (force)
     fs::remove_all(dest);
-  if (!property_get("backend").empty())
-    synchronize();
   auto namesave = name();
   auto filenamesave = m_filename;
   try {
@@ -488,12 +376,6 @@ bool Project::copy(const std::filesystem::path& destination_filename, bool force
   auto dest = fs::absolute(expand_path(destination_filename, fs::path{m_filename}.extension().string().substr(1)));
   if (slave)
     keep_run_directories = 0;
-  try { // try to synchronize if we can, but still do the copy if not
-    if (!property_get("backend").empty())
-      synchronize();
-  } catch (...) {
-    // condone
-  }
   {
     if (force)
       fs::remove_all(dest);
@@ -681,13 +563,16 @@ bool Project::run(int verbosity, bool force, bool wait) {
   auto rundir = run_directory_new();
   //  auto p_status_mutex = std::make_unique<std::lock_guard<std::mutex>>(m_status_mutex);
   m_trace(2 - verbosity) << "run job, backend=" << backend.name << std::endl;
+  m_trace(2-verbosity) << "initial run_command "<<run_command<<std::endl;
   auto spl = splitString(run_command);
   run_command = spl.front();
   for (auto sp = spl.rbegin(); sp < spl.rend() - 1; sp++)
     optionstring = "'" + *sp + "' " + optionstring;
-  m_trace(3 - verbosity) << "run job " << run_command << " " << optionstring << " " << filename("inp", "", rundir)
+  m_trace(3 - verbosity) << "run job " << run_command + " " + optionstring + std::to_string(rundir)+".inp"
                          << std::endl;
-  m_job->run(run_command + " " + optionstring + fs::relative(filename("inp", "", rundir)).string(), verbosity, wait);
+  m_job.reset(new util::Job(*this));
+//  m_job->run(run_command + " " + optionstring + fs::relative(filename("inp", "", rundir)).string(), verbosity, wait);
+  m_job->run(run_command + " " + optionstring + std::to_string(rundir)+".inp", verbosity, wait);
   property_set("jobnumber", std::to_string(m_job->job_number()));
   //    p_status_mutex.reset(); // TODO probably not necessary
   m_trace(3 - verbosity) << "jobnumber " << m_job->job_number() << std::endl;
@@ -812,10 +697,6 @@ std::string Project::xml(int run, bool sync) const {
 
 std::string Project::file_contents(const std::string& suffix, const std::string& name, int run, bool sync) const {
 
-  if (auto be = property_get("backend"); sync && !be.empty() && be != "local" &&
-                                         std::stoi(property_get("_private_sjef_project_backend_inactive_synced")) > 2 &&
-                                         suffix != m_suffixes.at("inp"))
-    synchronize();
   std::ifstream s(filename(suffix, name, run));
   auto result = std::string(std::istreambuf_iterator<char>(s), std::istreambuf_iterator<char>());
   while (result.back() == '\n')
@@ -843,17 +724,16 @@ std::string sjef::Project::status_message(int verbosity) const {
   return result;
 }
 
-// TODO use this in Command/Job
-// void Project::wait(unsigned int maximum_microseconds) const {
-//  unsigned int microseconds = 1;
-//  while (true) {
-//    if (auto stat = status(); stat == completed || stat == killed)
-//      break;
-//    std::this_thread::sleep_for(std::chrono::microseconds(microseconds));
-//    if (microseconds < maximum_microseconds)
-//      microseconds *= 2;
-//  }
-//}
+void Project::wait(unsigned int maximum_microseconds) const {
+  unsigned int microseconds = 1;
+//  std::cout << "wait status="<<status()<<std::endl;
+  while (status() == unknown or status() == running or status() == waiting) {
+    std::this_thread::sleep_for(std::chrono::microseconds(microseconds));
+    if (microseconds < maximum_microseconds)
+      microseconds *= 2;
+  }
+//  std::cout << "wait status="<<status()<<std::endl;
+}
 
 void Project::property_delete(const std::vector<std::string>& properties) {
   auto lock = m_locker->bolt();
@@ -1311,7 +1191,6 @@ std::vector<std::string> sjef::Project::backend_names() const {
   return result;
 }
 
-
 void sjef::Project::change_backend(std::string backend, bool force) {
   if (status() == running or status() == waiting)
     throw runtime_error("Cannot change backend when job is running or waiting");
@@ -1330,7 +1209,7 @@ void sjef::Project::change_backend(std::string backend, bool force) {
 }
 
 // TODO maybe use the stuff here about wait interval
-//void sjef::Project::backend_watcher(sjef::Project& project_, int min_wait_milliseconds, int max_wait_milliseconds,
+// void sjef::Project::backend_watcher(sjef::Project& project_, int min_wait_milliseconds, int max_wait_milliseconds,
 //                                    int poll_milliseconds) {
 //  project_.m_backend_watcher_instance.reset(
 //      new sjef::Project(project_.m_filename, true, "", {{}}, project_.m_monitor, project_.m_sync, &project_));
@@ -1355,8 +1234,8 @@ void sjef::Project::change_backend(std::string backend, bool force) {
 //      try {
 //        project.synchronize(0);
 //      } catch (const std::exception& ex) {
-//        project.m_warn.warn() << "sjef::Project::backend_watcher() synchronize() has thrown " << ex.what() << std::endl;
-//        project.cached_status(unknown);
+//        project.m_warn.warn() << "sjef::Project::backend_watcher() synchronize() has thrown " << ex.what() <<
+//        std::endl; project.cached_status(unknown);
 //      }
 //      try {
 //        project.cached_status(project.status(0, false));

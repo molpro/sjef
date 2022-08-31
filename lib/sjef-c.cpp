@@ -123,15 +123,6 @@ int sjef_project_run_needed(const char* project) {
 }
 
 int sjef_project_synchronize(const char* project, const char* backend, int verbosity) {
-  try {
-    if (projects.count(project) == 0)
-      sjef_project_open(project);
-    projects.at(project)->change_backend(backend);
-    return (projects.at(project)->synchronize(verbosity) ? 1 : 0);
-  } catch (std::exception& e) {
-    error(e);
-  } catch (...) {
-  }
   return 0;
 }
 int sjef_project_run(const char* project, const char* backend, int verbosity, int force, int wait) {

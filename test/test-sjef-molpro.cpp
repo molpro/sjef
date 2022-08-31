@@ -44,7 +44,7 @@ TEST_F(molpro_test, spawn_many_molpro) {
     for (auto i = 0; i < 1; ++i) {
       ASSERT_TRUE(p.run(backend, -1, true, true));
       EXPECT_NE(p.property_get("jobnumber"), "-1");
-      EXPECT_EQ(p.status(false), sjef::completed);
+      EXPECT_EQ(p.status(), sjef::completed);
     }
 }
 
@@ -103,12 +103,6 @@ TEST_F(molpro_test, molpro_workflow) {
         auto& p = *(pp.second);
         std::cout << "Project " << p.name() << std::endl;
         p.wait();
-        //            std::cout << "_private_sjef_project_backend_inactive
-        //            "<<p.property_get("_private_sjef_project_backend_inactive") << ",
-        //            _private_sjef_project_backend_inactive_synced
-        //            "<<p.property_get("_private_sjef_project_backend_inactive_synced")<<std::endl;
-        p.synchronize();
-        //        std::cout <<"after synchronize():\n"<<p.xml()<<std::endl;
         //            std::cout << "_private_sjef_project_backend_inactive
         //            "<<p.property_get("_private_sjef_project_backend_inactive") << ",
         //            _private_sjef_project_backend_inactive_synced

@@ -54,8 +54,6 @@ private:
   };
   mutable backend_watcher_flag_container m_unmovables;
   std::unique_ptr<Project> m_backend_watcher_instance;
-  const Project* m_master_instance;
-  bool m_master_of_slave;
   bool m_monitor;
   bool m_sync;
   mutable std::mutex m_status_mutex;
@@ -84,14 +82,13 @@ public:
    * directory name if filename does not have one
    * @param suffixes The file suffixes for special (input, output) files within
    * the project
-   * @param masterProject For internal use only
    * @param monitor Whether to spawn threads that continuously monitor state. If false, no attempt is made to monitor
    * the status of local or remote jobs, and submission of remote jobs is not allowed
    * @param sync Whether to synchronise with remote backend
    */
   explicit Project(const std::filesystem::path& filename, bool construct = true, const std::string& default_suffix = "",
                    const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}},
-                    bool monitor = true, bool sync = true, const Project* masterProject = nullptr);
+                    bool monitor = true, bool sync = true);
   //  explicit Project(const std::string& filename, bool construct = true, const std::string& default_suffix = "",
 //                   const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}}) : Project(std::filesystem::path(filename),construct,default_suffix,suffixes) {}
   Project(const Project& source) = delete;
@@ -150,16 +147,6 @@ public:
       result &= export_file(file, overwrite);
     return result;
   }
-  /*!
-   * @brief Synchronize the project with a cached copy belonging to a backend.
-   * name.inp, name.xyz, Info.plist, and any files brought in with import(),
-   * will be pushed from the master copy to the backend, and all other files
-   * will be pulled from the backend.
-   * @param verbosity If >0, show underlying processing
-   * @param nostatus should be set if called from status() to avoid infinite recursion
-   * @param force Force synchronization even if thought not to be needed
-   */
-  bool synchronize(int verbosity = 0, bool nostatus = false, bool force = false) const;
   /*!
    * @brief Set the warning/error diagnostic level and destination
    * @param stream

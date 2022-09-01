@@ -12,9 +12,10 @@ namespace fs = std::filesystem;
 
 TEST(Command, local) {
   sjef::util::Command comm;
-  for (int i = 0; i < 2; ++i)
+  for (int i = 0; i < 1; ++i)
     EXPECT_EQ(comm("pwd"), fs::current_path().string());
   EXPECT_EQ(comm.out(), fs::current_path().string());
+  EXPECT_EQ(comm.job_number(), 0);
 }
 
 TEST(Command, remote) {
@@ -25,12 +26,14 @@ TEST(Command, remote) {
     EXPECT_EQ(comm("cd " + fs::current_path().string() + ";pwd"), fs::current_path().string());
   for (int i = 0; i < 2; ++i)
     EXPECT_EQ(comm("pwd", true, fs::current_path().string()), fs::current_path().string());
+  EXPECT_EQ(comm.job_number(), 0);
 }
 
 TEST(Command, local_asynchronous) {
+  const std::string testfile{"testfile"};
   sjef::util::Command comm;
   comm("pwd", false);
-  EXPECT_NE(comm.job_number(), 0);
+  EXPECT_NE(comm.job_number(), 0)<<"Output stream:\n"<<comm.out()<<std::endl<<"Error stream:\n"<<comm.err()<<std::endl;
   comm.wait();
   EXPECT_FALSE(comm.running());
 }

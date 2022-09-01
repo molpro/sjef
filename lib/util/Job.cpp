@@ -77,13 +77,13 @@ sjef::util::Job::~Job() {
 }
 
 std::string Job::run(const std::string& command, int verbosity, bool wait) {
-//  const auto& substr = std::regex_replace(command, std::regex{"'"}, "").substr(0, m_backend.run_command.size());
+  //  const auto& substr = std::regex_replace(command, std::regex{"'"}, "").substr(0, m_backend.run_command.size());
   m_trace(4 - verbosity) << "Job::run() command=" << command << std::endl;
-//  m_trace(4 - verbosity) << "Job::run substr=" << substr << " m_backend.run_command=" << m_backend.run_command
-//                         << std::endl;
-//  auto is_run_command = substr == m_backend.run_command;
-  auto is_run_command=true;
-//  m_trace(4-verbosity)<< "is_run_command: "<<is_run_command<<std::endl;
+  //  m_trace(4 - verbosity) << "Job::run substr=" << substr << " m_backend.run_command=" << m_backend.run_command
+  //                         << std::endl;
+  //  auto is_run_command = substr == m_backend.run_command;
+  auto is_run_command = true;
+  //  m_trace(4-verbosity)<< "is_run_command: "<<is_run_command<<std::endl;
   if (is_run_command)
     m_job_number = 0; // pauses status polling
   auto backend_submits_batch = is_run_command and m_backend.run_jobnumber != "([0-9]+)";
@@ -127,7 +127,6 @@ status Job::get_status(int verbosity) {
 //  std::cout << "status_string:\n" << status_string << std::endl;
   std::stringstream ss(status_string);
   sjef::status result = completed;
-  // TODO check this parsing works for local jobs, including zombie process management
   for (std::string line; std::getline(ss, line);) {
     if ((" " + line).find(" " + std::to_string(m_job_number) + " ") != std::string::npos) {
       std::smatch match;
@@ -142,32 +141,26 @@ status Job::get_status(int verbosity) {
       }
     }
   }
-  //  std::cout <<"Job::status() returns "<<result<<std::endl;
+  //  std::cout << "running pattern: " << m_backend.status_running << std::endl;
+//  std::cout << Command()("ps -p "+std::to_string(m_job_number)) << std::endl;
+//
+//  std::cout << Command()("lsof -p "+std::to_string(m_job_number)) << std::endl;
+//  std::cout << Command()("ls -laR  /tmp/sjef/cmake-build-release-marat/test/H2_local.molpro/run") << std::endl;
+//  std::cout << "Job::status() returns " << result << std::endl;
   return result;
 }
 
 void Job::kill(int verbosity) {
   auto status_string = (*m_backend_command_server)(m_backend.kill_command + " " + std::to_string(m_job_number));
-  //   TODO more sophisticated checking that the kill worked
-  //  set_status(killed);
-  //    std::lock_guard lock(m_closing_mutex);
   m_killed = true;
-  //  m_closing = true;
 }
 void Job::poll_job(int verbosity) {
-//  std::cout << "new poll_job" << std::endl;
   status status;
+//  std::cout << "Polling starts"<<std::endl;
   while (true) {
     if (m_killed)
       sleep(1); //   TODO more sophisticated checking that the kill worked
     status = m_killed ? killed : get_status(verbosity);
-//    if (status == completed) // check again because apparently sometimes ps does not find the process even though it's still running
-//      status = get_status(verbosity);
-//    if (status == completed) // check again because apparently sometimes ps does not find the process even though it's still running
-//      status = get_status(verbosity);
-//    if (status==completed)
-//      std::cout << "debug ps"<<Command()("ps -o pid,state -p "+std::to_string(m_job_number),true,".",0) <<std::endl;
-//    std::cout << "poll_job status=" << status << std::endl;
     pull_rundir(verbosity);
     set_status(status);
     {
@@ -176,11 +169,11 @@ void Job::poll_job(int verbosity) {
         break;
     }
   }
-  //  std::cout << "poll_job has exited loop"<<std::endl;
   if (m_backend_command_server != nullptr and (status == completed or status == killed)) {
     (*m_backend_command_server)("rm -rf " + m_remote_cache_directory);
   }
   m_backend_command_server.reset(); // close down backend server as no longer needed
+//  std::cout << "Polling stops"<<std::endl;
 }
 
 } // namespace sjef::util

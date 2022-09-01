@@ -14,28 +14,8 @@ Command::Command(std::string host, std::string shell) : m_host(std::move(host)) 
                           bp::std_out > *m_out);
     if (!m_process.valid())
       throw std::runtime_error("Spawning run process has failed");
-  }
-}
 
-static std::vector<std::string> splitString(const std::string& input, char c = ' ', char quote = '\'') {
-  std::vector<std::string> result;
-  const char* str0 = strdup(input.c_str());
-  const char* str = str0;
-  do {
-    while (*str == c && *str)
-      ++str;
-    const char* begin = str;
-    while (*str && (*str != c || (*begin == quote && str > begin && *(str - 1) != quote)))
-      ++str;
-    if (*begin == quote && str > begin + 1 && *(str - 1) == quote)
-      result.emplace_back(begin + 1, str - 1);
-    else
-      result.emplace_back(begin, str);
-    if (result.back().empty())
-      result.pop_back();
-  } while (0 != *str++);
-  free((void*)str0);
-  return result;
+  }
 }
 
 ///> @private
@@ -63,24 +43,16 @@ std::string Command::operator()(const std::string& command, bool wait, const std
                                 int verbosity) const {
   std::lock_guard lock(m_run_mutex);
   m_trace(2 - verbosity) << "Command::operator() " << command << std::endl;
+  m_trace(2 - verbosity) << "Command::operator() m_host=" << m_host << ", wait="<< wait
+                         << ", localhost()=" << localhost() << std::endl;
   m_last_out.clear();
+  const std::string jobnumber_tag{"@@@!!JOBNUMBER"};
+  const std::string terminator{"@@@!!EOF"};
+  auto pipeline = command;
+  if (!wait)
+    pipeline = "(( " + command + ") & echo "+jobnumber_tag+" $! 1>&2)";
   if (localhost()) {
-    m_trace(2 - verbosity) << "run local command: " << command << std::endl;
-    m_trace(2 - verbosity) << "wait: " << wait << std::endl;
-    auto spl = splitString(command);
-    fs::path run_command = spl.front();
-    std::string optionstring;
-    for (auto sp = spl.rbegin(); sp < spl.rend() - 1; sp++)
-      optionstring = "'" + *sp + "' " + optionstring;
-    if (executable(run_command).empty()) {
-      for (const auto& p : ::boost::this_process::path())
-        m_warn.error() << "path " << p << std::endl;
-      throw std::runtime_error("Cannot find run command " + run_command.string());
-    }
-    m_trace(3 - verbosity) << "run local job executable=" << executable(run_command) << " options=" << optionstring
-                           << " " << std::endl;
-    for (const auto& o : splitString(optionstring))
-      m_trace(4 - verbosity) << "option " << o << std::endl;
+
     fs::path current_path_save;
     try {
       current_path_save = fs::current_path();
@@ -91,56 +63,53 @@ std::string Command::operator()(const std::string& command, bool wait, const std
 
     m_out.reset(new bp::ipstream);
     m_err.reset(new bp::ipstream);
-    m_trace(4 - verbosity) << "current directory for bp::child=" << fs::current_path() << std::endl;
-    m_process = bp::child(executable(run_command), bp::args(splitString(optionstring)), bp::std_out > *m_out,
-                          bp::std_err > *m_err);
+    m_process =
+        bp::child(executable("nohup"), "sh","-c",pipeline,
+//        bp::args(splitString(pipeline)),
+        bp::std_out > *m_out, bp::std_err > *m_err);
     fs::current_path(current_path_save);
     if (!m_process.valid())
       throw std::runtime_error("Spawning run process has failed");
     m_process.detach();
-    m_job_number = m_process.id();
-    m_trace(3 - verbosity) << "jobnumber " << m_process.id() << ", running=" << m_process.running() << std::endl;
-    if (!wait)
-      return "";
-    std::string line;
-    while (std::getline(*m_out, line)) {
-      m_trace(4 - verbosity) << "out line from local command " << command << ": " << line << std::endl;
-      m_last_out += line + '\n';
-    }
-    m_trace(3 - verbosity) << "out from local command " << command << ": " << m_last_out << std::endl;
-    m_process.wait();
+    //      m_trace(3 - verbosity) << "jobnumber " << m_process.id() << ", running=" << m_process.running() <<
+    //      std::endl; std::string line; while (std::getline(*m_out, line)) {
+    //        m_trace(4 - verbosity) << "out line from command " << command << ": " << line << std::endl;
+    //        m_jobnumber = wait ? 0 : std::to_string(line);
+    //        m_last_out += line + '\n';
+    //      }
+    //      m_trace(3 - verbosity) << "out from command " << command << ": " << m_last_out << std::endl;
   } else {
-    const std::string terminator{"@@@!!EOF"};
-    const std::string jobnumber_tag{"@@@!!JOBNUMBER"};
-    m_in << std::string{"(cd \""} + directory + "\"; " + command +
-                (wait ? ")" : std::string{")& echo "} + jobnumber_tag + " $! 1>&2")
-         << std::endl;
+    m_in << std::string{"cd \""} + directory + "\"" << std::endl;
+    m_in << pipeline << std::endl;
     m_in << ">&2 echo '" << terminator << "' $?" << std::endl;
     m_in << "echo '" << terminator << "'" << std::endl;
-    std::string line;
-    while (std::getline(*m_out, line) && line != terminator) {
-      m_trace(4 - verbosity) << "out line from remote command " << line << std::endl;
-      m_last_out += line + '\n';
-    }
-    m_trace(3 - verbosity) << "out from remote command\n" << command << ": " << m_last_out << std::endl;
-    m_last_err.clear();
-    while (std::getline(*m_err, line) && line.substr(0, terminator.size()) != terminator) {
-      m_trace(4 - verbosity) << "err line from remote command " << line << std::endl;
-      std::smatch match;
-      if (std::regex_search(line, match, std::regex{jobnumber_tag + "\\s*(\\d+)"})) {
-        m_trace(5 - verbosity) << "... a match was found: " << match[1] << std::endl;
-        m_job_number = std::stoi(match[1]);
-      } else
-        m_last_err += line + '\n';
-    }
-    m_trace(3 - verbosity) << "err from remote command " << command << ":\n" << m_last_err << std::endl;
-    m_trace(3 - verbosity) << "last line=" << line << std::endl;
-    auto rc = line.empty() ? -1 : std::stoi(line.substr(terminator.size() + 1));
-    m_trace(3 - verbosity) << "rc=" << rc << std::endl;
-    if (rc != 0)
-      throw std::runtime_error("Host " + m_host + "; failed remote command: " + command + "\nStandard output:\n" +
-                               m_last_out + "\nStandard error:\n" + m_last_err);
   }
+  std::string line;
+  m_job_number=0;
+  while (std::getline(*m_out, line) && line != terminator) {
+    m_trace(4 - verbosity) << "out line from command " << line << std::endl;
+    m_last_out += line + '\n';
+  }
+  m_trace(3 - verbosity) << "out from command " << command << ":\n" << m_last_out << std::endl;
+  m_last_err.clear();
+  while (std::getline(*m_err, line) && line.substr(0, terminator.size()) != terminator) {
+    m_trace(4 - verbosity) << "err line from command " << line << std::endl;
+    std::smatch match;
+          if (std::regex_search(line, match, std::regex{jobnumber_tag + "\\s*(\\d+)"})) {
+            m_trace(5 - verbosity) << "... a match was found: " << match[1] << std::endl;
+            m_job_number = std::stoi(match[1]);
+          } else
+            m_last_err += line + '\n';
+  }
+  m_trace(3 - verbosity) << "err from command " << command << ":\n" << m_last_err << std::endl;
+  if (localhost())
+    m_process.wait();
+//  m_trace(3 - verbosity) << "last line=" << line << std::endl;
+//  auto rc = line.empty() ? -1 : std::stoi(line.substr(terminator.size() + 1));
+//  m_trace(3 - verbosity) << "rc=" << rc << std::endl;
+//  if (rc != 0)
+//    throw std::runtime_error("Host " + m_host + "; failed remote command: " + command + "\nStandard output:\n" +
+//                             m_last_out + "\nStandard error:\n" + m_last_err);
   if (m_last_out[m_last_out.size() - 1] == '\n')
     m_last_out.resize(m_last_out.size() - 1);
   return m_last_out;

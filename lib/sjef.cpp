@@ -2,11 +2,6 @@
 #include "Locker.h"
 #include "sjef-backend.h"
 #include <array>
-#include <boost/process/args.hpp>
-#include <boost/process/child.hpp>
-#include <boost/process/io.hpp>
-#include <boost/process/search_path.hpp>
-#include <boost/process/spawn.hpp>
 #include <chrono>
 #include <fstream>
 #include <functional>
@@ -24,7 +19,6 @@
 #include "util/Command.h"
 #include "util/Job.h"
 
-namespace bp = boost::process;
 namespace fs = std::filesystem;
 
 ///> @private
@@ -43,26 +37,6 @@ public:
 ///> @private
 inline bool localhost(const std::string_view& host) {
   return (host.empty() || host == "localhost" || host == "127.0.0.1");
-}
-///> @private
-inline std::string executable(const fs::path& command) {
-  if (command.is_absolute())
-    return command.string();
-  else {
-    constexpr bool use_boost_search_path = true;
-    if (use_boost_search_path) {
-      return bp::search_path(command.string()).string();
-    } else {
-      std::stringstream path{std::string{getenv("PATH")}};
-      std::string elem;
-      while (std::getline(path, elem, ':')) {
-        auto resolved = elem / command;
-        if (fs::is_regular_file(resolved))
-          return resolved.string();
-      }
-      return "";
-    }
-  }
 }
 
 ///> @private
@@ -113,11 +87,11 @@ inline void prune_lockers(const fs::path& filename) {
 }
 const std::vector<std::string> Project::suffix_keys{"inp", "out", "xml"};
 Project::Project(const std::filesystem::path& filename, bool construct, const std::string& default_suffix,
-                 const mapstringstring_t& suffixes, bool monitor, bool sync, const Project* masterProject)
+                 const mapstringstring_t& suffixes, bool monitor, bool sync)
     : m_project_suffix(get_project_suffix(filename, default_suffix)),
       m_filename(expand_path(filename, m_project_suffix)), m_properties(std::make_unique<pugi_xml_document>()),
-      m_suffixes(suffixes), m_backend_doc(std::make_unique<pugi_xml_document>()), m_master_instance(masterProject),
-      m_master_of_slave(masterProject == nullptr), m_monitor(std::move(monitor)), m_sync(std::move(sync)),
+      m_suffixes(suffixes), m_backend_doc(std::make_unique<pugi_xml_document>()),
+      m_monitor(std::move(monitor)), m_sync(std::move(sync)),
       m_locker(make_locker(m_filename)), m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}) {
   {
     auto lock = m_locker->bolt();
@@ -144,7 +118,7 @@ Project::Project(const std::filesystem::path& filename, bool construct, const st
 
     if (!construct)
       return;
-    if (const auto pf = propertyFile(); !fs::exists(pf) && m_master_of_slave) {
+    if (const auto pf = propertyFile(); !fs::exists(pf)) {
       save_property_file();
       m_property_file_modification_time = fs::last_write_time(propertyFile());
       property_set("_status", "4");
@@ -405,8 +379,6 @@ void Project::erase(const std::filesystem::path& filename, const std::string& de
     auto project = Project(filename_);
     backend = project.backends().at(project.m_backend);
   }
-  if (backend.host != "localhost" and backend.host != "local")
-    bp::child(bp::search_path("ssh"), backend.host, "rm", "-rf", backend.cache + "/" + filename_.string()).wait();
   if (fs::remove_all(filename_))
     recent_edit("", filename_);
 }
@@ -553,7 +525,6 @@ bool Project::run(int verbosity, bool force, bool wait) {
     return false;
   //  status(unevaluated);
   std::string line;
-  bp::child c;
   std::string optionstring;
   property_set("run_input_hash", std::to_string(input_hash()));
   if (verbosity > 0 && backend.name != sjef::Backend::dummy_name)
@@ -901,7 +872,6 @@ int Project::run_directory_new() {
     throw runtime_error("Cannot create directory " + rundir.string());
   }
   property_delete("jobnumber");
-  property_delete("_private_job_submission_time");
   set_current_run(0);
   copy(dir.string(), false, false, true);
   return sequence;

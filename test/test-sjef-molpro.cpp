@@ -71,7 +71,7 @@ TEST_F(molpro_test, molpro_workflow) {
     for (const auto& backend : remotes) {
       std::map<std::string, std::unique_ptr<sjef::Project>> projects;
       fs::remove_all(cache);
-      for (const auto& id : std::map<std::string, std::string>{{"H", "angstrom; geometry={h};rhf"},
+      for (const auto& id : std::map<std::string, std::string>{//{"H", "angstrom; geometry={h};rhf"},
                                                                {"H2", "angstrom; geometry={h;h,h,0.7};rhf"}}) {
         std::cout << "backend: " << backend << ", molecule: " << id.first << ", input: " << id.second << std::endl;
         auto file = state.testfile(id.first + "_" + backend + ".molpro");

@@ -77,36 +77,41 @@ sjef::util::Job::~Job() {
 }
 
 std::string Job::run(const std::string& command, int verbosity, bool wait) {
-  const auto& substr = std::regex_replace(command, std::regex{"'"}, "").substr(0, m_backend.run_command.size());
-  m_trace(4-verbosity) << "Job::run() command="<<command<<std::endl;
-  m_trace(4-verbosity) << "Job::run substr=" << substr << " m_backend.run_command=" << m_backend.run_command << std::endl;
-  auto is_run_command = substr == m_backend.run_command;
-  if (is_run_command) m_job_number=0; // pauses status polling
+//  const auto& substr = std::regex_replace(command, std::regex{"'"}, "").substr(0, m_backend.run_command.size());
+  m_trace(4 - verbosity) << "Job::run() command=" << command << std::endl;
+//  m_trace(4 - verbosity) << "Job::run substr=" << substr << " m_backend.run_command=" << m_backend.run_command
+//                         << std::endl;
+//  auto is_run_command = substr == m_backend.run_command;
+  auto is_run_command=true;
+//  m_trace(4-verbosity)<< "is_run_command: "<<is_run_command<<std::endl;
+  if (is_run_command)
+    m_job_number = 0; // pauses status polling
   auto backend_submits_batch = is_run_command and m_backend.run_jobnumber != "([0-9]+)";
   if (backend_submits_batch)
     push_rundir(verbosity);
-  m_trace(4-verbosity) << "Job::run() gives directory "<<m_project.filename("","",0)<<std::endl;
-  auto run_output = (*m_backend_command_server)(command, wait or backend_submits_batch, m_project.filename("","",0), verbosity);
+  m_trace(4 - verbosity) << "Job::run() gives directory " << m_project.filename("", "", 0) << std::endl;
+  auto run_output =
+      (*m_backend_command_server)(command, wait or backend_submits_batch, m_project.filename("", "", 0), verbosity);
   if (backend_submits_batch) {
     std::smatch match;
     if (std::regex_search(run_output, match, std::regex{m_backend.run_jobnumber})) {
       //        m_trace(5 - verbosity) << "... a match was found: " << match[1] << std::endl;
       m_job_number = std::stoi(match[1]);
-      m_trace(4-verbosity) << "Job::run backend_submits_batch m_job_number=" << m_job_number << std::endl;
+      m_trace(4 - verbosity) << "Job::run backend_submits_batch m_job_number=" << m_job_number << std::endl;
     }
   } else if (is_run_command) {
     m_job_number = m_backend_command_server->job_number();
-    m_trace(4-verbosity) << "Job::run is_run_command m_job_number=" << m_job_number << std::endl;
+    m_trace(4 - verbosity) << "Job::run is_run_command m_job_number=" << m_job_number << std::endl;
   } else
-    m_trace(4-verbosity) << "Job::run doesn't collect m_job_number" << std::endl;
-//  if (is_run_command) {
-//    m_closing=true;
-//    m_poll_task.wait();
-////  }
-////  if (is_run_command) {
-//    m_poll_task = std::async(std::launch::async, [this]() { this->poll_job(); });
-//  }
-//  sleep(1);
+    m_trace(4 - verbosity) << "Job::run doesn't collect m_job_number" << std::endl;
+  //  if (is_run_command) {
+  //    m_closing=true;
+  //    m_poll_task.wait();
+  ////  }
+  ////  if (is_run_command) {
+  //    m_poll_task = std::async(std::launch::async, [this]() { this->poll_job(); });
+  //  }
+  //  sleep(1);
   return run_output;
 }
 
@@ -115,8 +120,8 @@ void Job::set_status(status stat) {
 }
 
 status Job::get_status(int verbosity) {
-//  std::cout << "get_status() job_number=" << m_job_number << std::endl;
-  if (m_job_number ==0) return unknown;
+  if (m_job_number == 0)
+    return unknown;
   auto status_string =
       (*m_backend_command_server)(m_backend.status_command + " " + std::to_string(m_job_number), true, ".", verbosity);
 //  std::cout << "status_string:\n" << status_string << std::endl;
@@ -137,7 +142,7 @@ status Job::get_status(int verbosity) {
       }
     }
   }
-//  std::cout <<"Job::status() returns "<<result<<std::endl;
+  //  std::cout <<"Job::status() returns "<<result<<std::endl;
   return result;
 }
 
@@ -150,22 +155,29 @@ void Job::kill(int verbosity) {
   //  m_closing = true;
 }
 void Job::poll_job(int verbosity) {
+//  std::cout << "new poll_job" << std::endl;
   status status;
   while (true) {
     if (m_killed)
       sleep(1); //   TODO more sophisticated checking that the kill worked
     status = m_killed ? killed : get_status(verbosity);
+//    if (status == completed) // check again because apparently sometimes ps does not find the process even though it's still running
+//      status = get_status(verbosity);
+//    if (status == completed) // check again because apparently sometimes ps does not find the process even though it's still running
+//      status = get_status(verbosity);
+//    if (status==completed)
+//      std::cout << "debug ps"<<Command()("ps -o pid,state -p "+std::to_string(m_job_number),true,".",0) <<std::endl;
 //    std::cout << "poll_job status=" << status << std::endl;
     pull_rundir(verbosity);
     set_status(status);
-//    std::cout << "poll_job has set status=" << status << std::endl;
     {
       std::lock_guard lock(m_closing_mutex);
       if (m_closing or status == completed or status == killed)
         break;
     }
   }
-  if (m_backend_command_server!=nullptr and (status == completed or status == killed)) {
+  //  std::cout << "poll_job has exited loop"<<std::endl;
+  if (m_backend_command_server != nullptr and (status == completed or status == killed)) {
     (*m_backend_command_server)("rm -rf " + m_remote_cache_directory);
   }
   m_backend_command_server.reset(); // close down backend server as no longer needed

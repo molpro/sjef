@@ -103,7 +103,7 @@ std::string Command::operator()(const std::string& command, bool wait, const std
     if (!wait)
       return "";
     std::string line;
-    while (m_process.running() && std::getline(*m_out, line)) {
+    while (std::getline(*m_out, line)) {
       m_trace(4 - verbosity) << "out line from local command " << command << ": " << line << std::endl;
       m_last_out += line + '\n';
     }

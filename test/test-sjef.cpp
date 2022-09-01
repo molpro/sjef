@@ -385,10 +385,10 @@ TEST(project, many_projects) {
   std::vector<std::unique_ptr<sjef::Project>> projects;
   projects.reserve(n_projects);
   for (int i = 0; i < n_projects; ++i)
-    projects.emplace_back(new sjef::Project(state.testproject(std::string{"many_projects_"} + std::to_string(i)),true,"molpro",{},i<n_projects_with_jobs,i<n_projects_with_jobs));
+    projects.emplace_back(new sjef::Project(state.testfile(std::string{"many_projects_"} + std::to_string(i)+".molpro"),true,"molpro",{},i<n_projects_with_jobs,i<n_projects_with_jobs));
   const auto& backend = sjef::Backend::dummy_name;
   for (auto& p : projects)
-    EXPECT_EQ(p->status(), sjef::status::completed);
+    EXPECT_EQ(p->status(), sjef::status::unevaluated);
   for (int i = 0; i < n_projects_with_jobs; ++i) {
     const auto& p = projects[i];
     { std::ofstream(p->filename("inp")) << ""; }

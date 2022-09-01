@@ -561,21 +561,23 @@ bool Project::run(int verbosity, bool force, bool wait) {
   auto run_command = backend_parameter_expand(backend.name, backend.run_command);
   custom_run_preface();
   auto rundir = run_directory_new();
+  m_xml_cached = "";
   //  auto p_status_mutex = std::make_unique<std::lock_guard<std::mutex>>(m_status_mutex);
   m_trace(2 - verbosity) << "run job, backend=" << backend.name << std::endl;
-  m_trace(2-verbosity) << "initial run_command "<<run_command<<std::endl;
+  m_trace(2 - verbosity) << "initial run_command " << run_command << std::endl;
   auto spl = splitString(run_command);
   run_command = spl.front();
   for (auto sp = spl.rbegin(); sp < spl.rend() - 1; sp++)
     optionstring = "'" + *sp + "' " + optionstring;
-  m_trace(3 - verbosity) << "run job " << run_command + " " + optionstring + std::to_string(rundir)+".inp"
+  m_trace(3 - verbosity) << "run job " << run_command + " " + optionstring + std::to_string(rundir) + ".inp"
                          << std::endl;
   m_job.reset(new util::Job(*this));
-//  m_job->run(run_command + " " + optionstring + fs::relative(filename("inp", "", rundir)).string(), verbosity, wait);
-  m_job->run(run_command + " " + optionstring + std::to_string(rundir)+".inp", verbosity, wait);
+  m_job->run(run_command + " " + optionstring + std::to_string(rundir) + ".inp", verbosity, false);
   property_set("jobnumber", std::to_string(m_job->job_number()));
   //    p_status_mutex.reset(); // TODO probably not necessary
   m_trace(3 - verbosity) << "jobnumber " << m_job->job_number() << std::endl;
+  if (wait)
+    this->wait();
   return true;
 }
 
@@ -685,13 +687,13 @@ bool Project::run_needed(int verbosity) const {
 }
 
 std::string Project::xml(int run, bool sync) const {
-  if (const bool localhost = m_backends.at(property_get("backend")).host == "localhost";
-      (localhost && status() != completed) ||
-      ((!localhost) && std::stoi(property_get("_private_sjef_project_backend_inactive_synced")) <= 2)) {
+  //  std::cout << "Project::xml() status="<<status()<<std::endl;
+  if (status() != completed)
     return xmlRepair(file_contents(m_suffixes.at("xml"), "", run, sync));
-  }
-  if (m_xml_cached.empty())
+  if (m_xml_cached.empty()) {
     m_xml_cached = xmlRepair(file_contents(m_suffixes.at("xml"), "", run, sync));
+//    std::cout << "m_xml_cached set to " << m_xml_cached << std::endl;
+  }
   return m_xml_cached;
 }
 
@@ -726,13 +728,13 @@ std::string sjef::Project::status_message(int verbosity) const {
 
 void Project::wait(unsigned int maximum_microseconds) const {
   unsigned int microseconds = 1;
-//  std::cout << "wait status="<<status()<<std::endl;
+  //  std::cout << "wait status="<<status()<<std::endl;
   while (status() == unknown or status() == running or status() == waiting) {
     std::this_thread::sleep_for(std::chrono::microseconds(microseconds));
     if (microseconds < maximum_microseconds)
       microseconds *= 2;
   }
-//  std::cout << "wait status="<<status()<<std::endl;
+  //  std::cout << "wait status="<<status()<<std::endl;
 }
 
 void Project::property_delete(const std::vector<std::string>& properties) {

@@ -13,6 +13,7 @@
 #include <regex>
 #include <stdlib.h>
 #include <unistd.h>
+#include "../lib/util/Command.h"
 
 namespace fs = std::filesystem;
 
@@ -363,9 +364,36 @@ TEST(project, spawn_many_dummy) {
     //    std::cerr << "run number " << i << std::endl;
     ASSERT_TRUE(p.run(backend, -1, true, true));
     EXPECT_EQ(p.status(), sjef::completed);
-//    p.wait();
+    //    p.wait();
     EXPECT_NE(p.property_get("jobnumber"), "-1");
   }
+}
+
+TEST(project, restart) {
+  savestate state;
+  std::string path(getenv("PATH"));
+  path = fs::current_path().string()+":"+path;
+  std::cout << "PATH "<<path<<std::endl;
+  setenv("PATH",path.c_str(),1);
+  { std::ofstream("dummy") << "#!/bin/sh\nsleep 0;if [ $1 = '-v' ]; then shift; fi; echo dummyxml > ${1%.inp}.xml"; }
+  fs::permissions("dummy",fs::perms::owner_exec, fs::perm_options::add);
+
+  const std::filesystem::path& filename = state.testproject("restart");
+  for (int restart=0; restart<2; ++restart)
+  {
+    sjef::Project p(filename);
+  const auto& backend = sjef::Backend::dummy_name;
+  for (auto i = 0; i < 5; ++i) {
+        std::cerr << "run number " << i << std::endl;
+    ASSERT_TRUE(p.run(backend, 0, true, false));
+        p.wait();
+//    std::cout << p.xml() <<std::endl;
+        EXPECT_EQ(p.xml(),"dummyxml");
+    EXPECT_EQ(p.status(), sjef::completed);
+    EXPECT_NE(p.property_get("jobnumber"), "-1");
+  }
+  }
+  fs::remove("dummy");
 }
 
 TEST(project, backend_cache) {

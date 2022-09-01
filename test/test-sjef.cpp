@@ -359,7 +359,7 @@ TEST(project, spawn_many_dummy) {
   sjef::Project p(state.testproject("spawn_many"));
   { std::ofstream(p.filename("inp")) << ""; }
   const auto& backend = sjef::Backend::dummy_name;
-  for (auto i = 0; i < 500; ++i) {
+  for (auto i = 0; i < 5; ++i) {
     //    std::cerr << "run number " << i << std::endl;
     ASSERT_TRUE(p.run(backend, -1, true, true));
     EXPECT_EQ(p.status(), sjef::completed);

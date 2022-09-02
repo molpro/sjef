@@ -14,8 +14,10 @@ namespace sjef::util {
 /*!
  * @brief Execute an external command locally or on a remote machine via ssh.
  *
- * Execution can either by synchronous or asynchronous, but in that case the output and error streams are not available.
- * Standard input is not supported.
+ * The command can be anything that can be understood by standard shell.
+ * Execution can either by synchronous (output and error streams available via out() and err())
+ * or asynchronous (output and error streams can be directed to a file).
+ * Standard input is not upported.
  */
 class Command {
 
@@ -23,7 +25,7 @@ public:
   Command(std::string host, std::string shell = "/bin/sh");
   Command() : Command("localhost") {}
   std::string operator()(const std::string& command, bool wait = true, const std::string& directory = ".",
-                         int verbosity = 0) const;
+                         int verbosity = 0, const std::string& out="/dev/null", const std::string& err="/dev/null") const;
   const std::string& out() const { return m_last_out; }
   const std::string& err() const { return m_last_err; }
   int job_number() const { return m_job_number; }

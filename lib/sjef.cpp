@@ -3,6 +3,8 @@
 #include "sjef-backend.h"
 #include <array>
 #include <chrono>
+#include <cstdlib>
+#include <ctime>
 #include <fstream>
 #include <functional>
 #include <iostream>
@@ -18,6 +20,7 @@
 #endif
 #include "util/Command.h"
 #include "util/Job.h"
+#include <random>
 
 namespace fs = std::filesystem;
 
@@ -90,9 +93,9 @@ Project::Project(const std::filesystem::path& filename, bool construct, const st
                  const mapstringstring_t& suffixes, bool monitor, bool sync)
     : m_project_suffix(get_project_suffix(filename, default_suffix)),
       m_filename(expand_path(filename, m_project_suffix)), m_properties(std::make_unique<pugi_xml_document>()),
-      m_suffixes(suffixes), m_backend_doc(std::make_unique<pugi_xml_document>()),
-      m_monitor(std::move(monitor)), m_sync(std::move(sync)),
-      m_locker(make_locker(m_filename)), m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}) {
+      m_suffixes(suffixes), m_backend_doc(std::make_unique<pugi_xml_document>()), m_monitor(std::move(monitor)),
+      m_sync(std::move(sync)), m_locker(make_locker(m_filename)),
+      m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}) {
   {
     auto lock = m_locker->bolt();
     if (fs::exists(propertyFile())) {
@@ -233,6 +236,18 @@ Project::Project(const std::filesystem::path& filename, bool construct, const st
     if (m_backends.count(be) == 0)
       be = sjef::Backend::default_name;
     change_backend(be, true);
+    // we may be loading an old project with an active job when it was last closed, so need to poll its status
+    {
+      auto initial_status = static_cast<sjef::status>(std::stoi("0" + property_get("_status")));
+//      std::cout << "initial_status " << initial_status << std::endl;
+      if (initial_status == running or initial_status == waiting) {
+        auto new_status = util::Job(*this).get_status();
+        if (new_status == unknown) {
+//          std::cout << "setting status from " << initial_status <<" to completed"<< std::endl;
+        property_set("_status", std::to_string(static_cast<int>(completed)));
+        }
+      }
+    }
   }
 }
 
@@ -573,6 +588,7 @@ void Project::clean(bool oldOutput, bool output, bool unused, int keep_run_direc
 }
 
 void Project::kill() {
+  std::cout << "Project::kill()" << std::endl;
   if (m_job != nullptr)
     m_job->kill();
 }
@@ -663,7 +679,7 @@ std::string Project::xml(int run, bool sync) const {
     return xmlRepair(file_contents(m_suffixes.at("xml"), "", run, sync));
   if (m_xml_cached.empty()) {
     m_xml_cached = xmlRepair(file_contents(m_suffixes.at("xml"), "", run, sync));
-//    std::cout << "m_xml_cached set to " << m_xml_cached << std::endl;
+    //    std::cout << "m_xml_cached set to " << m_xml_cached << std::endl;
   }
   return m_xml_cached;
 }
@@ -701,6 +717,7 @@ void Project::wait(unsigned int maximum_microseconds) const {
   unsigned int microseconds = 1;
   //  std::cout << "wait status="<<status()<<std::endl;
   while (status() == unknown or status() == running or status() == waiting) {
+//    std::cout << "in sjef::Project::wait() status "<<status()<<std::endl;
     std::this_thread::sleep_for(std::chrono::microseconds(microseconds));
     if (microseconds < maximum_microseconds)
       microseconds *= 2;
@@ -1038,15 +1055,19 @@ void Project::save_property_file_locked() const {
 
 ///> @private
 inline std::string random_string(size_t length) {
-  auto randchar = []() {
+  std::random_device dev;
+  std::mt19937 rng(dev());
+  std::uniform_int_distribution<std::mt19937::result_type> rn(1, 1000000000);
+  auto randchar = [&rn, &rng]() {
     const char charset[] = "0123456789"
                            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                            "abcdefghijklmnopqrstuvwxyz";
     const size_t max_index = (sizeof(charset) - 1);
-    return charset[rand() % max_index];
+    return charset[rn(rng) % max_index];
   };
   std::string str(length, 0);
   std::generate_n(str.begin(), length, randchar);
+  std::cout << "random_string makes " << str << std::endl;
   return str;
 }
 
@@ -1056,10 +1077,12 @@ size_t sjef::Project::project_hash() {
   if (p.empty()) {
     result = std::hash<std::string>{}(random_string(32));
     this->property_set("project_hash", std::to_string(result));
+    std::cout << "generated new project hash" << std::endl;
   } else {
     std::istringstream iss(p);
     iss >> result;
   }
+  std::cout << "project hash " << result << std::endl;
   return result;
 }
 
@@ -1164,15 +1187,16 @@ std::vector<std::string> sjef::Project::backend_names() const {
 }
 
 void sjef::Project::change_backend(std::string backend, bool force) {
-  if (status() == running or status() == waiting)
-    throw runtime_error("Cannot change backend when job is running or waiting");
   if (backend.empty())
     backend = sjef::Backend::default_name;
   bool unchanged = property_get("backend") == backend && m_backend == backend;
   if (!force && unchanged)
     return;
-  if (!unchanged && !m_backend.empty())
+  if (!unchanged && !m_backend.empty()) {
+    if (status() == running or status() == waiting)
+      throw runtime_error("Cannot change backend when job is running or waiting");
     property_delete("jobnumber");
+  }
   m_backend = backend;
   if (!unchanged) {
     throw_if_backend_invalid(backend);

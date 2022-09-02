@@ -40,17 +40,18 @@ static std::string executable(const fs::path& command) {
 }
 
 std::string Command::operator()(const std::string& command, bool wait, const std::string& directory,
-                                int verbosity) const {
+                                int verbosity, const std::string& out, const std::string& err) const {
   std::lock_guard lock(m_run_mutex);
   m_trace(2 - verbosity) << "Command::operator() " << command << std::endl;
   m_trace(2 - verbosity) << "Command::operator() m_host=" << m_host << ", wait="<< wait
                          << ", localhost()=" << localhost() << std::endl;
   m_last_out.clear();
-  const std::string jobnumber_tag{"@@@!!JOBNUMBER"};
-  const std::string terminator{"@@@!!EOF"};
+  const std::string jobnumber_tag{"@@@JOBNUMBER"};
+  const std::string terminator{"@@@EOF"};
   auto pipeline = command;
   if (!wait)
-    pipeline = "(( " + command + ") & echo "+jobnumber_tag+" $! 1>&2)";
+    pipeline = "(( " + command + " >"+out+" 2>"+err+") & echo "+jobnumber_tag+" $! 1>&2)";
+  m_trace(2 - verbosity) << "Command::operator() pipeline=" << pipeline << std::endl;
   if (localhost()) {
 
     fs::path current_path_save;
@@ -63,8 +64,10 @@ std::string Command::operator()(const std::string& command, bool wait, const std
 
     m_out.reset(new bp::ipstream);
     m_err.reset(new bp::ipstream);
+    m_trace(2-verbosity) << "launching local process"<<std::endl;
     m_process =
         bp::child(executable("nohup"), "sh","-c",pipeline,
+//        bp::child(executable("sh"),"-vxc",pipeline,
 //        bp::args(splitString(pipeline)),
         bp::std_out > *m_out, bp::std_err > *m_err);
     fs::current_path(current_path_save);

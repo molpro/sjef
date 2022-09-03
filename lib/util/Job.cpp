@@ -5,6 +5,7 @@
 #include <regex>
 #include <sstream>
 #include <string>
+#include <chrono>
 namespace fs = std::filesystem;
 
 namespace sjef::util {
@@ -22,9 +23,9 @@ sjef::util::Job::Job(const sjef::Project& project)
       m_backend_command_server(new Command(m_backend.host)),
       m_job_number(std::stoi("0" + m_project.property_get("jobnumber"))),
       m_initial_status(static_cast<sjef::status>(std::stoi("0" + m_project.property_get("_status")))) {
-//  std::cout << "Job constructor, m_job_number=" << m_job_number << std::endl;
+  //  std::cout << "Job constructor, m_job_number=" << m_job_number << std::endl;
   m_poll_task = std::async(std::launch::async, [this]() { this->poll_job(); });
-//  std::cout << "Job constructor has launched poll task" << std::endl;
+  //  std::cout << "Job constructor has launched poll task" << std::endl;
 }
 bool sjef::util::Job::push_rundir(int verbosity) {
   if (localhost())
@@ -82,11 +83,11 @@ sjef::util::Job::~Job() {
 }
 
 std::string Job::run(const std::string& command, int verbosity, bool wait) {
-  m_closing=true;
+  m_closing = true;
   m_poll_task.wait();
   m_closing = false;
   m_backend_command_server.reset(new Command(m_backend.host));
-      auto l = std::lock_guard(kill_mutex);
+  auto l = std::lock_guard(kill_mutex);
   //  const auto& substr = std::regex_replace(command, std::regex{"'"}, "").substr(0, m_backend.run_command.size());
   m_trace(4 - verbosity) << "Job::run() command=" << command << std::endl;
   //  m_trace(4 - verbosity) << "Job::run substr=" << substr << " m_backend.run_command=" << m_backend.run_command
@@ -97,7 +98,7 @@ std::string Job::run(const std::string& command, int verbosity, bool wait) {
   if (is_run_command) {
     m_initial_status = waiting;
     m_job_number = 0; // pauses status polling
-//    std::cout << "Job::run() set initial status to waiting, and pause polling"<<std::endl;
+                      //    std::cout << "Job::run() set initial status to waiting, and pause polling"<<std::endl;
   }
   set_status(waiting);
   auto backend_submits_batch = is_run_command and m_backend.run_jobnumber != "([0-9]+)";
@@ -130,7 +131,7 @@ std::string Job::run(const std::string& command, int verbosity, bool wait) {
   //    m_poll_task = std::async(std::launch::async, [this]() { this->poll_job(); });
   //  }
   //  sleep(1);
-//  std::cout << "Job::run() returns " << run_output << std::endl;
+  //  std::cout << "Job::run() returns " << run_output << std::endl;
   m_poll_task = std::async(std::launch::async, [this]() { this->poll_job(); });
   return run_output;
 }
@@ -144,7 +145,7 @@ status Job::get_status(int verbosity) {
     return unknown;
   auto status_string =
       (*m_backend_command_server)(m_backend.status_command + " " + std::to_string(m_job_number), true, ".", verbosity);
-//  std::cout << "status_string:\n" << status_string << std::endl;
+  //  std::cout << "status_string:\n" << status_string << std::endl;
   std::stringstream ss(status_string);
   sjef::status result = unknown;
   for (std::string line; std::getline(ss, line);) {
@@ -166,32 +167,38 @@ status Job::get_status(int verbosity) {
   //
   //  std::cout << Command()("lsof -p "+std::to_string(m_job_number)) << std::endl;
   //  std::cout << Command()("ls -laR  /tmp/sjef/cmake-build-release-marat/test/H2_local.molpro/run") << std::endl;
-//  std::cout << "Job::status() returns " << result << std::endl;
+  //  std::cout << "Job::status() returns " << result << std::endl;
   return result;
 }
 
 void Job::kill(int verbosity) {
-  auto l = std::lock_guard(kill_mutex);
-  std::cout << "Job::kill()" << std::endl;
-  auto status_string = (*m_backend_command_server)(m_backend.kill_command + " " + std::to_string(m_job_number));
-  std::cout << "Job::kill() has killed" << std::endl;
-  set_status(killed);
-  std::cout << "Job::kill() has set status" << std::endl;
+//  std::cout << "Job::kill()"<<std::endl;
+  {
+    auto l = std::lock_guard(kill_mutex);
+//    std::cout << "Job::kill() gets mutex"<<std::endl;
+    auto status_string = (*m_backend_command_server)(m_backend.kill_command + " " + std::to_string(m_job_number));
+//    std::cout << "Job::kill() finished killing"<<std::endl;
+    set_status(killed);
+//    std::cout << "Job::kill() finished set_status()"<<std::endl;
+  }
   m_killed = true;
-  std::cout << "Job::kill() returns" << std::endl;
+//  std::cout << "Job::kill() set sentinel"<<std::endl;
 }
 void Job::poll_job(int verbosity) {
+  using Clock = std::chrono::high_resolution_clock;
   status status;
-//    std::cout << "Polling starts" << std::endl;
+  auto start = Clock::now();
+  auto stop = Clock::now();
+  //    std::cout << "Polling starts" << std::endl;
   while (true) {
     //    std::cout << "m_killed " << m_killed << std::endl;
     {
       auto l = std::lock_guard(kill_mutex);
-//      std::cout << "active polling cycle starts"<<std::endl;
-      //      if (m_killed)
-      //        std::cout << "poll_job received kill sentinel" << std::endl;
-      if (m_killed)
-        sleep(1); //   TODO more sophisticated checking that the kill worked
+      //      std::cout << "active polling cycle starts"<<std::endl;
+//      if (m_killed)
+//        std::cout << "poll_job received kill sentinel" << std::endl;
+
+      start = Clock::now();
       status = m_killed ? killed : get_status(verbosity);
       if (status == unknown) {
         if (m_initial_status == killed)
@@ -199,23 +206,25 @@ void Job::poll_job(int verbosity) {
         if (m_initial_status == running or m_initial_status == completed or m_initial_status == waiting)
           status = completed;
       }
-//    std::cout << "got status " << status << std::endl;
-    pull_rundir(verbosity);
-    set_status(status);
-//    std::cout << "set status " << m_project.status_message() << std::endl;
-    {
-      std::lock_guard lock(m_closing_mutex);
-      if (m_closing or status == completed or m_killed)
-        break;
+      //    std::cout << "got status " << status << std::endl;
+      pull_rundir(verbosity);
+      set_status(status);
+      //    std::cout << "set status " << m_project.status_message() << std::endl;
+      stop = Clock::now();
+      {
+        std::lock_guard lock(m_closing_mutex);
+        if (m_closing or status == completed or m_killed)
+          break;
+      }
+      //      std::cout << "active polling cycle stops"<<std::endl;
     }
-//      std::cout << "active polling cycle stops"<<std::endl;
-    }
+    std::this_thread::sleep_for((stop-start)*5);
   }
   if (m_backend_command_server != nullptr and (status == completed or status == killed)) {
     (*m_backend_command_server)("rm -rf " + m_remote_cache_directory);
   }
   m_backend_command_server.reset(); // close down backend server as no longer needed
-//  std::cout << "Polling stops" << std::endl;
+  //  std::cout << "Polling stops" << std::endl;
 }
 
 } // namespace sjef::util

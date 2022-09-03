@@ -588,7 +588,6 @@ void Project::clean(bool oldOutput, bool output, bool unused, int keep_run_direc
 }
 
 void Project::kill() {
-  std::cout << "Project::kill()" << std::endl;
   if (m_job != nullptr)
     m_job->kill();
 }

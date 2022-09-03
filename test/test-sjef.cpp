@@ -285,7 +285,7 @@ TEST(project, project_hash) {
     auto f2 = state.testproject("project_hash_try2"); // remove any previous contents
     ASSERT_TRUE(x.copy(f2));
     sjef::Project x2(f2);
-    EXPECT_GT(fs::file_size(x2.propertyFile()), 0)<<x2.propertyFile()<<": "<<fs::file_size(x2.propertyFile());
+    EXPECT_GT(fs::file_size(x2.propertyFile()), 0) << x2.propertyFile() << ": " << fs::file_size(x2.propertyFile());
     EXPECT_NE(xph, x2.project_hash());
     auto f3 = state.testproject("project_hash_try3"); // remove any previous contents
     x.move(f3);
@@ -372,7 +372,7 @@ TEST(project, restart) {
   savestate state;
   std::string path(getenv("PATH"));
   path = fs::current_path().string() + ":" + path;
-//  std::cout << "PATH " << path << std::endl;
+  //  std::cout << "PATH " << path << std::endl;
   setenv("PATH", path.c_str(), 1);
   { std::ofstream("dummy") << "#!/bin/sh\nsleep 0;if [ $1 = '-v' ]; then shift; fi; echo dummyxml > ${1%.inp}.xml"; }
   fs::permissions("dummy", fs::perms::owner_exec, fs::perm_options::add);
@@ -383,11 +383,11 @@ TEST(project, restart) {
     EXPECT_EQ(p.status(), restart == 0 ? sjef::status::unevaluated : sjef::status::completed);
     const auto& backend = sjef::Backend::dummy_name;
     for (auto i = 0; i < 2; ++i) {
-//      std::cerr << "run number " << i << std::endl;
+      //      std::cerr << "run number " << i << std::endl;
       ASSERT_TRUE(p.run(backend, 0, true, false));
       p.wait();
       //    std::cout << p.xml() <<std::endl;
-      EXPECT_EQ(p.xml(), "dummyxml")<<p.file_contents("xml");
+      EXPECT_EQ(p.xml(), "dummyxml") << p.file_contents("xml");
       EXPECT_EQ(p.status(), sjef::completed);
       EXPECT_NE(p.property_get("jobnumber"), "-1");
     }
@@ -867,4 +867,29 @@ TEST(project, reopen) {
   ASSERT_EQ(std::string{}, std::string{project_reopened.property_get(key)});
   //  sjef_project_close(projectname);
   ASSERT_EQ(std::string{value}, std::string{project2.property_get(key)});
+}
+
+TEST(project, kill) {
+  savestate state;
+  auto suffix = state.suffix();
+  ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{"~/.sjef/"} + suffix)));
+  const auto cache = state.testfile(fs::current_path() / "test-remote-cache");
+  if (not fs::create_directories(cache))
+    throw std::runtime_error("cannot create " + cache.string());
+  const auto run_script = state.testfile("light.sh").string();
+  std::ofstream(sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml"))
+      << "<?xml version=\"1.0\"?>\n<backends>\n <backend name=\"local\" run_command=\"true\"/>"
+      << "<backend name=\"test-local\" run_command=\"sh " << run_script << "\" />\n"
+      << "<backend name=\"test-remote\" run_command=\"sh " << run_script << "\" host=\"127.0.0.1\" cache=\""
+      << cache.string() << "\"/>\n"
+      <<"</backends>";
+  std::ofstream(run_script) << "sleep 120;";
+  auto p = sjef::Project(state.testfile(std::string{"test_kill."} + suffix));
+  std::ofstream(p.filename("inp")) << "some input";
+  p.run("test-local", 0, true, false);
+  p.kill();
+  EXPECT_EQ(p.status(), sjef::killed);
+  p.run("test-remote", 0, true, false);
+  p.kill();
+  EXPECT_EQ(p.status(), sjef::killed);
 }

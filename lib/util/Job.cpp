@@ -172,11 +172,12 @@ status Job::get_status(int verbosity) {
 }
 
 void Job::kill(int verbosity) {
+  m_trace(4-verbosity) << "Job::kill()"<<std::endl;
 //  std::cout << "Job::kill()"<<std::endl;
   {
     auto l = std::lock_guard(kill_mutex);
 //    std::cout << "Job::kill() gets mutex"<<std::endl;
-    auto status_string = (*m_backend_command_server)(m_backend.kill_command + " " + std::to_string(m_job_number));
+    auto status_string = (*m_backend_command_server)(m_backend.kill_command + " " + std::to_string(m_job_number),true,".",verbosity);
 //    std::cout << "Job::kill() finished killing"<<std::endl;
     set_status(killed);
 //    std::cout << "Job::kill() finished set_status()"<<std::endl;

@@ -1,17 +1,17 @@
 #ifndef SJEF_SJEF_H
 #define SJEF_SJEF_H
+#include "util/Logger.h"
+#include <atomic>
 #include <filesystem>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <mutex>
+#include <ostream>
 #include <set>
 #include <string>
 #include <thread>
 #include <vector>
-#include <ostream>
-#include <iostream>
-#include <atomic>
-#include "util/Logger.h"
 
 namespace pugi {
 class xpath_node_set; ///< @private
@@ -20,8 +20,8 @@ namespace sjef {
 namespace util {
 class Job;
 }
-class Backend;            ///< @private
-class Locker;             ///< @private
+class Backend; ///< @private
+class Locker;  ///< @private
 using util::Logger;
 struct Remote_server;     ///< @private
 struct pugi_xml_document; ///< @private
@@ -29,14 +29,13 @@ static constexpr int recentMax = 128;
 enum status : int { unknown = 0, running = 1, waiting = 2, completed = 3, unevaluated = 4, killed = 5 };
 using mapstringstring_t = std::map<std::string, std::string>;
 
-
 class Project {
 private:
   std::string m_project_suffix;
   std::filesystem::path m_filename; ///< the name of the file bundle, expressed as an absolute
-                          ///< pathname for the directory holding the bundle
-  std::vector<std::filesystem::path> m_reserved_files =
-      std::vector<std::filesystem::path>{sjef::Project::s_propertyFile}; ///< Files which should never be copied back from backend
+                                    ///< pathname for the directory holding the bundle
+  std::vector<std::filesystem::path> m_reserved_files = std::vector<std::filesystem::path>{
+      sjef::Project::s_propertyFile}; ///< Files which should never be copied back from backend
   std::unique_ptr<pugi_xml_document> m_properties;
   mapstringstring_t m_suffixes; ///< File suffixes for the standard files
   std::map<std::string, Backend> m_backends;
@@ -88,9 +87,10 @@ public:
    */
   explicit Project(const std::filesystem::path& filename, bool construct = true, const std::string& default_suffix = "",
                    const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}},
-                    bool monitor = true, bool sync = true);
+                   bool monitor = true, bool sync = true);
   //  explicit Project(const std::string& filename, bool construct = true, const std::string& default_suffix = "",
-//                   const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}}) : Project(std::filesystem::path(filename),construct,default_suffix,suffixes) {}
+  //                   const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}}) :
+  //                   Project(std::filesystem::path(filename),construct,default_suffix,suffixes) {}
   Project(const Project& source) = delete;
   Project(const Project&& source) = delete;
   virtual ~Project();
@@ -106,7 +106,8 @@ public:
    * @param keep_run_directories  Keep up to this number of run directories unless slave is set
    * @return true if the copy was successful
    */
-  bool copy(const std::filesystem::path& destination_filename, bool force = false, bool keep_hash = false, bool slave = false, int keep_run_directories=std::numeric_limits<int>::max());
+  bool copy(const std::filesystem::path& destination_filename, bool force = false, bool keep_hash = false,
+            bool slave = false, int keep_run_directories = std::numeric_limits<int>::max());
   /*!
    * @brief Move the project to another location
    * @param destination_filename
@@ -154,7 +155,7 @@ public:
    * @param preambles
    */
   void set_warnings(const Logger::Levels level = Logger::Levels::WARNING, std::ostream& stream = std::cerr,
-                std::vector<std::string> preambles = {"sjef:: Error: ", "sjef:: Warning: ", "sjef:: Note:"}) {
+                    std::vector<std::string> preambles = {"sjef:: Error: ", "sjef:: Warning: ", "sjef:: Note:"}) {
     m_warn = Logger{stream, level, std::move(preambles)};
   }
   void set_verbosity(int verbosity, std::ostream& stream = std::cout) { m_trace = Logger(stream, verbosity); }
@@ -206,7 +207,7 @@ public:
   /*!
    * @brief Kill the job started by run()
    */
-  void kill();
+  void kill(int verbosity = 0);
   /*!
    * @brief Check whether the job output is believed to be out of date with
    * respect to the input and any other files contained in the project that
@@ -266,7 +267,7 @@ public:
    * @param unused Whether to remove unused files
    * @param keep_run_directories Maximum number of run directories to keep
    */
-  void clean(bool oldOutput = true, bool output = false, bool unused = false, int keep_run_directories=0);
+  void clean(bool oldOutput = true, bool output = false, bool unused = false, int keep_run_directories = 0);
   /*!
    * @brief Set a property
    * @param property

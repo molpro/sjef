@@ -239,12 +239,12 @@ Project::Project(const std::filesystem::path& filename, bool construct, const st
     // we may be loading an old project with an active job when it was last closed, so need to poll its status
     {
       auto initial_status = static_cast<sjef::status>(std::stoi("0" + property_get("_status")));
-//      std::cout << "initial_status " << initial_status << std::endl;
+      //      std::cout << "initial_status " << initial_status << std::endl;
       if (initial_status == running or initial_status == waiting) {
         auto new_status = util::Job(*this).get_status();
         if (new_status == unknown) {
-//          std::cout << "setting status from " << initial_status <<" to completed"<< std::endl;
-        property_set("_status", std::to_string(static_cast<int>(completed)));
+          //          std::cout << "setting status from " << initial_status <<" to completed"<< std::endl;
+          property_set("_status", std::to_string(static_cast<int>(completed)));
         }
       }
     }
@@ -587,9 +587,12 @@ void Project::clean(bool oldOutput, bool output, bool unused, int keep_run_direc
     run_delete(*run_list().rbegin());
 }
 
-void Project::kill() {
-  if (m_job != nullptr)
-    m_job->kill();
+void Project::kill(int verbosity) {
+  if (status() == running or status() == waiting) {
+    if (m_job == nullptr)
+      m_job.reset(new util::Job(*this));
+    m_job->kill(verbosity);
+  }
 }
 
 bool Project::run_needed(int verbosity) const {
@@ -716,7 +719,7 @@ void Project::wait(unsigned int maximum_microseconds) const {
   unsigned int microseconds = 1;
   //  std::cout << "wait status="<<status()<<std::endl;
   while (status() == unknown or status() == running or status() == waiting) {
-//    std::cout << "in sjef::Project::wait() status "<<status()<<std::endl;
+    //    std::cout << "in sjef::Project::wait() status "<<status()<<std::endl;
     std::this_thread::sleep_for(std::chrono::microseconds(microseconds));
     if (microseconds < maximum_microseconds)
       microseconds *= 2;

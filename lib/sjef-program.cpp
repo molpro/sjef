@@ -193,7 +193,7 @@ extern "C" int sjef_program(int argc, char* argv[]) {
         } else if (command == "status") {
           std::cout << proj.status_message(verboseSwitch.getValue()) << std::endl;
         } else if (command == "kill")
-          proj.kill();
+          proj.kill(verboseSwitch.getValue());
         else if (command == "run") {
           for (const auto& kv : backendParameterArg) {
             auto pos = kv.find_first_of("=");
@@ -243,7 +243,7 @@ extern "C" int sjef_program(int argc, char* argv[]) {
               else
                 std::cout << "Job submission failed" << std::endl;
             } else if (command == "kill") {
-              proj.kill();
+              proj.kill(verboseSwitch.getValue());
             } else if (command == "wait") {
               proj.wait();
             } else if (command == "property") {

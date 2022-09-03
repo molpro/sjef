@@ -88,7 +88,6 @@ std::string Job::run(const std::string& command, int verbosity, bool wait) {
   m_backend_command_server.reset(new Command(m_backend.host));
       auto l = std::lock_guard(kill_mutex);
   //  const auto& substr = std::regex_replace(command, std::regex{"'"}, "").substr(0, m_backend.run_command.size());
-  verbosity+=4;
   m_trace(4 - verbosity) << "Job::run() command=" << command << std::endl;
   //  m_trace(4 - verbosity) << "Job::run substr=" << substr << " m_backend.run_command=" << m_backend.run_command
   //                         << std::endl;
@@ -98,7 +97,7 @@ std::string Job::run(const std::string& command, int verbosity, bool wait) {
   if (is_run_command) {
     m_initial_status = waiting;
     m_job_number = 0; // pauses status polling
-    std::cout << "Job::run() set initial status to waiting, and pause polling"<<std::endl;
+//    std::cout << "Job::run() set initial status to waiting, and pause polling"<<std::endl;
   }
   set_status(waiting);
   auto backend_submits_batch = is_run_command and m_backend.run_jobnumber != "([0-9]+)";
@@ -183,7 +182,7 @@ void Job::kill(int verbosity) {
 }
 void Job::poll_job(int verbosity) {
   status status;
-    std::cout << "Polling starts" << std::endl;
+//    std::cout << "Polling starts" << std::endl;
   while (true) {
     //    std::cout << "m_killed " << m_killed << std::endl;
     {
@@ -216,7 +215,7 @@ void Job::poll_job(int verbosity) {
     (*m_backend_command_server)("rm -rf " + m_remote_cache_directory);
   }
   m_backend_command_server.reset(); // close down backend server as no longer needed
-  std::cout << "Polling stops" << std::endl;
+//  std::cout << "Polling stops" << std::endl;
 }
 
 } // namespace sjef::util

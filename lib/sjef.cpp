@@ -1055,19 +1055,15 @@ void Project::save_property_file_locked() const {
 
 ///> @private
 inline std::string random_string(size_t length) {
+  const char charset[] = "0123456789"
+                         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                         "abcdefghijklmnopqrstuvwxyz";
   std::random_device dev;
   std::mt19937 rng(dev());
-  std::uniform_int_distribution<std::mt19937::result_type> rn(1, 1000000000);
-  auto randchar = [&rn, &rng]() {
-    const char charset[] = "0123456789"
-                           "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                           "abcdefghijklmnopqrstuvwxyz";
-    const size_t max_index = (sizeof(charset) - 1);
-    return charset[rn(rng) % max_index];
-  };
+  std::uniform_int_distribution<std::mt19937::result_type> rn(0, sizeof(charset) - 1);
+  auto randchar = [&rn, &rng, &charset]() { return charset[rn(rng)]; };
   std::string str(length, 0);
   std::generate_n(str.begin(), length, randchar);
-  std::cout << "random_string makes " << str << std::endl;
   return str;
 }
 
@@ -1077,12 +1073,10 @@ size_t sjef::Project::project_hash() {
   if (p.empty()) {
     result = std::hash<std::string>{}(random_string(32));
     this->property_set("project_hash", std::to_string(result));
-    std::cout << "generated new project hash" << std::endl;
   } else {
     std::istringstream iss(p);
     iss >> result;
   }
-  std::cout << "project hash " << result << std::endl;
   return result;
 }
 

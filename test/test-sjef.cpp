@@ -283,17 +283,9 @@ TEST(project, project_hash) {
     auto xph = x.project_hash();
     ASSERT_NE(xph, 0);
     auto f2 = state.testproject("project_hash_try2"); // remove any previous contents
-                                                      //    std::this_thread::sleep_for(std::chrono::milliseconds(5));
     ASSERT_TRUE(x.copy(f2));
-    std::cout << sjef::util::Command()(std::string{"echo x.propertyFile;cat "}+x.propertyFile().string())<<std::endl;
-    std::cout << sjef::util::Command()(std::string{"echo f2;cat "}+f2.string()+"/Info.plist")<<std::endl;
     sjef::Project x2(f2);
-    std::cout << sjef::util::Command()(std::string{"echo f2;cat "}+f2.string()+"/Info.plist")<<std::endl;
-    std::cout << sjef::util::Command()(std::string{"echo x2.propertyFile;echo "}+x2.propertyFile().string())<<std::endl;
-    std::cout << sjef::util::Command()(std::string{"echo x2.propertyFile;cat "}+x2.propertyFile().string())<<std::endl;
-    std::cout << sjef::util::Command()(std::string{"echo x2.propertyFile;ls -lh "}+x2.propertyFile().string())<<std::endl;
     EXPECT_GT(fs::file_size(x2.propertyFile()), 0)<<x2.propertyFile()<<": "<<fs::file_size(x2.propertyFile());
-    std::cout << sjef::util::Command()(std::string{"echo x2.propertyFile;ls -lh "}+x2.propertyFile().string())<<std::endl;
     EXPECT_NE(xph, x2.project_hash());
     auto f3 = state.testproject("project_hash_try3"); // remove any previous contents
     x.move(f3);
@@ -395,7 +387,7 @@ TEST(project, restart) {
       ASSERT_TRUE(p.run(backend, 0, true, false));
       p.wait();
       //    std::cout << p.xml() <<std::endl;
-      EXPECT_EQ(p.xml(), "dummyxml");
+      EXPECT_EQ(p.xml(), "dummyxml")<<p.file_contents("xml");
       EXPECT_EQ(p.status(), sjef::completed);
       EXPECT_NE(p.property_get("jobnumber"), "-1");
     }

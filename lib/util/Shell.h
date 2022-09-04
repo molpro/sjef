@@ -1,13 +1,9 @@
 #ifndef SJEF_LIB_UTIL_SHELL_H_
 #define SJEF_LIB_UTIL_SHELL_H_
 #include "Logger.h"
-#include <boost/process/args.hpp>
 #include <boost/process/child.hpp>
 #include <boost/process/io.hpp>
-#include <boost/process/search_path.hpp>
-#include <boost/process/spawn.hpp>
 namespace bp = boost::process;
-namespace fs = std::filesystem;
 
 namespace sjef::util {
 

@@ -1200,49 +1200,6 @@ void sjef::Project::change_backend(std::string backend, bool force) {
   }
 }
 
-// TODO maybe use the stuff here about wait interval
-// void sjef::Project::backend_watcher(sjef::Project& project_, int min_wait_milliseconds, int max_wait_milliseconds,
-//                                    int poll_milliseconds) {
-//  project_.m_backend_watcher_instance.reset(
-//      new sjef::Project(project_.m_filename, true, "", {{}}, project_.m_monitor, project_.m_sync, &project_));
-//  const auto& project = *project_.m_backend_watcher_instance.get();
-//  if (max_wait_milliseconds <= 0)
-//    max_wait_milliseconds = min_wait_milliseconds;
-//  constexpr auto radix = 2;
-//  auto backend_watcher_wait_milliseconds = std::max(min_wait_milliseconds, poll_milliseconds);
-//  try {
-//    project.ensure_remote_server();
-//    auto& shutdown_flag = const_cast<sjef::Project*>(project.m_master_instance)->m_unmovables.shutdown_flag;
-//    for (auto iter = 0; true; ++iter) {
-//      for (int repeat = 0; repeat < backend_watcher_wait_milliseconds / poll_milliseconds; ++repeat) {
-//        if (shutdown_flag.test_and_set())
-//          goto FINISHED;
-//        shutdown_flag.clear();
-//        std::this_thread::sleep_for(std::chrono::milliseconds(poll_milliseconds));
-//      }
-//      backend_watcher_wait_milliseconds =
-//          std::max(std::min(backend_watcher_wait_milliseconds * radix, max_wait_milliseconds),
-//                   min_wait_milliseconds <= 0 ? 1 : min_wait_milliseconds);
-//      try {
-//        project.synchronize(0);
-//      } catch (const std::exception& ex) {
-//        project.m_warn.warn() << "sjef::Project::backend_watcher() synchronize() has thrown " << ex.what() <<
-//        std::endl; project.cached_status(unknown);
-//      }
-//      try {
-//        project.cached_status(project.status(0, false));
-//      } catch (const std::exception& ex) {
-//        project.m_warn.warn() << "sjef::Project::backend_watcher() status() has thrown " << ex.what() << std::endl;
-//        project.cached_status(unknown);
-//      }
-//    }
-//  FINISHED:;
-//  } catch (const std::exception& ex) {
-//    project.m_warn.warn() << "sjef::Project::backend_watcher() has thrown " << ex.what() << std::endl;
-//    project.cached_status(unknown);
-//  }
-//}
-
 bool sjef::Project::check_backend(const std::string& name) const {
   auto be = m_backends.at(name);
   if (be.host.empty())

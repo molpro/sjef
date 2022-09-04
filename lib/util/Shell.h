@@ -21,11 +21,12 @@ public:
   Shell(std::string host, std::string shell = "/bin/sh");
   Shell() : Shell("localhost") {}
   std::string operator()(const std::string& command, bool wait = true, const std::string& directory = ".",
-                         int verbosity = 0, const std::string& out="/dev/null", const std::string& err="/dev/null") const;
+                         int verbosity = 0, const std::string& out = "/dev/null",
+                         const std::string& err = "/dev/null") const;
   const std::string& out() const { return m_last_out; }
   const std::string& err() const { return m_last_err; }
   int job_number() const { return m_job_number; }
-  void wait() const;
+  void wait(int min_wait_milliseconds = 1, int max_wait_milliseconds = 1000) const;
   bool running() const;
 
 private:
@@ -38,7 +39,7 @@ private:
   mutable Logger m_trace;
   mutable Logger m_warn;
   mutable std::mutex m_run_mutex;
-  mutable int m_job_number=0;
+  mutable int m_job_number = 0;
   mutable bp::child m_process;
 
   bool localhost() const { return (m_host.empty() || m_host == "localhost" || m_host == "127.0.0.1"); }

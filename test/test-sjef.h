@@ -23,16 +23,17 @@ inline int setenv(const char* name, const char* value, int overwrite) {
 const std::string path_environment_separator = ":";
 #endif
 
-class savestate {
+class test_sjef : public ::testing::Test {
+protected:
   std::string rf;
   std::vector<std::filesystem::path> testfiles;
-  const std::string m_default_suffix;
+  std::string m_default_suffix;
   std::vector<std::string> m_suffixes;
   std::vector<std::unique_ptr<sjef::Locker>> m_lockers;
   std::set<std::filesystem::path, std::less<>> m_not_preexisting;
 
 public:
-  explicit savestate(const std::vector<std::string>& suffixes = {})
+  explicit test_sjef(const std::vector<std::string>& suffixes = {})
       : m_default_suffix(::testing::UnitTest::GetInstance()->current_test_info()->name()), m_suffixes(suffixes) {
     const auto sympath = std::filesystem::path{"~"} / ".sjef";
     fs::create_directories(sjef::expand_path(sympath));
@@ -56,9 +57,9 @@ public:
                 std::getenv("PATH");
     setenv("PATH", path.c_str(), 1);
   }
-  explicit savestate(const std::string& suffix) : savestate(std::vector<std::string>{{suffix}}) {}
-  savestate(const savestate&) = delete;
-  ~savestate() {
+  explicit test_sjef(const std::string& suffix) : test_sjef(std::vector<std::string>{{suffix}}) {}
+  test_sjef(const test_sjef&) = delete;
+  ~test_sjef() {
     for (const auto& file : testfiles)
       fs::remove_all(file);
     for (const auto& suffix : m_suffixes) {

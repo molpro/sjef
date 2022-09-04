@@ -21,10 +21,11 @@
 namespace {
 
 static std::mutex molpro_mutex;
-class molpro_test : public ::testing::Test {
+class test_sjef_molpro : public test_sjef {
 protected:
   sjef::Locker locker = sjef::Locker(".molpro_lock");
   virtual void SetUp() override {
+    this->m_default_suffix = "molpro";
     //    molpro_mutex.lock();
     //    locker.add_bolt();
     //    std::cout << "Hello from molpro_test "<<&molpro_mutex<<" pid "<<getpid()<<std::endl;
@@ -36,9 +37,8 @@ protected:
 };
 } // namespace
 
-TEST_F(molpro_test, spawn_many_molpro) {
-  savestate state("molpro");
-  sjef::Project p(state.testfile("spawn_many.molpro"));
+TEST_F(test_sjef_molpro, spawn_many_molpro) {
+  sjef::Project p(testfile("spawn_many.molpro"));
   { std::ofstream(p.filename("inp")) << ""; }
   const auto& backend = sjef::Backend::default_name;
   if (not boost::process::search_path("molpro").empty()) // test the default backend only if it exists
@@ -49,7 +49,7 @@ TEST_F(molpro_test, spawn_many_molpro) {
     }
 }
 
-TEST_F(molpro_test, molpro_workflow) {
+TEST_F(test_sjef_molpro, molpro_workflow) {
 #ifdef WIN32
   // TODO get remote launch working for Windows
   constexpr bool test_remote = false;
@@ -57,8 +57,7 @@ TEST_F(molpro_test, molpro_workflow) {
   constexpr bool test_remote = true;
 #endif
   constexpr bool timing = false;
-  savestate state("molpro");
-  const auto cache = state.testfile(fs::current_path() / "molpro_workflow-cache");
+  const auto cache = testfile(fs::current_path() / "molpro_workflow-cache");
   std::ofstream(sjef::expand_path(std::string{"~/.sjef/molpro/backends.xml"}))
       << "<?xml version=\"1.0\"?>\n<backends>\n <backend name=\"test-remote\" run_command=\""
       << boost::process::search_path("molpro").string() << "\" host=\"127.0.0.1\" cache=\"" << cache.string()
@@ -74,8 +73,8 @@ TEST_F(molpro_test, molpro_workflow) {
       for (const auto& id : std::map<std::string, std::string>{//{"H", "angstrom; geometry={h};rhf"},
                                                                {"H2", "angstrom; geometry={h;h,h,0.7};rhf"}}) {
         std::cout << "backend: " << backend << ", molecule: " << id.first << ", input: " << id.second << std::endl;
-        auto file = state.testfile(id.first + "_" + backend + ".molpro");
-        projects.insert({id.first, std::make_unique<sjef::Project>(fs::exists(file) ? file : state.testfile(file))});
+        auto file = testfile(id.first + "_" + backend + ".molpro");
+        projects.insert({id.first, std::make_unique<sjef::Project>(fs::exists(file) ? file : testfile(file))});
         std::ofstream(projects[id.first]->filename("inp")) << id.second;
         projects[id.first]->change_backend(backend);
       }
@@ -118,15 +117,14 @@ TEST_F(molpro_test, molpro_workflow) {
   }
   //  end:;
 }
-TEST_F(molpro_test, input_from_output) {
-  savestate state("molpro");
+TEST_F(test_sjef_molpro, input_from_output) {
   sjef::Project He("He.molpro");
   std::string input = He.file_contents("inp");
   input = std::regex_replace(input, std::regex{"\r"}, "");
   input = std::regex_replace(input, std::regex{" *\n\n*"}, "\n");
   input = std::regex_replace(input, std::regex{"\n$"}, "");
   EXPECT_EQ(input, He.input_from_output());
-  auto copy = state.testfile("Hecopy.molpro");
+  auto copy = testfile("Hecopy.molpro");
   He.copy(copy);
   sjef::Project Hecopy(copy);
   EXPECT_EQ(He.file_contents("inp"), Hecopy.file_contents("inp"));
@@ -134,8 +132,7 @@ TEST_F(molpro_test, input_from_output) {
   EXPECT_EQ(Hecopy.input_from_output(), "");
 }
 
-TEST_F(molpro_test, run_needed) {
-  savestate x("molpro");
+TEST_F(test_sjef_molpro, run_needed) {
   sjef::Project He("He.molpro");
   EXPECT_FALSE(He.run_needed());
 }

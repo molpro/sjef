@@ -219,7 +219,9 @@ void Job::poll_job(int verbosity) {
       }
       //      std::cout << "active polling cycle stops"<<std::endl;
     }
-    std::this_thread::sleep_for((stop-start)*5);
+    using namespace std::literals::chrono_literals;
+    std::this_thread::sleep_for(10ms);
+    std::this_thread::sleep_for((stop - start) * 2);
   }
   if (m_backend_command_server != nullptr and (status == completed or status == killed)) {
     (*m_backend_command_server)("rm -rf " + m_remote_cache_directory);

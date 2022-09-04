@@ -90,11 +90,10 @@ inline void prune_lockers(const fs::path& filename) {
 }
 const std::vector<std::string> Project::suffix_keys{"inp", "out", "xml"};
 Project::Project(const std::filesystem::path& filename, bool construct, const std::string& default_suffix,
-                 const mapstringstring_t& suffixes, bool monitor, bool sync)
+                 const mapstringstring_t& suffixes)
     : m_project_suffix(get_project_suffix(filename, default_suffix)),
       m_filename(expand_path(filename, m_project_suffix)), m_properties(std::make_unique<pugi_xml_document>()),
-      m_suffixes(suffixes), m_backend_doc(std::make_unique<pugi_xml_document>()), m_monitor(std::move(monitor)),
-      m_sync(std::move(sync)), m_locker(make_locker(m_filename)),
+      m_suffixes(suffixes), m_backend_doc(std::make_unique<pugi_xml_document>()), m_locker(make_locker(m_filename)),
       m_run_directory_ignore({writing_object_file, name() + "_[^./\\\\]+\\..+"}) {
   {
     auto lock = m_locker->bolt();
@@ -548,7 +547,6 @@ bool Project::run(int verbosity, bool force, bool wait) {
   custom_run_preface();
   auto rundir = run_directory_new();
   m_xml_cached = "";
-  //  auto p_status_mutex = std::make_unique<std::lock_guard<std::mutex>>(m_status_mutex);
   m_trace(2 - verbosity) << "run job, backend=" << backend.name << std::endl;
   m_trace(2 - verbosity) << "initial run_command " << run_command << std::endl;
   auto spl = splitString(run_command);

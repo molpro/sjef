@@ -137,8 +137,7 @@ extern "C" int sjef_program(int argc, char* argv[]) {
       Project proj(project, true, suffixSwitch.getValue(),
                    {{"inp", suffixInpSwitch.getValue()},
                     {"out", suffixOutSwitch.getValue()},
-                    {"xml", suffixXmlSwitch.getValue()}},
-                    not nomonitorArg.getValue(), not nosyncArg.getValue());
+                    {"xml", suffixXmlSwitch.getValue()}});
 
       auto allowedBackends = proj.backend_names();
       auto backend = backendSwitch.getValue();

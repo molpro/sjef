@@ -23,7 +23,6 @@ class Job;
 class Backend; ///< @private
 class Locker;  ///< @private
 using util::Logger;
-struct Remote_server;     ///< @private
 struct pugi_xml_document; ///< @private
 static constexpr int recentMax = 128;
 enum status : int { unknown = 0, running = 1, waiting = 2, completed = 3, unevaluated = 4, killed = 5 };
@@ -41,26 +40,14 @@ private:
   std::map<std::string, Backend> m_backends;
 
   std::unique_ptr<pugi_xml_document> m_backend_doc;
-  mutable std::shared_ptr<Remote_server> m_remote_server;
-  mutable std::chrono::milliseconds m_status_lifetime = std::chrono::milliseconds(0);
-  mutable std::chrono::time_point<std::chrono::steady_clock> m_status_last = std::chrono::steady_clock::now();
-  mutable std::thread m_backend_watcher;
   // put the flag into a container to deal conveniently with std:atomic_flag's
   // lack of move constructor
-  struct backend_watcher_flag_container {
-    std::atomic_flag shutdown_flag;
+  struct unmovables_container {
     std::mutex m_property_set_mutex;
   };
-  mutable backend_watcher_flag_container m_unmovables;
-  std::unique_ptr<Project> m_backend_watcher_instance;
-  bool m_monitor;
-  bool m_sync;
-  mutable std::mutex m_status_mutex;
-  mutable std::mutex m_remote_server_mutex;
-  mutable std::mutex m_synchronize_mutex;
+  mutable unmovables_container m_unmovables;
   mutable std::string m_backend; ///< The current backend
   mutable std::string m_xml_cached;
-  std::string remote_server_run(const std::string& command, int verbosity = 0, bool wait = true) const;
   ///> @private
   static const std::string s_propertyFile;
   ///> @private
@@ -81,13 +68,9 @@ public:
    * directory name if filename does not have one
    * @param suffixes The file suffixes for special (input, output) files within
    * the project
-   * @param monitor Whether to spawn threads that continuously monitor state. If false, no attempt is made to monitor
-   * the status of local or remote jobs, and submission of remote jobs is not allowed
-   * @param sync Whether to synchronise with remote backend
    */
   explicit Project(const std::filesystem::path& filename, bool construct = true, const std::string& default_suffix = "",
-                   const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}},
-                   bool monitor = true, bool sync = true);
+                   const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}});
   //  explicit Project(const std::string& filename, bool construct = true, const std::string& default_suffix = "",
   //                   const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}}) :
   //                   Project(std::filesystem::path(filename),construct,default_suffix,suffixes) {}

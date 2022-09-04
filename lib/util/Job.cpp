@@ -1,11 +1,11 @@
 #include "Job.h"
-#include "Command.h"
+#include "Shell.h"
+#include <chrono>
 #include <functional>
 #include <future>
 #include <regex>
 #include <sstream>
 #include <string>
-#include <chrono>
 namespace fs = std::filesystem;
 
 namespace sjef::util {
@@ -20,7 +20,7 @@ sjef::util::Job::Job(const sjef::Project& project)
     : m_project(project), m_backend(m_project.backends().at(m_project.property_get("backend"))),
       m_remote_cache_directory(m_backend.cache + "/" +
                                std::to_string(std::hash<std::string>{}(m_project.filename("", "", 0).string()))),
-      m_backend_command_server(new Command(m_backend.host)),
+      m_backend_command_server(new Shell(m_backend.host)),
       m_job_number(std::stoi("0" + m_project.property_get("jobnumber"))),
       m_initial_status(static_cast<sjef::status>(std::stoi("0" + m_project.property_get("_status")))) {
   //  std::cout << "Job constructor, m_job_number=" << m_job_number << std::endl;
@@ -40,7 +40,7 @@ bool sjef::util::Job::push_rundir(int verbosity) {
     command += " -v";
   m_project.m_trace(2 - verbosity) << "Push rsync: " << command << std::endl;
   auto start_time = std::chrono::steady_clock::now();
-  Command()(command, verbosity);
+  Shell()(command, verbosity);
   if (verbosity > 1)
     m_project.m_trace(3 - verbosity)
         << "time for push_rundir() rsync "
@@ -62,7 +62,7 @@ bool sjef::util::Job::pull_rundir(int verbosity) {
     command += " -v";
   m_project.m_trace(2 - verbosity) << "Pull rsync: " << command << std::endl;
   auto start_time = std::chrono::steady_clock::now();
-  Command()(command, verbosity);
+  Shell()(command, verbosity);
   if (verbosity > 1)
     m_project.m_trace(3 - verbosity)
         << "time for pull_rundir() rsync "
@@ -86,7 +86,7 @@ std::string Job::run(const std::string& command, int verbosity, bool wait) {
   m_closing = true;
   m_poll_task.wait();
   m_closing = false;
-  m_backend_command_server.reset(new Command(m_backend.host));
+  m_backend_command_server.reset(new Shell(m_backend.host));
   auto l = std::lock_guard(kill_mutex);
   //  const auto& substr = std::regex_replace(command, std::regex{"'"}, "").substr(0, m_backend.run_command.size());
   m_trace(4 - verbosity) << "Job::run() command=" << command << std::endl;

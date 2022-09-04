@@ -1,7 +1,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "../lib/util/Command.h"
+#include "../lib/util/Shell.h"
 #include "Locker.h"
 #include "sjef-backend.h"
 #include "sjef.h"

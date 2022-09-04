@@ -1,5 +1,5 @@
-#ifndef SJEF_LIB_UTIL_COMMAND_H_
-#define SJEF_LIB_UTIL_COMMAND_H_
+#ifndef SJEF_LIB_UTIL_SHELL_H_
+#define SJEF_LIB_UTIL_SHELL_H_
 #include "Logger.h"
 #include <boost/process/args.hpp>
 #include <boost/process/child.hpp>
@@ -17,20 +17,19 @@ namespace sjef::util {
  * The command can be anything that can be understood by standard shell.
  * Execution can either by synchronous (output and error streams available via out() and err())
  * or asynchronous (output and error streams can be directed to a file).
- * Standard input is not upported.
+ * Standard input is not supported.
  */
-class Command {
+class Shell {
 
 public:
-  Command(std::string host, std::string shell = "/bin/sh");
-  Command() : Command("localhost") {}
+  Shell(std::string host, std::string shell = "/bin/sh");
+  Shell() : Shell("localhost") {}
   std::string operator()(const std::string& command, bool wait = true, const std::string& directory = ".",
                          int verbosity = 0, const std::string& out="/dev/null", const std::string& err="/dev/null") const;
   const std::string& out() const { return m_last_out; }
   const std::string& err() const { return m_last_err; }
   int job_number() const { return m_job_number; }
   void wait() const;
-  const bp::child& process() const { return m_process; }
   bool running() const;
 
 private:
@@ -51,4 +50,4 @@ private:
 
 } // namespace sjef::util
 
-#endif // SJEF_LIB_UTIL_COMMAND_H_
+#endif // SJEF_LIB_UTIL_SHELL_H_

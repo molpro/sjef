@@ -15,7 +15,7 @@
 #include <unistd.h>
 
 #include "test-sjef.h"
-#include "util/Command.h"
+#include "util/Shell.h"
 #include <Locker.h>
 
 namespace {

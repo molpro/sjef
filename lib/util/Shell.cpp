@@ -1,4 +1,4 @@
-#include "Command.h"
+#include "Shell.h"
 #include <chrono>
 #include <filesystem>
 #include <regex>
@@ -6,7 +6,7 @@
 
 namespace sjef::util {
 
-Command::Command(std::string host, std::string shell) : m_host(std::move(host)) {
+Shell::Shell(std::string host, std::string shell) : m_host(std::move(host)) {
   if (!localhost()) {
     m_out.reset(new bp::ipstream);
     m_err.reset(new bp::ipstream);
@@ -39,7 +39,7 @@ static std::string executable(const fs::path& command) {
   }
 }
 
-std::string Command::operator()(const std::string& command, bool wait, const std::string& directory,
+std::string Shell::operator()(const std::string& command, bool wait, const std::string& directory,
                                 int verbosity, const std::string& out, const std::string& err) const {
   std::lock_guard lock(m_run_mutex);
   m_trace(2 - verbosity) << "Command::operator() " << command << std::endl;
@@ -118,13 +118,13 @@ std::string Command::operator()(const std::string& command, bool wait, const std
   return m_last_out;
 }
 
-void Command::wait() const {
+void Shell::wait() const {
   using namespace std::chrono_literals;
   while (running())
     std::this_thread::sleep_for(100ms); // TODO more sophisticated interval
 }
 
-bool Command::running() const {
+bool Shell::running() const {
   if (localhost())
     return m_process.running();
   return (*this)(std::string{"ps -p "} + std::to_string(m_job_number) + " > /dev/null 2>/dev/null; echo $?") == "0";

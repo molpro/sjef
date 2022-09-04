@@ -18,8 +18,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #endif
-#include "util/Command.h"
 #include "util/Job.h"
+#include "util/Shell.h"
 #include <random>
 
 namespace fs = std::filesystem;

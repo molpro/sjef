@@ -225,7 +225,7 @@ TEST_F(test_sjef, properties) {
 TEST_F(test_sjef, recent_files) {
   {
     auto suffix = this->suffix();
-    auto rf = sjef::expand_path(std::filesystem::path{"~"} / ".sjef" / suffix / "projects");
+    auto rf = sjef::expand_path(m_dot_sjef/ suffix / "projects");
     auto rf_ = rf;
     rf_ += ".save";
     auto oldfile = fs::exists(rf);
@@ -418,7 +418,7 @@ TEST_F(test_sjef, many_projects) {
 #ifndef WIN32
 TEST_F(test_sjef, early_change_backend) {
   auto suffix = this->suffix();
-  auto backenddirectory = sjef::expand_path((fs::path{"~"} / ".sjef" / suffix).string());
+  auto backenddirectory = sjef::expand_path((m_dot_sjef/ suffix).string());
   fs::create_directories(backenddirectory);
   auto backendfile = sjef::expand_path((fs::path{backenddirectory} / "backends.xml").string());
   std::ofstream(backendfile) << "<?xml version=\"1.0\"?>\n<backends><backend name=\"local\" "
@@ -550,7 +550,7 @@ TEST_F(test_sjef, dummy_backend) {
 
 TEST_F(test_sjef, project_name_embedded_space) {
   auto suffix = this->suffix();
-  ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{"~/.sjef/"} + suffix)));
+  ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{m_dot_sjef/  suffix})));
   sjef::Project p(testproject("completely new"));
   std::ofstream(p.filename("inp")) << "geometry={He};rhf\n";
   p.run(sjef::Backend::dummy_name, 0, true, false);
@@ -565,7 +565,7 @@ TEST_F(test_sjef, project_dir_embedded_space) {
   fs::remove_all(dir);
   std::cout << dir << std::endl;
   ASSERT_TRUE(fs::create_directories(dir));
-  ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{"~/.sjef/"} + suffix)));
+  ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{m_dot_sjef/suffix})));
   {
     sjef::Project p(testfile((dir / (std::string{"run_directory."} + suffix)).string()));
     std::ofstream(p.filename("inp")) << "geometry={He};rhf\n";
@@ -614,12 +614,12 @@ TEST_F(test_sjef, run_directory) {
 #ifndef WIN32
 TEST_F(test_sjef, sync_backend) {
   auto suffix = this->suffix();
-  ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{"~/.sjef/"} + suffix)));
+  ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{m_dot_sjef/suffix})));
   const auto cache = testfile(fs::current_path() / "test-remote-cache");
   if (not fs::create_directories(cache))
     throw std::runtime_error("cannot create " + cache.string());
   const auto run_script = testfile("light.sh").string();
-  std::ofstream(sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml"))
+  std::ofstream(sjef::expand_path(std::string{m_dot_sjef/suffix / "backends.xml"}))
       << "<?xml version=\"1.0\"?>\n<backends>\n <backend name=\"local\" run_command=\"true\"/><backend "
          "name=\"test-remote\" run_command=\"sh "
       << run_script << "\" host=\"127.0.0.1\" cache=\"" << cache.string() << "\"/>\n</backends>";
@@ -840,12 +840,12 @@ TEST_F(test_sjef, reopen) {
 
 TEST_F(test_sjef, kill) {
   auto suffix = this->suffix();
-  ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{"~/.sjef/"} + suffix)));
+  ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{m_dot_sjef/suffix})));
   const auto cache = testfile(fs::current_path() / "test-remote-cache");
   if (not fs::create_directories(cache))
     throw std::runtime_error("cannot create " + cache.string());
   const auto run_script = testfile("light.sh").string();
-  std::ofstream(sjef::expand_path(std::string{"~/.sjef/"} + suffix + "/backends.xml"))
+  std::ofstream(sjef::expand_path(std::string{m_dot_sjef/suffix} + "/backends.xml"))
       << "<?xml version=\"1.0\"?>\n<backends>\n <backend name=\"local\" run_command=\"true\"/>"
       << "<backend name=\"test-local\" run_command=\"sh " << run_script << "\" />\n"
       << "<backend name=\"test-remote\" run_command=\"sh " << run_script << "\" host=\"127.0.0.1\" cache=\""

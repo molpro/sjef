@@ -29,23 +29,24 @@ protected:
   std::vector<std::filesystem::path> testfiles;
   std::string m_default_suffix;
   std::vector<std::string> m_suffixes;
+  const fs::path m_dot_sjef;
   std::vector<std::unique_ptr<sjef::Locker>> m_lockers;
   std::set<std::filesystem::path, std::less<>> m_not_preexisting;
 
 public:
   explicit test_sjef(const std::vector<std::string>& suffixes = {})
-      : m_default_suffix(::testing::UnitTest::GetInstance()->current_test_info()->name()), m_suffixes(suffixes) {
-    const auto sympath = std::filesystem::path{"~"} / ".sjef";
-    fs::create_directories(sjef::expand_path(sympath));
+      : m_default_suffix(::testing::UnitTest::GetInstance()->current_test_info()->name()), m_suffixes(suffixes),
+        m_dot_sjef(std::filesystem::path{"~"} / ".sjef") {
+    fs::create_directories(sjef::expand_path(m_dot_sjef));
     m_suffixes.push_back(m_default_suffix);
     for (const auto& suffix : m_suffixes) {
-      const auto path = sjef::expand_path(sympath / suffix);
+      const auto path = sjef::expand_path(m_dot_sjef / suffix);
       if (!fs::exists(path))
         m_not_preexisting.insert(path);
       m_lockers.emplace_back(std::make_unique<sjef::Locker>(path.string() + ".lock"));
       m_lockers.back()->add_bolt();
       auto path_ = path;
-      path_+=".save";
+      path_ += ".save";
       if (fs::exists(path) && !fs::exists(path_)) {
         fs::rename(path, path_);
       }
@@ -63,7 +64,7 @@ public:
     for (const auto& file : testfiles)
       fs::remove_all(file);
     for (const auto& suffix : m_suffixes) {
-      const auto sympath = std::filesystem::path{"~"} / ".sjef"/suffix;
+      const auto sympath = m_dot_sjef/ suffix;
       auto path = sjef::expand_path(sympath);
       auto path_ = path;
       path_.append(".save");
@@ -81,7 +82,9 @@ public:
     }
   }
   const std::string& suffix() const { return m_default_suffix; }
-  std::filesystem::path testproject(const std::string& file) { return testfile(std::filesystem::path{file + "." + m_default_suffix}); }
+  std::filesystem::path testproject(const std::string& file) {
+    return testfile(std::filesystem::path{file + "." + m_default_suffix});
+  }
   std::filesystem::path testfile(const char* file) { return testfile(std::string{file}); }
   std::filesystem::path testfile(const fs::path& file) { return testfile(file.string()); }
   std::filesystem::path testfile(const std::string& file) {

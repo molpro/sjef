@@ -58,7 +58,7 @@ TEST_F(test_sjef_molpro, molpro_workflow) {
 #endif
   constexpr bool timing = false;
   const auto cache = testfile(fs::current_path() / "molpro_workflow-cache");
-  std::ofstream(sjef::expand_path(std::string{"~/.sjef/molpro/backends.xml"}))
+  std::ofstream(sjef::expand_path(std::string{m_dot_sjef / "molpro" / "backends.xml"}))
       << "<?xml version=\"1.0\"?>\n<backends>\n <backend name=\"test-remote\" run_command=\""
       << boost::process::search_path("molpro").string() << "\" host=\"127.0.0.1\" cache=\"" << cache.string()
       << "\"/>\n</backends>";

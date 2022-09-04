@@ -386,6 +386,7 @@ private:
   void save_property_file() const;
   void load_property_file_locked() const;
   bool properties_last_written_by_me(bool removeFile = false) const;
+  bool check_backends(const std::string& suffix) const;
 
 public:
   std::filesystem::path propertyFile() const;

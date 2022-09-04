@@ -46,7 +46,7 @@ TEST_F(test_sjef, expand_path) {
     ASSERT_EQ(sjef::expand_path(n.first, "ext"), n.second);
 }
 
-TEST_F(test_sjef, contruction) {
+TEST_F(test_sjef, construction) {
   ASSERT_EQ(this->suffix(), ::testing::UnitTest::GetInstance()->current_test_info()->name());
   std::string name("sjef-project-test");
   auto filename = testproject(name);

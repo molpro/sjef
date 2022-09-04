@@ -25,15 +25,16 @@ class test_sjef_molpro : public test_sjef {
 protected:
   sjef::Locker locker = sjef::Locker(".molpro_lock");
   virtual void SetUp() override {
-    this->m_default_suffix = "molpro";
+//    this->m_default_suffix = "molpro";
+    test_sjef::_SetUp({"molpro"});
     //    molpro_mutex.lock();
     //    locker.add_bolt();
     //    std::cout << "Hello from molpro_test "<<&molpro_mutex<<" pid "<<getpid()<<std::endl;
   }
 
-  virtual void TearDown() override { // molpro_mutex.unlock();
-    //    locker.remove_bolt();
-  }
+//  virtual void TearDown() override { // molpro_mutex.unlock();
+//        locker.remove_bolt();
+//  }
 };
 } // namespace
 

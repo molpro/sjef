@@ -88,6 +88,10 @@ inline void prune_lockers(const fs::path& filename) {
   if (lockers.count(name) > 0 && lockers[name].use_count() == 0)
     lockers.erase(name);
 }
+inline fs::path sjef_config_directory() {
+  return fs::path(expand_path(getenv("SJEF_CONFIG") == nullptr ? "~/.sjef" : getenv("SJEF_CONFIG")));
+}
+
 const std::vector<std::string> Project::suffix_keys{"inp", "out", "xml"};
 Project::Project(const std::filesystem::path& filename, bool construct, const std::string& default_suffix,
                  const mapstringstring_t& suffixes)
@@ -106,7 +110,7 @@ Project::Project(const std::filesystem::path& filename, bool construct, const st
                                                 "<plist> <dict/> </plist>"
                                              << std::endl;
     }
-    auto recent_projects_directory = expand_path(fs::path{"~"} / ".sjef" / m_project_suffix);
+    auto recent_projects_directory = expand_path(sjef_config_directory() / m_project_suffix);
     fs::create_directories(recent_projects_directory);
     for (const auto& key : suffix_keys)
       if (m_suffixes.count(key) < 1)
@@ -142,13 +146,13 @@ Project::Project(const std::filesystem::path& filename, bool construct, const st
       recent_edit(m_filename);
 
     m_backends.try_emplace(Backend::dummy_name, Backend::local());
-    if (!sjef::check_backends(m_project_suffix)) {
-      auto config_file = expand_path(std::filesystem::path{"~"} / ".sjef" / m_project_suffix / "backends.xml");
+    if (!check_backends(m_project_suffix)) {
+      auto config_file = expand_path(sjef_config_directory() / m_project_suffix / "backends.xml");
       m_warn.error() << "contents of " << config_file << ":" << std::endl;
       m_warn.error() << std::ifstream(config_file).rdbuf() << std::endl;
       throw runtime_error("sjef backend files are invalid");
     }
-    for (const auto& config_dir : std::vector<std::filesystem::path>{"/usr/local/etc/sjef", "~/.sjef"}) {
+    for (const auto& config_dir : std::vector<std::filesystem::path>{"/usr/local/etc/sjef", sjef_config_directory()}) {
       const auto config_file = expand_path(config_dir / m_project_suffix / "backends.xml");
       if (fs::exists(config_file)) {
         m_backend_doc->load_file(config_file.c_str());
@@ -192,7 +196,7 @@ Project::Project(const std::filesystem::path& filename, bool construct, const st
     }
     if (m_backends.count(sjef::Backend::default_name) == 0) {
       m_backends[sjef::Backend::default_name] = default_backend();
-      const auto config_file = expand_path(fs::path{"~"} / ".sjef" / m_project_suffix / "backends.xml");
+      const auto config_file = expand_path(sjef_config_directory() / m_project_suffix / "backends.xml");
       auto config_file_ = config_file;
       config_file_ += "-";
       if (!fs::exists(config_file))
@@ -288,7 +292,7 @@ void Project::throw_if_backend_invalid(std::string backend) const {
     throw runtime_error("No backend specified");
   if (m_backends.count(backend) > 0)
     return;
-  const auto path = expand_path(std::filesystem::path{"~"} / ".sjef" / m_project_suffix / "backends.xml");
+  const auto path = expand_path(sjef_config_directory() / m_project_suffix / "backends.xml");
   m_warn.error() << "Contents of " << path << ":\n" << std::ifstream(path).rdbuf() << std::endl;
   throw runtime_error("Backend " + backend + " is not registered");
 }
@@ -808,7 +812,7 @@ std::mutex s_recent_edit_mutex;
 void Project::recent_edit(const std::filesystem::path& add, const std::filesystem::path& remove) {
   auto project_suffix =
       add.empty() ? fs::path(remove).extension().string().substr(1) : fs::path(add).extension().string().substr(1);
-  const auto recent_projects_file = expand_path(std::filesystem::path{"~"} / ".sjef" / project_suffix / "projects");
+  const auto recent_projects_file = sjef_config_directory() / project_suffix / "projects";
   auto recent_projects_file_ = recent_projects_file;
   recent_projects_file_ += "-";
   bool changed = false;
@@ -947,7 +951,7 @@ int Project::run_directory_next() const {
 }
 
 int Project::recent_find(const std::string& suffix, const std::filesystem::path& filename) {
-  auto recent_projects_directory = expand_path(std::filesystem::path{"~"} / ".sjef" / suffix);
+  auto recent_projects_directory = expand_path(sjef_config_directory() / suffix);
   fs::create_directories(recent_projects_directory);
   std::ifstream in(expand_path(recent_projects_directory / "projects"));
   std::string line;
@@ -966,7 +970,7 @@ int Project::recent_find(const std::filesystem::path& filename) const {
 }
 
 std::string Project::recent(const std::string& suffix, int number) {
-  auto recent_projects_directory = expand_path(std::filesystem::path{"~"} / ".sjef" / suffix);
+  auto recent_projects_directory = expand_path(sjef_config_directory() / suffix);
   fs::create_directories(recent_projects_directory);
   //  std::cout << "recent_projects_directory " << recent_projects_directory << std::endl;
   std::ifstream in(expand_path(recent_projects_directory / "projects"));
@@ -1222,8 +1226,8 @@ bool sjef::Project::check_all_backends() const {
   return result;
 }
 
-bool check_backends(const std::string& suffix) {
-  for (const auto& config_dir : std::vector<std::filesystem::path>{"/usr/local/etc/sjef", "~/.sjef"}) {
+bool sjef::Project::check_backends(const std::string& suffix) const {
+  for (const auto& config_dir : std::vector<std::filesystem::path>{"/usr/local/etc/sjef", sjef_config_directory()}) {
     const auto config_file = expand_path(config_dir / suffix / "backends.xml");
     if (fs::exists(config_file)) {
       std::unique_ptr<pugi_xml_document> backend_doc;

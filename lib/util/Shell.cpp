@@ -83,7 +83,7 @@ std::string Shell::operator()(const std::string& command, bool wait, const std::
     //      }
     //      m_trace(3 - verbosity) << "out from command " << command << ": " << m_last_out << std::endl;
   } else {
-    m_in << std::string{"cd \""} + directory + "\"" << std::endl;
+    m_in << std::string{"cd '"} + directory + "'" << std::endl;
     m_in << pipeline << std::endl;
     m_in << ">&2 echo '" << terminator << "' $?" << std::endl;
     m_in << "echo '" << terminator << "'" << std::endl;

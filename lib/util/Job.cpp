@@ -36,12 +36,12 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verb
   command += " --exclude=Info.plist --exclude=.Info.plist.writing_object";
   command += " --rsh 'ssh -o ControlPath=~/.ssh/sjef-control-%h-%p-%r -o ControlMaster=auto -o ControlPersist=300'";
   command += " " + m_project.filename("", "", 0).string() + "/";
-  command += " " + m_backend.host + ":" + m_remote_cache_directory;
+  command += " " + m_backend.host + ":'" + m_remote_cache_directory + "'";
   if (verbosity > 0)
     command += " -v";
   m_project.m_trace(2 - verbosity) << "Push rsync: " << command << std::endl;
   auto start_time = std::chrono::steady_clock::now();
-  (*m_backend_command_server)("mkdir -p " + m_remote_cache_directory);
+  (*m_backend_command_server)("mkdir -p '" + m_remote_cache_directory + "'");
   const Shell& shell = Shell();
   auto rsync_out = shell(command, verbosity);
   if (verbosity > 1)
@@ -61,7 +61,7 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::pull_rundir(int verb
   command += " --exclude=*.out_* --exclude=*.log_* --exclude=*.xml_* --exclude=backup --exclude=*.d";
   command += " --exclude=Info.plist --exclude=.Info.plist.writing_object";
   command += " --rsh 'ssh -o ControlPath=~/.ssh/sjef-control-%h-%p-%r -o ControlMaster=auto -o ControlPersist=300'";
-  command += " " + m_backend.host + ":" + m_remote_cache_directory + "/";
+  command += " " + m_backend.host + ":'" + m_remote_cache_directory + "/'";
   command += " " + m_project.filename("", "", 0).string();
   if (verbosity > 0)
     command += " -v";
@@ -222,31 +222,31 @@ void Job::poll_job(int verbosity) {
   }
   if (!localhost() and m_backend_command_server != nullptr and (status == completed or status == killed)) {
     m_trace(4 - verbosity) << "Pull run directory at end of job " << std::endl;
-    m_trace(4 - verbosity) << Shell()("echo local rundir;ls -lta " + m_project.filename("", "", 0).string())
+    m_trace(4 - verbosity) << Shell()("echo local rundir;ls -lta '" + m_project.filename("", "", 0).string()) + "'"
                            << std::endl;
     m_trace(4 - verbosity) << "remote cache directory: " << m_remote_cache_directory << std::endl;
-    m_trace(4 - verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta " + m_remote_cache_directory +
-                                                          "  2>&1")
+    m_trace(4 - verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta '" + m_remote_cache_directory +
+                                                          "' 2>&1")
                            << std::endl;
     auto rundir_result = pull_rundir(verbosity); // TODO don't remove unless it worked!
-    m_trace(4 - verbosity) << Shell()("echo local rundir;ls -lta " + m_project.filename("", "", 0).string())
+    m_trace(4 - verbosity) << Shell()("echo local rundir;ls -lta '" + m_project.filename("", "", 0).string()) + "'"
                            << std::endl;
-    m_trace(4 - verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta " + m_remote_cache_directory +
-                                                          "  2>&1")
+    m_trace(4 - verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta '" + m_remote_cache_directory +
+                                                          "'  2>&1")
                            << std::endl;
     auto remote_manifest = util::splitString(
-        (*m_backend_command_server)("ls -1 " + m_remote_cache_directory + " 2>&1 | grep -v Info.plist"), '\n');
+        (*m_backend_command_server)("ls -1 '" + m_remote_cache_directory + "' 2>&1 | grep -v Info.plist"), '\n');
     auto local_manifest = util::splitString(
-        Shell()("ls -1 " + m_project.filename("", "", 0).string() + " 2>&1 | grep -v Info.plist"), '\n');
+        Shell()("ls -1 '" + m_project.filename("", "", 0).string() + "' 2>&1 | grep -v Info.plist"), '\n');
     //    std::cout << "rundir_result " << std::get<0>(rundir_result) << std::endl;
     if (!std::get<0>(rundir_result) or remote_manifest == local_manifest) {
 
       m_trace(4 - verbosity) << "remove run directory " + m_remote_cache_directory + " at end of job " << std::endl;
-      (*m_backend_command_server)("rm -rf " + m_remote_cache_directory);
+      (*m_backend_command_server)("rm -rf '" + m_remote_cache_directory + "'");
     } else if (remote_manifest.front().find("No such file") ==
                std::string::npos) { // sometimes sync will be tried before the remote cache exists, so stay quiet when
                                     // that happens
-      m_trace(-verbosity) << "Not removing remote cache " << m_backend.host + ":" + m_remote_cache_directory
+      m_trace(-verbosity) << "Not removing remote cache " << m_backend.host + ":'" + m_remote_cache_directory + "'"
                           << " because master local copy " << m_project.filename("", "", 0) << " has failed to update"
                           << std::endl;
       m_trace(-verbosity) << "remote manifest:\n" << remote_manifest << std::endl;
@@ -254,8 +254,8 @@ void Job::poll_job(int verbosity) {
       m_trace(-verbosity) << "Output stream from rsync:\n" << std::get<1>(rundir_result) << std::endl;
       m_trace(-verbosity) << "Error stream from rsync:\n" << std::get<2>(rundir_result) << std::endl;
       m_trace(-verbosity) << "To recover manually, try\n"
-                          << "rsync -a " << m_backend.host + ":" + m_remote_cache_directory + "/"
-                          << " " << m_project.filename("", "", 0).string() << std::endl;
+                          << "rsync -a " << m_backend.host + ":'" + m_remote_cache_directory + "/'"
+                          << " '" << m_project.filename("", "", 0).string() + "'" << std::endl;
     }
   }
   m_backend_command_server.reset(); // close down backend server as no longer needed

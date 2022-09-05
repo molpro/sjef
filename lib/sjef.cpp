@@ -533,7 +533,7 @@ bool Project::run(int verbosity, bool force, bool wait) {
   custom_run_preface();
   m_job.reset(nullptr);
   auto rundir = run_directory_new();
-  m_trace(3-verbosity) << "new run directory "<<rundir<<std::endl;
+  m_trace(3 - verbosity) << "new run directory " << rundir << std::endl;
   m_xml_cached = "";
   m_trace(2 - verbosity) << "run job, backend=" << backend.name << std::endl;
   m_trace(2 - verbosity) << "initial run_command " << run_command << std::endl;

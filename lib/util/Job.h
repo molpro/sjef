@@ -62,8 +62,8 @@ protected:
   bool m_closing = false; //!< set to signal that polling should be stopped
   std::mutex m_closing_mutex;
   status m_initial_status;
-  bool push_rundir(int verbosity = 0);
-  bool pull_rundir(int verbosity = 0);
+  std::tuple<bool, std::string, std::string> push_rundir(int verbosity = 0);
+  std::tuple<bool, std::string, std::string> pull_rundir(int verbosity = 0);
   const bool localhost() const;
   void poll_job(int verbosity = 0);
   void set_status(status stat);

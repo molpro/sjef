@@ -28,9 +28,9 @@ sjef::util::Job::Job(const sjef::Project& project)
   m_poll_task = std::async(std::launch::async, [this]() { this->poll_job(); });
   //  std::cout << "Job constructor has launched poll task" << std::endl;
 }
-bool sjef::util::Job::push_rundir(int verbosity) {
+std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verbosity) {
   if (localhost())
-    return true;
+    return {true, "", ""};
   std::string command = "rsync --archive --copy-links --timeout=5";
   command += " --exclude=*.out* --exclude=*.log* --exclude=*.xml*";
   command += " --exclude=Info.plist --exclude=.Info.plist.writing_object";
@@ -42,19 +42,21 @@ bool sjef::util::Job::push_rundir(int verbosity) {
   m_project.m_trace(2 - verbosity) << "Push rsync: " << command << std::endl;
   auto start_time = std::chrono::steady_clock::now();
   (*m_backend_command_server)("mkdir -p " + m_remote_cache_directory);
-  Shell()(command, verbosity);
+  const Shell& shell = Shell();
+  auto rsync_out = shell(command, verbosity);
   if (verbosity > 1)
     m_project.m_trace(3 - verbosity)
         << "time for push_rundir() rsync "
         << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
         << "ms" << std::endl;
-  return true; // TODO: implement more robust error checking
+  return {shell.err().find("rsync error:") == std::string::npos, shell.out(),
+          shell.err()}; // TODO: implement more robust error checking
 }
 
-bool sjef::util::Job::pull_rundir(int verbosity) {
+std::tuple<bool, std::string, std::string> sjef::util::Job::pull_rundir(int verbosity) {
   m_trace(3 - verbosity) << "pull_rundir " << verbosity << std::endl;
   if (localhost())
-    return true;
+    return {true, "", ""};
   std::string command = "rsync --archive --copy-links --timeout=5";
   command += " --exclude=*.out_* --exclude=*.log_* --exclude=*.xml_* --exclude=backup --exclude=*.d";
   command += " --exclude=Info.plist --exclude=.Info.plist.writing_object";
@@ -65,14 +67,16 @@ bool sjef::util::Job::pull_rundir(int verbosity) {
     command += " -v";
   m_project.m_trace(2 - verbosity) << "Pull rsync: " << command << std::endl;
   auto start_time = std::chrono::steady_clock::now();
-  auto rsync_out = Shell()(command, verbosity);
+  const Shell& shell = Shell();
+  auto rsync_out = shell(command, verbosity);
   if (verbosity > 1)
     m_project.m_trace(3 - verbosity)
         << "time for pull_rundir() rsync "
         << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
         << "ms" << std::endl
         << "Output from rsync\n:" << rsync_out << std::endl;
-  return true; // TODO: implement more robust error checking
+  return {shell.err().find("rsync error:") == std::string::npos, shell.out(),
+          shell.err()}; // TODO: implement more robust error checking
 }
 
 sjef::util::Job::~Job() {
@@ -224,26 +228,31 @@ void Job::poll_job(int verbosity) {
     m_trace(4 - verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta " + m_remote_cache_directory +
                                                           "  2>&1")
                            << std::endl;
-    pull_rundir(verbosity); // TODO don't remove unless it worked!
+    auto rundir_result = pull_rundir(verbosity); // TODO don't remove unless it worked!
     m_trace(4 - verbosity) << Shell()("echo local rundir;ls -lta " + m_project.filename("", "", 0).string())
                            << std::endl;
     m_trace(4 - verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta " + m_remote_cache_directory +
                                                           "  2>&1")
                            << std::endl;
     auto remote_manifest = util::splitString(
-        (*m_backend_command_server)("ls " + m_remote_cache_directory + " 2>&1 | grep -v Info.plist"), '\n');
-    auto local_manifest =
-        util::splitString(Shell()("ls " + m_project.filename("", "", 0).string() + " 2>&1 | grep -v Info.plist"), '\n');
-    if (remote_manifest == local_manifest) {
+        (*m_backend_command_server)("ls -1 " + m_remote_cache_directory + " 2>&1 | grep -v Info.plist"), '\n');
+    auto local_manifest = util::splitString(
+        Shell()("ls -1 " + m_project.filename("", "", 0).string() + " 2>&1 | grep -v Info.plist"), '\n');
+    //    std::cout << "rundir_result " << std::get<0>(rundir_result) << std::endl;
+    if (!std::get<0>(rundir_result) or remote_manifest == local_manifest) {
 
       m_trace(4 - verbosity) << "remove run directory " + m_remote_cache_directory + " at end of job " << std::endl;
       (*m_backend_command_server)("rm -rf " + m_remote_cache_directory);
-    } else {
+    } else if (remote_manifest.front().find("No such file") ==
+               std::string::npos) { // sometimes sync will be tried before the remote cache exists, so stay quiet when
+                                    // that happens
       m_trace(-verbosity) << "Not removing remote cache " << m_backend.host + ":" + m_remote_cache_directory
                           << " because master local copy " << m_project.filename("", "", 0) << " has failed to update"
                           << std::endl;
       m_trace(-verbosity) << "remote manifest:\n" << remote_manifest << std::endl;
       m_trace(-verbosity) << "local manifest:\n" << local_manifest << std::endl;
+      m_trace(-verbosity) << "Output stream from rsync:\n" << std::get<1>(rundir_result) << std::endl;
+      m_trace(-verbosity) << "Error stream from rsync:\n" << std::get<2>(rundir_result) << std::endl;
       m_trace(-verbosity) << "To recover manually, try\n"
                           << "rsync -a " << m_backend.host + ":" + m_remote_cache_directory + "/"
                           << " " << m_project.filename("", "", 0).string() << std::endl;

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['error_316',['ERROR',['../classsjef_1_1_logger.html#a501bf4bba389d319177643eb24a9374fabb1ca97ec761fc37101737ba0aa2e7c5',1,'sjef::Logger']]]
+  ['running_286',['running',['../namespacesjef.html#a36c95c05a49948d8f97e2c80d80ec787a874b668d2d2db32ffd146f4f59549883',1,'sjef']]]
 ];

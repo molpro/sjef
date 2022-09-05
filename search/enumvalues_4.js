@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['notification_318',['NOTIFICATION',['../classsjef_1_1_logger.html#a501bf4bba389d319177643eb24a9374fa9814d942b7e24870084a3dce24867ab3',1,'sjef::Logger']]]
+  ['waiting_289',['waiting',['../namespacesjef.html#a36c95c05a49948d8f97e2c80d80ec787a3a3005f6a436f5466b0aa741c823d105',1,'sjef']]]
 ];

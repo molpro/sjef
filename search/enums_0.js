@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['levels_312',['Levels',['../classsjef_1_1_logger.html#a501bf4bba389d319177643eb24a9374f',1,'sjef::Logger']]]
+  ['status_283',['status',['../namespacesjef.html#a36c95c05a49948d8f97e2c80d80ec787',1,'sjef']]]
 ];

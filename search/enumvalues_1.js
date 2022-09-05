@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['detail_315',['DETAIL',['../classsjef_1_1_logger.html#a501bf4bba389d319177643eb24a9374faeda1bc61d9a1bcddb91097bb9395147c',1,'sjef::Logger']]]
+  ['killed_285',['killed',['../namespacesjef.html#a36c95c05a49948d8f97e2c80d80ec787a25ec5628a971544b4ba68e7555a039af',1,'sjef']]]
 ];

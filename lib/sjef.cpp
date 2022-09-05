@@ -20,6 +20,7 @@
 #endif
 #include "util/Job.h"
 #include "util/Shell.h"
+#include "util/util.h"
 #include <random>
 
 namespace fs = std::filesystem;
@@ -401,27 +402,6 @@ void Project::erase(const std::filesystem::path& filename, const std::string& de
     recent_edit("", filename_);
 }
 
-static std::vector<std::string> splitString(const std::string& input, char c = ' ', char quote = '\'') {
-  std::vector<std::string> result;
-  const char* str0 = strdup(input.c_str());
-  const char* str = str0;
-  do {
-    while (*str == c && *str)
-      ++str;
-    const char* begin = str;
-    while (*str && (*str != c || (*begin == quote && str > begin && *(str - 1) != quote)))
-      ++str;
-    if (*begin == quote && str > begin + 1 && *(str - 1) == quote)
-      result.emplace_back(begin + 1, str - 1);
-    else
-      result.emplace_back(begin, str);
-    if (result.back().empty())
-      result.pop_back();
-  } while (0 != *str++);
-  free((void*)str0);
-  return result;
-}
-
 std::string Project::backend_get(const std::string& backend, const std::string& key) const {
   throw_if_backend_invalid(backend);
   auto& be = m_backends.at(backend);
@@ -533,6 +513,8 @@ mapstringstring_t Project::backend_parameters(const std::string& backend, bool d
 }
 
 bool Project::run(int verbosity, bool force, bool wait) {
+
+  using util::splitString;
 
   if (auto stat = status(); stat == running || stat == waiting)
     return false;

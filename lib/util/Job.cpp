@@ -1,5 +1,6 @@
 #include "Job.h"
 #include "Shell.h"
+#include "util.h"
 #include <chrono>
 #include <functional>
 #include <future>
@@ -51,7 +52,7 @@ bool sjef::util::Job::push_rundir(int verbosity) {
 }
 
 bool sjef::util::Job::pull_rundir(int verbosity) {
-  m_trace(3-verbosity) << "pull_rundir " << verbosity << std::endl;
+  m_trace(3 - verbosity) << "pull_rundir " << verbosity << std::endl;
   if (localhost())
     return true;
   std::string command = "rsync --archive --copy-links --timeout=5";
@@ -199,7 +200,7 @@ void Job::poll_job(int verbosity) {
         if (m_initial_status == running or m_initial_status == completed or m_initial_status == waiting)
           status = completed;
       }
-      m_trace(4-verbosity) << "got status " << status << std::endl;
+      m_trace(4 - verbosity) << "got status " << status << std::endl;
       pull_rundir(verbosity);
       set_status(status);
       //    std::cout << "set status " << m_project.status_message() << std::endl;
@@ -209,24 +210,44 @@ void Job::poll_job(int verbosity) {
         if (m_closing or status == completed or m_killed)
           break;
       }
-            m_trace(4-verbosity) << "active polling cycle stops"<<std::endl;
+      m_trace(4 - verbosity) << "active polling cycle stops" << std::endl;
     }
     using namespace std::literals::chrono_literals;
     std::this_thread::sleep_for(10ms);
     std::this_thread::sleep_for((stop - start) * 2);
   }
   if (!localhost() and m_backend_command_server != nullptr and (status == completed or status == killed)) {
-    m_trace(4-verbosity) << "Pull run directory at end of job " << std::endl;
-    m_trace(4-verbosity) << Shell()("echo local rundir;ls -lta " + m_project.filename("", "", 0).string()) << std::endl;
-    m_trace(4-verbosity) << "remote cache directory: " << m_remote_cache_directory << std::endl;
-    m_trace(4-verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta " + m_remote_cache_directory + "  2>&1")
-              << std::endl;
+    m_trace(4 - verbosity) << "Pull run directory at end of job " << std::endl;
+    m_trace(4 - verbosity) << Shell()("echo local rundir;ls -lta " + m_project.filename("", "", 0).string())
+                           << std::endl;
+    m_trace(4 - verbosity) << "remote cache directory: " << m_remote_cache_directory << std::endl;
+    m_trace(4 - verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta " + m_remote_cache_directory +
+                                                          "  2>&1")
+                           << std::endl;
     pull_rundir(verbosity); // TODO don't remove unless it worked!
-    m_trace(4-verbosity) << Shell()("echo local rundir;ls -lta " + m_project.filename("", "", 0).string()) << std::endl;
-    m_trace(4-verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta " + m_remote_cache_directory + "  2>&1")
-              << std::endl;
-    m_trace(4-verbosity) << "remove run directory " + m_remote_cache_directory + " at end of job " << std::endl;
-        (*m_backend_command_server)("rm -rf " + m_remote_cache_directory);
+    m_trace(4 - verbosity) << Shell()("echo local rundir;ls -lta " + m_project.filename("", "", 0).string())
+                           << std::endl;
+    m_trace(4 - verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta " + m_remote_cache_directory +
+                                                          "  2>&1")
+                           << std::endl;
+    auto remote_manifest = util::splitString(
+        (*m_backend_command_server)("ls " + m_remote_cache_directory + " 2>&1 | grep -v Info.plist"), '\n');
+    auto local_manifest =
+        util::splitString(Shell()("ls " + m_project.filename("", "", 0).string() + " 2>&1 | grep -v Info.plist"), '\n');
+    if (remote_manifest == local_manifest) {
+
+      m_trace(4 - verbosity) << "remove run directory " + m_remote_cache_directory + " at end of job " << std::endl;
+      (*m_backend_command_server)("rm -rf " + m_remote_cache_directory);
+    } else {
+      m_trace(-verbosity) << "Not removing remote cache " << m_backend.host + ":" + m_remote_cache_directory
+                          << " because master local copy " << m_project.filename("", "", 0) << " has failed to update"
+                          << std::endl;
+      m_trace(-verbosity) << "remote manifest:\n" << remote_manifest << std::endl;
+      m_trace(-verbosity) << "local manifest:\n" << local_manifest << std::endl;
+      m_trace(-verbosity) << "To recover manually, try\n"
+                          << "rsync -a " << m_backend.host + ":" + m_remote_cache_directory + "/"
+                          << " " << m_project.filename("", "", 0).string() << std::endl;
+    }
   }
   m_backend_command_server.reset(); // close down backend server as no longer needed
   //  m_trace(4-verbosity) << "Polling stops" << std::endl;

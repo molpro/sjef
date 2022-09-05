@@ -51,7 +51,7 @@ jobs:
         service ssh restart
         service ssh status
         ssh localhost hostname || ssh -v localhost hostname
-        cd ${{github.workspace}}/build && ctest -C ${{env.CMAKE_BUILD_TYPE}}
+        cd ${{github.workspace}}/build && ctest -C ${{env.CMAKE_BUILD_TYPE}} || ctest -C ${{env.CMAKE_BUILD_TYPE}} -V --rerun-failed --output-on-failure
 
     - name: Build doxygen
       run: cmake --build ${{github.workspace}}/build --target sjef-doc

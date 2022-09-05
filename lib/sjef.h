@@ -1,133 +1,61 @@
 #ifndef SJEF_SJEF_H
 #define SJEF_SJEF_H
+#include "util/Logger.h"
+#include <atomic>
 #include <filesystem>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <mutex>
+#include <ostream>
 #include <set>
 #include <string>
 #include <thread>
 #include <vector>
-#include <ostream>
-#include <iostream>
-#include <atomic>
 
 namespace pugi {
 class xpath_node_set; ///< @private
 }
 namespace sjef {
-class Backend;            ///< @private
-class Locker;             ///< @private
-struct remote_server;     ///< @private
+namespace util {
+class Job;
+}
+class Backend; ///< @private
+class Locker;  ///< @private
+using util::Logger;
 struct pugi_xml_document; ///< @private
 static constexpr int recentMax = 128;
 enum status : int { unknown = 0, running = 1, waiting = 2, completed = 3, unevaluated = 4, killed = 5 };
 using mapstringstring_t = std::map<std::string, std::string>;
 
-class Logger {
-  std::ostream* m_stream;
-  int m_level;
-
-  class NullBuffer : public std::streambuf {
-  public:
-    int overflow(int c) override { return c; }
-  };
-  NullBuffer m_null_buffer;
-  mutable std::ostream m_null{&m_null_buffer};
-  std::vector<std::string> m_preambles;
-
-public:
-  enum class Levels : int { QUIET = -1, ERROR = 0, WARNING = 1, NOTIFICATION = 2, DETAIL = 3 };
-  explicit Logger(std::ostream& stream, int level) : m_stream(&stream), m_level(level) {}
-  explicit Logger(std::ostream& stream = std::cout, const Levels level = Levels::ERROR,
-                  std::vector<std::string> preambles = {})
-      : m_stream(&stream), m_level(static_cast<int>(level)), m_preambles(std::move(preambles)) {}
-  explicit Logger(const Logger& source)
-      : m_stream(source.m_stream), m_level(source.m_level), m_preambles(source.m_preambles) {}
-  explicit Logger(Logger&& source) noexcept
-      : m_stream(std::move(source.m_stream)), m_level(std::move(source.m_level)),
-        m_preambles(std::move(source.m_preambles)) {}
-  Logger& operator=(const Logger& source) {
-    m_stream = source.m_stream;
-    m_level = source.m_level;
-    m_preambles = source.m_preambles;
-    return *this;
-  }
-  Logger& operator=(Logger&& source) noexcept {
-    m_stream = source.m_stream;
-    m_level = source.m_level;
-    m_preambles = std::move(source.m_preambles);
-    return *this;
-  }
-  ~Logger() = default;
-  std::ostream& stream() const { return *m_stream; }
-  std::ostream& operator()(int level, const std::string& message = "") const {
-    auto& stream = level > m_level ? m_null : *m_stream;
-    if (level >= 0 && level < decltype(level)(m_preambles.size()))
-      stream << m_preambles[level];
-    if (!message.empty())
-      stream << message << std::endl;
-    return stream;
-  }
-  std::ostream& operator()(const Levels level, const std::string& message = "") const {
-    return ((*this)(static_cast<int>(level), message));
-  }
-  std::ostream& detail(const std::string& message = "") const { return ((*this)(Levels::DETAIL, message)); }
-  std::ostream& notify(const std::string& message = "") const { return ((*this)(Levels::NOTIFICATION, message)); }
-  std::ostream& warn(const std::string& message = "") const { return ((*this)(Levels::WARNING, message)); }
-  std::ostream& error(const std::string& message = "") const { return ((*this)(Levels::ERROR, message)); }
-  int level() const { return m_level; }
-  void set_level(int level) { Logger::m_level = level; }
-  void set_level(Levels level) { Logger::m_level = static_cast<int>(level); }
-  void set_stream(std::ostream& stream) { m_stream = &stream; }
-};
-
-template <typename Arg>
-std::ostream& operator<<(const Logger& l, Arg arg) {
-  l.stream() << arg;
-  return l.stream();
-}
-
 class Project {
 private:
   std::string m_project_suffix;
   std::filesystem::path m_filename; ///< the name of the file bundle, expressed as an absolute
-                          ///< pathname for the directory holding the bundle
-  std::vector<std::filesystem::path> m_reserved_files =
-      std::vector<std::filesystem::path>{sjef::Project::s_propertyFile}; ///< Files which should never be copied back from backend
+                                    ///< pathname for the directory holding the bundle
+  std::vector<std::filesystem::path> m_reserved_files = std::vector<std::filesystem::path>{
+      sjef::Project::s_propertyFile}; ///< Files which should never be copied back from backend
   std::unique_ptr<pugi_xml_document> m_properties;
   mapstringstring_t m_suffixes; ///< File suffixes for the standard files
   std::map<std::string, Backend> m_backends;
 
   std::unique_ptr<pugi_xml_document> m_backend_doc;
-  mutable std::shared_ptr<remote_server> m_remote_server;
-  mutable std::chrono::milliseconds m_status_lifetime = std::chrono::milliseconds(0);
-  mutable std::chrono::time_point<std::chrono::steady_clock> m_status_last = std::chrono::steady_clock::now();
-  mutable std::thread m_backend_watcher;
   // put the flag into a container to deal conveniently with std:atomic_flag's
   // lack of move constructor
-  struct backend_watcher_flag_container {
-    std::atomic_flag shutdown_flag;
+  struct unmovables_container {
     std::mutex m_property_set_mutex;
   };
-  mutable backend_watcher_flag_container m_unmovables;
-  std::unique_ptr<Project> m_backend_watcher_instance;
-  const Project* m_master_instance;
-  bool m_master_of_slave;
-  bool m_monitor;
-  bool m_sync;
-  mutable std::mutex m_status_mutex;
-  mutable std::mutex m_remote_server_mutex;
-  mutable std::mutex m_synchronize_mutex;
+  mutable unmovables_container m_unmovables;
   mutable std::string m_backend; ///< The current backend
   mutable std::string m_xml_cached;
-  std::string remote_server_run(const std::string& command, int verbosity = 0, bool wait = true) const;
   ///> @private
   static const std::string s_propertyFile;
   ///> @private
   std::shared_ptr<Locker> m_locker;
-  Logger m_warn{std::cerr, Logger::Levels::WARNING, {"sjef:: Error: ", "sjef:: Warning: ", "sjef:: Note:"}};
-  Logger m_trace{std::cout, Logger::Levels::QUIET};
+  mutable Logger m_warn{std::cerr, Logger::Levels::WARNING, {"sjef:: Error: ", "sjef:: Warning: ", "sjef:: Note:"}};
+  mutable Logger m_trace{std::cout, Logger::Levels::QUIET};
+  friend class util::Job;
+  std::unique_ptr<util::Job> m_job;
 
 public:
   /*!
@@ -140,16 +68,12 @@ public:
    * directory name if filename does not have one
    * @param suffixes The file suffixes for special (input, output) files within
    * the project
-   * @param masterProject For internal use only
-   * @param monitor Whether to spawn threads that continuously monitor state. If false, no attempt is made to monitor
-   * the status of local or remote jobs, and submission of remote jobs is not allowed
-   * @param sync Whether to synchronise with remote backend
    */
   explicit Project(const std::filesystem::path& filename, bool construct = true, const std::string& default_suffix = "",
-                   const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}},
-                    bool monitor = true, bool sync = true, const Project* masterProject = nullptr);
+                   const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}});
   //  explicit Project(const std::string& filename, bool construct = true, const std::string& default_suffix = "",
-//                   const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}}) : Project(std::filesystem::path(filename),construct,default_suffix,suffixes) {}
+  //                   const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}}) :
+  //                   Project(std::filesystem::path(filename),construct,default_suffix,suffixes) {}
   Project(const Project& source) = delete;
   Project(const Project&& source) = delete;
   virtual ~Project();
@@ -165,7 +89,8 @@ public:
    * @param keep_run_directories  Keep up to this number of run directories unless slave is set
    * @return true if the copy was successful
    */
-  bool copy(const std::filesystem::path& destination_filename, bool force = false, bool keep_hash = false, bool slave = false, int keep_run_directories=std::numeric_limits<int>::max());
+  bool copy(const std::filesystem::path& destination_filename, bool force = false, bool keep_hash = false,
+            bool slave = false, int keep_run_directories = std::numeric_limits<int>::max());
   /*!
    * @brief Move the project to another location
    * @param destination_filename
@@ -207,23 +132,13 @@ public:
     return result;
   }
   /*!
-   * @brief Synchronize the project with a cached copy belonging to a backend.
-   * name.inp, name.xyz, Info.plist, and any files brought in with import(),
-   * will be pushed from the master copy to the backend, and all other files
-   * will be pulled from the backend.
-   * @param verbosity If >0, show underlying processing
-   * @param nostatus should be set if called from status() to avoid infinite recursion
-   * @param force Force synchronization even if thought not to be needed
-   */
-  bool synchronize(int verbosity = 0, bool nostatus = false, bool force = false) const;
-  /*!
    * @brief Set the warning/error diagnostic level and destination
    * @param stream
    * @param level
    * @param preambles
    */
   void set_warnings(const Logger::Levels level = Logger::Levels::WARNING, std::ostream& stream = std::cerr,
-                std::vector<std::string> preambles = {"sjef:: Error: ", "sjef:: Warning: ", "sjef:: Note:"}) {
+                    std::vector<std::string> preambles = {"sjef:: Error: ", "sjef:: Warning: ", "sjef:: Note:"}) {
     m_warn = Logger{stream, level, std::move(preambles)};
   }
   void set_verbosity(int verbosity, std::ostream& stream = std::cout) { m_trace = Logger(stream, verbosity); }
@@ -259,7 +174,7 @@ public:
    * - 4 unevaluated
    * - 5 killed
    */
-  sjef::status status(int verbosity = 0, bool cached = true) const;
+  sjef::status status() const;
   /*!
    *
    * @return An informative string about job status
@@ -275,7 +190,7 @@ public:
   /*!
    * @brief Kill the job started by run()
    */
-  void kill();
+  void kill(int verbosity = 0);
   /*!
    * @brief Check whether the job output is believed to be out of date with
    * respect to the input and any other files contained in the project that
@@ -335,7 +250,7 @@ public:
    * @param unused Whether to remove unused files
    * @param keep_run_directories Maximum number of run directories to keep
    */
-  void clean(bool oldOutput = true, bool output = false, bool unused = false, int keep_run_directories=0);
+  void clean(bool oldOutput = true, bool output = false, bool unused = false, int keep_run_directories = 0);
   /*!
    * @brief Set a property
    * @param property
@@ -453,12 +368,11 @@ public:
    */
   void change_backend(std::string backend = std::string{""}, bool force = false);
 
+  const std::map<std::string, Backend>& backends() const { return m_backends; }
   std::map<std::string, Backend>& backends() { return m_backends; }
 
 private:
   Backend default_backend();
-  sjef::status cached_status() const;
-  void cached_status(sjef::status status) const;
   void throw_if_backend_invalid(std::string backend = "") const;
   std::string get_project_suffix(const std::filesystem::path& filename, const std::string& default_suffix) const;
   static void recent_edit(const std::filesystem::path& add, const std::filesystem::path& remove = "");
@@ -472,6 +386,7 @@ private:
   void save_property_file() const;
   void load_property_file_locked() const;
   bool properties_last_written_by_me(bool removeFile = false) const;
+  bool check_backends(const std::string& suffix) const;
 
 public:
   std::filesystem::path propertyFile() const;

@@ -22,7 +22,7 @@ target_include_directories(${LIB_NAME} PRIVATE ${tclap_SOURCE_DIR}/include)
 
 
 find_package(Boost 1.71.0 COMPONENTS filesystem REQUIRED)
-target_link_libraries(${LIB_NAME} PRIVATE Boost::headers pthread Boost::filesystem)
+target_link_libraries(${LIB_NAME} PUBLIC Boost::headers pthread Boost::filesystem)
 message("Boost_INCLUDE_DIRS: ${Boost_INCLUDE_DIRS}")
 message("Boost_LIBRARIES: ${Boost_LIBRARIES}")
 foreach (dir ${Boost_INCLUDE_DIRS})

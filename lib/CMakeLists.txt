@@ -8,7 +8,7 @@ add_library(${LIB_NAME}
         )
 target_compile_features(${LIB_NAME} PUBLIC cxx_std_17)
 target_compile_options(${LIB_NAME} PUBLIC -fPIC)
-set_target_properties(${LIB_NAME} PROPERTIES PUBLIC_HEADER "sjef.h;sjef-c.h;sjef-program.h;util/Command.h")
+set_target_properties(${LIB_NAME} PROPERTIES PUBLIC_HEADER "sjef.h;sjef-c.h;sjef-program.h;util/Shell.h")
 set_target_properties(${LIB_NAME} PROPERTIES OUTPUT_NAME "${LIB_FILENAME}")
 
 include(FetchContent)

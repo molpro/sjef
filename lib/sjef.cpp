@@ -702,6 +702,8 @@ std::string sjef::Project::status_message(int verbosity) const {
 }
 
 void Project::wait(unsigned int maximum_microseconds) const {
+  if (m_job == nullptr)
+    m_job.reset(new util::Job(*this));
   unsigned int microseconds = 1;
   //  std::cout << "wait status="<<status()<<std::endl;
   while (status() == unknown or status() == running or status() == waiting) {

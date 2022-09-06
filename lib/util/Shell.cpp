@@ -124,12 +124,12 @@ void Shell::wait(int min_wait_milliseconds, int max_wait_milliseconds) const {
   if (max_wait_milliseconds <= 0)
     max_wait_milliseconds = min_wait_milliseconds;
   constexpr auto radix = 2;
-    auto wait_milliseconds = min_wait_milliseconds;
-    while (running()) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(wait_milliseconds));
-      wait_milliseconds = std::max(std::min(wait_milliseconds * radix, max_wait_milliseconds),
-                                   min_wait_milliseconds <= 0 ? 1 : min_wait_milliseconds);
-    }
+  auto wait_milliseconds = min_wait_milliseconds;
+  while (running()) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(wait_milliseconds));
+    wait_milliseconds = std::max(std::min(wait_milliseconds * radix, max_wait_milliseconds),
+                                 min_wait_milliseconds <= 0 ? 1 : min_wait_milliseconds);
+  }
 }
 
 bool Shell::running() const {

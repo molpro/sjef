@@ -123,7 +123,7 @@ $(function() {
 <div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;  <span class="keyword">mutable</span> Logger m_warn{std::cerr, Logger::Levels::WARNING, {<span class="stringliteral">&quot;sjef:: Error: &quot;</span>, <span class="stringliteral">&quot;sjef:: Warning: &quot;</span>, <span class="stringliteral">&quot;sjef:: Note:&quot;</span>}};</div>
 <div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;  <span class="keyword">mutable</span> Logger m_trace{std::cout, Logger::Levels::QUIET};</div>
 <div class="line"><a name="l00057"></a><span class="lineno"><a class="line" href="classsjef_1_1_project.html#a1477b6d3867ff4c6ced762877881f34f">   57</a></span>&#160;  <span class="keyword">friend</span> <span class="keyword">class </span><a class="code" href="classsjef_1_1_project.html#a1477b6d3867ff4c6ced762877881f34f">util::Job</a>;</div>
-<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;  std::unique_ptr&lt;util::Job&gt; m_job;</div>
+<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;  <span class="keyword">mutable</span> std::unique_ptr&lt;util::Job&gt; m_job;</div>
 <div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160; </div>
 <div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;<span class="keyword">public</span>:</div>
 <div class="line"><a name="l00072"></a><span class="lineno"><a class="line" href="classsjef_1_1_project.html#aea84f6286e521bbfc54c147d33c96361">   72</a></span>&#160;  <span class="keyword">explicit</span> <a class="code" href="classsjef_1_1_project.html#aea84f6286e521bbfc54c147d33c96361">Project</a>(<span class="keyword">const</span> std::filesystem::path&amp; <a class="code" href="classsjef_1_1_project.html#a8c43d0fe14bd729d73453349521cf598">filename</a>, <span class="keywordtype">bool</span> construct = <span class="keyword">true</span>, <span class="keyword">const</span> std::string&amp; default_suffix = <span class="stringliteral">&quot;&quot;</span>,</div>
@@ -406,7 +406,7 @@ $(function() {
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Mon Sep 5 2022 09:00:41 for sjef by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
+Generated on Tue Sep 6 2022 19:24:42 for sjef by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
 </small></address>
 </body>
 </html>

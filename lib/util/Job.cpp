@@ -35,7 +35,7 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verb
   command += " --exclude=*.out* --exclude=*.log* --exclude=*.xml*";
   command += " --exclude=Info.plist --exclude=.Info.plist.writing_object";
   command += " --rsh 'ssh -o ControlPath=~/.ssh/sjef-control-%h-%p-%r -o ControlMaster=auto -o ControlPersist=300'";
-  command += " " + m_project.filename("", "", 0).string() + "/";
+  command += " '" + m_project.filename("", "", 0).string() + "/'";
   command += " " + m_backend.host + ":'" + m_remote_cache_directory + "'";
   if (verbosity > 0)
     command += " -v";
@@ -62,7 +62,7 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::pull_rundir(int verb
   command += " --exclude=Info.plist --exclude=.Info.plist.writing_object";
   command += " --rsh 'ssh -o ControlPath=~/.ssh/sjef-control-%h-%p-%r -o ControlMaster=auto -o ControlPersist=300'";
   command += " " + m_backend.host + ":'" + m_remote_cache_directory + "/'";
-  command += " " + m_project.filename("", "", 0).string();
+  command += " '" + m_project.filename("", "", 0).string() + "'";
   if (verbosity > 0)
     command += " -v";
   m_project.m_trace(2 - verbosity) << "Pull rsync: " << command << std::endl;
@@ -106,14 +106,20 @@ std::string Job::run(const std::string& command, int verbosity, bool wait) {
                     //    std::cout << "Job::run() set initial status to waiting, and pause polling"<<std::endl;
   set_status(waiting);
   auto backend_submits_batch = m_backend.run_jobnumber != "([0-9]+)";
-  if (!localhost())
-    push_rundir(verbosity);
+  if (!localhost()) {
+    const auto& push_rundir_result = push_rundir(verbosity);
+    if (!std::get<0>(push_rundir_result))
+      throw std::runtime_error("Push of data to remote cache has failed\nOutput:\n" + std::get<1>(push_rundir_result) +
+                               "\nError:" + std::get<2>(push_rundir_result));
+  }
+  push_rundir(verbosity); // do it again to allow time to settle
   m_trace(4 - verbosity) << "Job::run() gives directory " << m_project.filename("", "", 0) << std::endl;
   m_trace(4 - verbosity) << "before submit, m_backend_command_server? " << (m_backend_command_server == nullptr)
                          << std::endl;
   auto run_output = (*m_backend_command_server)(
       command, wait or backend_submits_batch,
-      localhost() ? m_project.filename("", "", 0).string() : m_remote_cache_directory, verbosity);
+      localhost() ? m_project.filename("", "", 0).string() : m_remote_cache_directory, verbosity,
+      m_project.filename("stdout", "", 0).filename(), m_project.filename("stderr", "", 0).filename());
   if (backend_submits_batch) {
     std::smatch match;
     if (std::regex_search(run_output, match, std::regex{m_backend.run_jobnumber})) {
@@ -228,7 +234,7 @@ void Job::poll_job(int verbosity) {
     m_trace(4 - verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta '" + m_remote_cache_directory +
                                                           "' 2>&1")
                            << std::endl;
-    auto rundir_result = pull_rundir(verbosity); // TODO don't remove unless it worked!
+    auto rundir_result = pull_rundir(verbosity);
     m_trace(4 - verbosity) << Shell()("echo local rundir;ls -lta '" + m_project.filename("", "", 0).string()) + "'"
                            << std::endl;
     m_trace(4 - verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta '" + m_remote_cache_directory +
@@ -259,7 +265,7 @@ void Job::poll_job(int verbosity) {
     }
   }
   m_backend_command_server.reset(); // close down backend server as no longer needed
-  //  m_trace(4-verbosity) << "Polling stops" << std::endl;
+  m_trace(4 - verbosity) << "Polling stops" << std::endl;
 }
 
 } // namespace sjef::util

@@ -5,28 +5,20 @@ include(FetchContent)
 FetchContent_Declare(
         LibraryManager
         GIT_REPOSITORY https://github.com/molpro/library-manager.git
-        GIT_TAG 0.11.3
+        GIT_TAG 0.11.5
 )
 FetchContent_MakeAvailable(LibraryManager)
 
 LibraryManager_Project(FORTRAN_OPTION MPI_OPTION)
+message("PROJECT_VERSION=${PROJECT_VERSION}")
+message("PROJECT_VERSION_FULL=${PROJECT_VERSION_FULL}")
 
 option(BUILD_TESTS "Whether to build tests or not" ON)
 option(BUILD_PROGRAM "Whether to build sjef bash program or not" ON)
 
-execute_process(
-        COMMAND git describe --tags --abbrev=0 --always HEAD
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        OUTPUT_VARIABLE SJEF_VERSION)
-string(STRIP "${SJEF_VERSION}" SJEF_VERSION)
-if (SJEF_VERSION STREQUAL "")
-    set(SJEF_VERSION "0.0.0")
-endif()
-project(sjef LANGUAGES CXX C VERSION ${SJEF_VERSION})
-message("SJEF_VERSION: ${SJEF_VERSION}")
+project(sjef LANGUAGES CXX C VERSION ${PROJECT_VERSION})
+set(SJEF_VERSION ${PROJECT_VERSION_FULL})
 
-#set(LIB_FILENAME "sjef")
-#set(LIB_NAME "${LIB_FILENAME}")
 set(PROGRAM_FILENAME "sjef")
 set(PROGRAM_NAME "sjef-program")
 

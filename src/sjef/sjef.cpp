@@ -1,6 +1,6 @@
 #include "sjef.h"
-#include "Locker.h"
 #include "sjef-backend.h"
+#include "util/Locker.h"
 #include <array>
 #include <chrono>
 #include <cstdlib>
@@ -52,7 +52,7 @@ bool copyDir(fs::path const& source, fs::path const& destination, bool delete_so
     throw runtime_error("Destination directory " + destination.string() + " already exists.");
   if (!fs::create_directory(destination))
     throw runtime_error("Unable to create destination directory " + destination.string());
-  sjef::Locker destination_locker(destination);
+  sjef::util::Locker destination_locker(destination);
   auto destination_lock = destination_locker.bolt();
   for (fs::directory_iterator file(source); file != fs::directory_iterator(); ++file) {
     fs::path current(file->path());
@@ -74,12 +74,12 @@ inline std::string getattribute(pugi::xpath_node node, const std::string& name) 
 }
 
 std::mutex s_make_locker_mutex;
-std::map<fs::path, std::shared_ptr<Locker>> lockers;
-inline std::shared_ptr<Locker> make_locker(const fs::path& filename) {
+std::map<fs::path, std::shared_ptr<util::Locker>> lockers;
+inline std::shared_ptr<util::Locker> make_locker(const fs::path& filename) {
   std::lock_guard lock(s_make_locker_mutex);
   auto name = fs::absolute(filename);
   if (lockers.count(name) == 0) {
-    lockers[name] = std::make_shared<Locker>(fs::path{name} / ".lock");
+    lockers[name] = std::make_shared<util::Locker>(fs::path{name} / ".lock");
   }
   return lockers[name];
 }
@@ -203,7 +203,7 @@ Project::Project(const std::filesystem::path& filename, bool construct, const st
       if (!fs::exists(config_file))
         std::ofstream(config_file) << "<?xml version=\"1.0\"?>\n<backends>\n</backends>" << std::endl;
       {
-        Locker locker{fs::path{config_file}.parent_path()};
+        util::Locker locker{fs::path{config_file}.parent_path()};
         auto locki = locker.bolt();
         fs::copy_file(config_file, config_file_);
         auto in = std::ifstream(config_file_.string());
@@ -803,7 +803,7 @@ void Project::recent_edit(const std::filesystem::path& add, const std::filesyste
   recent_projects_file_ += "-";
   bool changed = false;
   auto lock_threads = std::lock_guard(s_recent_edit_mutex);
-  Locker locker{fs::path{recent_projects_file}.parent_path()};
+  util::Locker locker{fs::path{recent_projects_file}.parent_path()};
   {
     auto lock = locker.bolt();
     if (!fs::exists(recent_projects_file)) {

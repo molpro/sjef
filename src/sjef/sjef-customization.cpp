@@ -1,6 +1,6 @@
-#include "Locker.h"
 #include "sjef-backend.h"
 #include "sjef.h"
+#include "util/Locker.h"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -46,7 +46,7 @@ void sjef::Project::custom_initialisation() {
   if (m_project_suffix == "molpro") {
     auto molprorc = filename("rc", "molpro");
     auto lockfile=molprorc; lockfile.replace_filename(".molpro.rc.lock");
-    sjef::Locker source_lock(lockfile);
+    sjef::util::Locker source_lock(lockfile);
     auto lock = source_lock.bolt();
     if (not std::filesystem::exists(molprorc)) {
       std::ofstream s(molprorc);

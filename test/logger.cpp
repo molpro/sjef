@@ -1,4 +1,4 @@
-#include <Locker.h>
+#include <sjef/util/Locker.h>
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -20,7 +20,7 @@ std::string msg() {
 }
 int main(int argc, char* argv[]) {
   std::string logfile(argc > 1 ? argv[1] : "");
-  sjef::Locker locker(logfile + ".lock");
+  sjef::util::Locker locker(logfile + ".lock");
   auto bolt = locker.bolt();
 
   if (argc > 1)

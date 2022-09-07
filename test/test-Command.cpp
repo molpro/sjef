@@ -7,7 +7,7 @@
 #define HOST_NAME_MAX 64
 #endif
 
-#include "util/Shell.h"
+#include <sjef/util/Shell.h>
 namespace fs = std::filesystem;
 
 TEST(Shell, local) {

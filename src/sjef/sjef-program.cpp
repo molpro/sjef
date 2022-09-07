@@ -1,6 +1,6 @@
 #include "sjef-program.h"
+#include <sjef/sjef.h>
 #include <iostream>
-#include <sjef.h>
 using Project = sjef::Project;
 static const auto program_name = std::string("Simple Job Execution Framework");
 #include <boost/filesystem.hpp>

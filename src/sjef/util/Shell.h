@@ -1,8 +1,8 @@
 #ifndef SJEF_LIB_UTIL_SHELL_H_
 #define SJEF_LIB_UTIL_SHELL_H_
-#include "Logger.h"
 #include <boost/process/child.hpp>
 #include <boost/process/io.hpp>
+#include "Logger.h"
 namespace bp = boost::process;
 
 namespace sjef::util {

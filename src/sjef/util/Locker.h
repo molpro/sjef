@@ -11,7 +11,7 @@ namespace boost::interprocess {
 class file_lock; ///< @private
 }
 
-namespace sjef {
+namespace sjef::util {
 /*!
  * @brief A thread-safe class for an inter-thread/inter-process lock.
  * The lock mechanism is based on a locked file in the file system.
@@ -57,5 +57,5 @@ public:
   Bolt bolt();
 };
 
-} // namespace sjef
+} // namespace sjef::util
 #endif // SJEF_LIB_LOCKER_H_

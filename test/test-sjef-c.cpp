@@ -1,9 +1,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "sjef-backend.h"
-#include "sjef-c.h"
-#include "sjef.h"
+#include <sjef/sjef-backend.h>
+#include <sjef/sjef-c.h>
+#include <sjef/sjef.h>
 #include "test-sjef.h"
 #include <filesystem>
 #include <libgen.h>

@@ -1,6 +1,6 @@
 add_executable(${PROGRAM_NAME} main.cpp)
 set_target_properties(${PROGRAM_NAME} PROPERTIES OUTPUT_NAME "${PROGRAM_FILENAME}")
-target_link_libraries(${PROGRAM_NAME} PRIVATE ${LIB_NAME})
+target_link_libraries(${PROGRAM_NAME} PRIVATE ${PROJECT_NAME})
 set_target_properties(${PROGRAM_NAME} PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
 set_target_properties(${PROGRAM_NAME} PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 install(TARGETS ${PROGRAM_NAME} RUNTIME DESTINATION bin)

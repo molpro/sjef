@@ -1,4 +1,4 @@
-#include "sjef-c.h"
+#include <sjef/sjef-c.h>
 #include <stdio.h>
 #include <stdlib.h>
 

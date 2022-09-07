@@ -2,8 +2,8 @@
 #include <gtest/gtest.h>
 #include <signal.h>
 
-#include "sjef-backend.h"
-#include "sjef.h"
+#include <sjef/sjef-backend.h>
+#include <sjef/sjef.h>
 #include <boost/process/search_path.hpp>
 #include <chrono>
 #include <fstream>
@@ -15,8 +15,8 @@
 #include <unistd.h>
 
 #include "test-sjef.h"
-#include "util/Shell.h"
-#include <Locker.h>
+#include <sjef/util/Shell.h>
+#include <sjef/util/Locker.h>
 
 namespace {
 

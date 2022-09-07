@@ -6,7 +6,7 @@ var searchData=
   ['check_5fbackends_22',['check_backends',['../namespacesjef.html#a253847a858f772bb890190b3fd169385',1,'sjef']]],
   ['clean_23',['clean',['../classsjef_1_1_project.html#a17e29d1056196500591f6a9169925eef',1,'sjef::Project']]],
   ['completed_24',['completed',['../namespacesjef.html#a36c95c05a49948d8f97e2c80d80ec787a3625c62154959907fcd62a9f487a1c7d',1,'sjef']]],
-  ['configuration_20of_20backends_25',['Configuration of backends',['../md____w_sjef_sjef_lib_backends.html',1,'']]],
+  ['configuration_20of_20backends_25',['Configuration of backends',['../md____w_sjef_sjef_src_sjef_backends.html',1,'']]],
   ['copy_26',['copy',['../classsjef_1_1_project.html#a661062aa17ab8aea1f8794dce0a24d34',1,'sjef::Project']]],
   ['current_5frun_27',['current_run',['../classsjef_1_1_project.html#a727d24e35dfa5a37d909d859735cfeb9',1,'sjef::Project']]],
   ['custom_5finitialisation_28',['custom_initialisation',['../classsjef_1_1_project.html#a5a785b13afcaba2f72721f08c4eab025',1,'sjef::Project']]],

@@ -11,6 +11,6 @@ var searchData=
   ['backend_5fparameter_5fset_170',['backend_parameter_set',['../classsjef_1_1_project.html#a359e6bcab5d9debc578656eb26679b00',1,'sjef::Project']]],
   ['backend_5fparameters_171',['backend_parameters',['../classsjef_1_1_project.html#a7689f2ace089d5361fb3c602952f7859',1,'sjef::Project']]],
   ['backends_172',['backends',['../classsjef_1_1_project.html#ad2eb4f3cdf95e4a47730bbb161b642c0',1,'sjef::Project::backends() const'],['../classsjef_1_1_project.html#ab25caa9a16bbbecdd0980cdefda34e1a',1,'sjef::Project::backends()']]],
-  ['bolt_173',['bolt',['../classsjef_1_1_locker.html#a23e3a8111a4bc51e1f95a44a48ef9a76',1,'sjef::Locker']]],
-  ['bolt_174',['Bolt',['../structsjef_1_1_locker_1_1_bolt.html#a12feb3018b057e1d21afeb80a23d2e2a',1,'sjef::Locker::Bolt::Bolt(Locker &amp;locker)'],['../structsjef_1_1_locker_1_1_bolt.html#a71fea5d96652a5876d2d99541838b940',1,'sjef::Locker::Bolt::Bolt()=delete'],['../structsjef_1_1_locker_1_1_bolt.html#ab3138d4aa4efdc1d0567d51d82b2ae27',1,'sjef::Locker::Bolt::Bolt(const Bolt &amp;)=delete']]]
+  ['bolt_173',['bolt',['../classsjef_1_1util_1_1_locker.html#a69ddaa601238d828e64baf8448981d6f',1,'sjef::util::Locker']]],
+  ['bolt_174',['Bolt',['../structsjef_1_1util_1_1_locker_1_1_bolt.html#abe2335eef033d60ecbd9e0eae42e8326',1,'sjef::util::Locker::Bolt::Bolt(Locker &amp;locker)'],['../structsjef_1_1util_1_1_locker_1_1_bolt.html#adbbfac7d20f64d0b7a85c43226402c55',1,'sjef::util::Locker::Bolt::Bolt()=delete'],['../structsjef_1_1util_1_1_locker_1_1_bolt.html#a090e342aa45a5365e86ae19b0dd12ca0',1,'sjef::util::Locker::Bolt::Bolt(const Bolt &amp;)=delete']]]
 ];

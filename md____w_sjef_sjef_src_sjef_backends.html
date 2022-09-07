@@ -87,38 +87,12 @@ $(function() {
 <li><code>{prologue param:default value!documentation}</code> works similarly, with substitution of <code>default value</code> instead of elision if <code>param</code> is not defined. <code>!documentation</code> is ignored in constructing the completed run command, but can be queried by programs using the library, so it is good practice to write a description that would help a user to understand if and how the parameter should be specified.</li>
 </ul>
 <p>The key/value pairs are normally specified through the library call to run the job (<code><a class="el" href="classsjef_1_1_project.html#a78a8af26654fada8c1b0799aac21c844" title="Start a sjef job.">sjef::Project::run()</a></code>, <code>pysjef.Project.run()</code>, <code>sjef run</code>) but are then cached in the properties of the project using the backend, so that the defaults for subsequent runs for the same project are the values of the parameters used most recently.</p>
-<p>Example:</p>
-<div class="fragment"><div class="line">&lt;<span class="keywordtype">backends</span>&gt;</div>
-<div class="line">  <span class="comment">GÃ‹Ä±U</span></div>
-<div class="line"><span class="comment">GÃ‹Ä±U</span></div>
-<div class="line"><span class="comment"> ­ÞKv</span></div>
-<div class="line"><span class="comment">€³ÞKv</span></div>
-<div class="line"><span class="comment">  --&gt;</span></div>
-<div class="line">  &lt;<span class="keywordtype">backend</span> <span class="keyword">name</span>=<span class="stringliteral">&quot;local&quot;</span> <span class="keyword">host</span>=<span class="stringliteral">&quot;localhost&quot;</span></div>
-<div class="line">           <span class="keyword">run_command</span>=<span class="stringliteral">&quot;molpro {-n %n!MPI size} {-M %M!Total memory} {-m %m!Memory per process} {-G %G!GA memory}&quot;</span></div>
-<div class="line">  /&gt;</div>
-<div class="line">  <span class="comment">&lt;!-- local backend with special options --&gt;</span></div>
-<div class="line">  &lt;<span class="keywordtype">backend</span> <span class="keyword">name</span>=<span class="stringliteral">&quot;special_local&quot;</span> <span class="keyword">host</span>=<span class="stringliteral">&quot;localhost&quot;</span> <span class="keyword">run_command</span>=<span class="stringliteral">&quot;molpro {-n %n:2!MPI size} {-m %m:100M!Memory} {-G %G!GA memory}&quot;</span>/&gt;</div>
-<div class="line">  <span class="comment">&lt;!-- informal immediate launching of Molpro on a neighbouring workstation --&gt;</span></div>
-<div class="line">    &lt;<span class="keywordtype">backend</span> <span class="keyword">name</span>=<span class="stringliteral">&quot;linux&quot;</span> <span class="keyword">host</span>=<span class="stringliteral">&quot;user@host&quot;</span> <span class="keyword">cache</span>=<span class="stringliteral">&quot;/tmp/sjef-backend&quot;</span> <span class="keyword">run_command</span>=<span class="stringliteral">&quot;molpro&quot;</span>/&gt;</div>
-<div class="line">    &lt;<span class="keywordtype">backend</span> <span class="keyword">name</span>=<span class="stringliteral">&quot;linux2&quot;</span> <span class="keyword">host</span>=<span class="stringliteral">&quot;linux2&quot;</span> <span class="keyword">cache</span>=<span class="stringliteral">&quot;/tmp/peter/sjef-backend&quot;</span> <span class="keyword">run_command</span>=<span class="stringliteral">&quot;myMolpro/bin/molpro&quot;</span>/&gt;</div>
-<div class="line">  <span class="comment">GÃ‹Ä±U</span></div>
-<div class="line"><span class="comment">       and submits with srun --&gt;</span></div>
-<div class="line">    &lt;<span class="keywordtype">backend</span> <span class="keyword">name</span>=<span class="stringliteral">&quot;slurmcluster&quot;</span></div>
-<div class="line">             <span class="keyword">host</span>=<span class="stringliteral">&quot;{%user}@slurmcluster.somewhere.edu&quot;</span></div>
-<div class="line">             <span class="keyword">cache</span>=<span class="stringliteral">&quot;/scratch/{%user}/sjef-project&quot;</span></div>
-<div class="line">             <span class="keyword">run_command</span>=<span class="stringliteral">&quot;/software/molpro/release/bin/qmolpro {-t %t!time limit in seconds} {-n %n!number of MPI processes} {-m %m!memory} {-G %G!Global Arrays memory} {-q %q:compute!batch queue}&quot;</span></div>
-<div class="line">             <span class="keyword">run_jobnumber</span>=<span class="stringliteral">&quot;Submitted batch job *([0-9]+)&quot;</span></div>
-<div class="line">             <span class="keyword">kill_command</span>=<span class="stringliteral">&quot;scancel&quot;</span></div>
-<div class="line">             <span class="keyword">status_command</span>=<span class="stringliteral">&quot;squeue -j&quot;</span></div>
-<div class="line">             <span class="keyword">status_running</span>=<span class="stringliteral">&quot; (CF|CG|R|ST|S) *[0-9]&quot;</span> <span class="keyword">status_waiting</span>=<span class="stringliteral">&quot; (PD|SE) *[0-9]&quot;</span></div>
-<div class="line">    /&gt;</div>
-<div class="line">&lt;/<span class="keywordtype">backends</span>&gt;</div>
-</div><!-- fragment --> </div></div><!-- contents -->
+<p>Example: </p>
+</div></div><!-- contents -->
 </div><!-- PageDoc -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Tue Sep 6 2022 19:24:42 for sjef by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
+Generated on Wed Sep 7 2022 11:27:20 for sjef by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
 </small></address>
 </body>
 </html>

@@ -80,9 +80,9 @@ $(function() {
 <p><code>new</code>: Make a completely new project bundle. Any additional arguments are interpreted as files to be imported into the project.</p>
 <p><code>edit</code>: Edit the input file, whose name is the project base name with extension from the <code>--suffix-inp</code> flag, using <code>${VISUAL}</code> (default <code>${EDITOR}</code>, default <code>vi</code>).</p>
 <p><code>browse</code>: Browse the output file, whose name is the project base name with extension from the <code>--suffix-out</code> flag, using <code>${PAGER}</code> (default <code>less</code>).</p>
-<p><code>run</code>: Launch a job either on the local machine or on a preconfigured <a class="el" href="md____w_sjef_sjef_lib_backends.html">backend</a>. Valid flags that can then be specified are</p><ul>
+<p><code>run</code>: Launch a job either on the local machine or on a preconfigured <a class="el" href="md____w_sjef_sjef_src_sjef_backends.html">backend</a>. Valid flags that can then be specified are</p><ul>
 <li><code>-b</code> | <code>--backend</code> <em>backend</em>: specify the name of the backend to be used (default is last used, or <code>local</code>)</li>
-<li><code>-p</code> | <code>--parameter</code> <em>key</em>=*value*: specify a parameter value for substitution in the template for <code>run_command</code> defined in the <a class="el" href="md____w_sjef_sjef_lib_backends.html">backend</a></li>
+<li><code>-p</code> | <code>--parameter</code> <em>key</em>=*value*: specify a parameter value for substitution in the template for <code>run_command</code> defined in the <a class="el" href="md____w_sjef_sjef_src_sjef_backends.html">backend</a></li>
 <li><code>-w</code> | <code>--wait</code></li>
 <li><code>-f</code> | <code>--force</code></li>
 </ul>
@@ -93,13 +93,13 @@ $(function() {
 <p><code>move</code>: Move the project bundle. The additional argument gives the destination, which, if already existing, will not be overwritten unless the <code>-f</code> flag is given.</p>
 <p><code>import</code>: Copy files into the project bundle. For each additional argument, the file specified is copied into the project.</p>
 <p><code>export</code>: Copy files out of the project bundle. For each additional argument, its base name specifies which file in the project, and full name gives the destination to be copied to.</p>
-<p>Backends are defined in per-user and per-system configuration files; see <a class="el" href="md____w_sjef_sjef_lib_backends.html">further details</a>.</p>
+<p>Backends are defined in per-user and per-system configuration files; see <a class="el" href="md____w_sjef_sjef_src_sjef_backends.html">further details</a>.</p>
 <p><code>sjef</code> can be localised onto a single software package using the options described above with the help of a shell alias, for example </p><div class="fragment"><div class="line">alias cmolpro=&#39;sjef -s molpro&#39;</div>
 </div><!-- fragment --> </div></div><!-- contents -->
 </div><!-- PageDoc -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Tue Sep 6 2022 19:24:42 for sjef by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
+Generated on Wed Sep 7 2022 11:27:20 for sjef by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
 </small></address>
 </body>
 </html>

@@ -12,9 +12,9 @@ var searchData=
   ['backend_5fparameters_11',['backend_parameters',['../classsjef_1_1_project.html#a7689f2ace089d5361fb3c602952f7859',1,'sjef::Project']]],
   ['backends_12',['backends',['../classsjef_1_1_project.html#ad2eb4f3cdf95e4a47730bbb161b642c0',1,'sjef::Project::backends() const'],['../classsjef_1_1_project.html#ab25caa9a16bbbecdd0980cdefda34e1a',1,'sjef::Project::backends()']]],
   ['backends_2emd_13',['backends.md',['../backends_8md.html',1,'']]],
-  ['bolt_14',['Bolt',['../structsjef_1_1_locker_1_1_bolt.html#ab3138d4aa4efdc1d0567d51d82b2ae27',1,'sjef::Locker::Bolt::Bolt(const Bolt &amp;)=delete'],['../structsjef_1_1_locker_1_1_bolt.html#a71fea5d96652a5876d2d99541838b940',1,'sjef::Locker::Bolt::Bolt()=delete'],['../structsjef_1_1_locker_1_1_bolt.html#a12feb3018b057e1d21afeb80a23d2e2a',1,'sjef::Locker::Bolt::Bolt(Locker &amp;locker)']]],
-  ['bolt_15',['bolt',['../classsjef_1_1_locker.html#a23e3a8111a4bc51e1f95a44a48ef9a76',1,'sjef::Locker']]],
-  ['bolt_16',['Bolt',['../structsjef_1_1_locker_1_1_bolt.html',1,'sjef::Locker']]],
+  ['bolt_14',['Bolt',['../structsjef_1_1util_1_1_locker_1_1_bolt.html#a090e342aa45a5365e86ae19b0dd12ca0',1,'sjef::util::Locker::Bolt::Bolt(const Bolt &amp;)=delete'],['../structsjef_1_1util_1_1_locker_1_1_bolt.html#adbbfac7d20f64d0b7a85c43226402c55',1,'sjef::util::Locker::Bolt::Bolt()=delete'],['../structsjef_1_1util_1_1_locker_1_1_bolt.html#abe2335eef033d60ecbd9e0eae42e8326',1,'sjef::util::Locker::Bolt::Bolt(Locker &amp;locker)']]],
+  ['bolt_15',['bolt',['../classsjef_1_1util_1_1_locker.html#a69ddaa601238d828e64baf8448981d6f',1,'sjef::util::Locker']]],
+  ['bolt_16',['Bolt',['../structsjef_1_1util_1_1_locker_1_1_bolt.html',1,'sjef::util::Locker']]],
   ['boost_17',['boost',['../namespaceboost.html',1,'']]],
   ['interprocess_18',['interprocess',['../namespaceboost_1_1interprocess.html',1,'boost']]]
 ];

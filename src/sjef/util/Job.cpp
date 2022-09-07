@@ -31,7 +31,7 @@ sjef::util::Job::Job(const sjef::Project& project)
 std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verbosity) {
   if (localhost())
     return {true, "", ""};
-  std::string command = "rsync --archive --copy-links --timeout=5";
+  std::string command = "rsync --archive --copy-links --timeout=5 --protect-args -v";
   command += " --exclude=*.out* --exclude=*.log* --exclude=*.xml*";
   command += " --exclude=Info.plist --exclude=.Info.plist.writing_object";
   command += " --rsh 'ssh -o ControlPath=~/.ssh/sjef-control-%h-%p-%r -o ControlMaster=auto -o ControlPersist=300'";
@@ -57,7 +57,7 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::pull_rundir(int verb
   m_trace(3 - verbosity) << "pull_rundir " << verbosity << std::endl;
   if (localhost())
     return {true, "", ""};
-  std::string command = "rsync --archive --copy-links --timeout=5";
+  std::string command = "rsync --archive --copy-links --timeout=5 --protect-args -v";
   command += " --exclude=*.out_* --exclude=*.log_* --exclude=*.xml_* --exclude=backup --exclude=*.d";
   command += " --exclude=Info.plist --exclude=.Info.plist.writing_object";
   command += " --rsh 'ssh -o ControlPath=~/.ssh/sjef-control-%h-%p-%r -o ControlMaster=auto -o ControlPersist=300'";
@@ -234,6 +234,8 @@ void Job::poll_job(int verbosity) {
     m_trace(4 - verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta '" + m_remote_cache_directory +
                                                           "' 2>&1")
                            << std::endl;
+    using namespace std::literals::chrono_literals;
+    std::this_thread::sleep_for(1000ms); // seems to be necessary to avoid a race. TODO fix this
     auto rundir_result = pull_rundir(verbosity);
     m_trace(4 - verbosity) << Shell()("echo local rundir;ls -lta '" + m_project.filename("", "", 0).string()) + "'"
                            << std::endl;
@@ -260,7 +262,7 @@ void Job::poll_job(int verbosity) {
       m_trace(-verbosity) << "Output stream from rsync:\n" << std::get<1>(rundir_result) << std::endl;
       m_trace(-verbosity) << "Error stream from rsync:\n" << std::get<2>(rundir_result) << std::endl;
       m_trace(-verbosity) << "To recover manually, try\n"
-                          << "rsync -a " << m_backend.host + ":'" + m_remote_cache_directory + "/'"
+                          << "rsync -asv " << m_backend.host + ":'" + m_remote_cache_directory + "/'"
                           << " '" << m_project.filename("", "", 0).string() + "'" << std::endl;
     }
   }

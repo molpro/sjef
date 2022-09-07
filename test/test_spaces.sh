@@ -47,10 +47,10 @@ echo Project: ${project}; ls -lR "${project}"
 fi
 sjef status "${project}"
 grep ! "${project}/run/1.molpro/1.out"  ||  ( \
-cat "${project}/run/1.molpro/1.out" "${project}/run/1.molpro/1.xml" \
-echo "Job standard error:" \
-cat "${project}/run/1.molpro/1.stderr" \
-echo "Job standard output:" "${project}/run/1.molpro/1.stdout" \
+cat "${project}/run/1.molpro/1.out" "${project}/run/1.molpro/1.xml"; \
+echo "Job standard error:"; \
+cat "${project}/run/1.molpro/1.stderr"; \
+echo "Job standard output:" "${project}/run/1.molpro/1.stdout"; \
 cat "${project}/run/1.molpro/1.stdout" \
 )
 

@@ -9,9 +9,9 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(LibraryManager)
 
-LibraryManager_Project(FORTRAN_OPTION MPI_OPTION)
-message("PROJECT_VERSION=${PROJECT_VERSION}")
-message("PROJECT_VERSION_FULL=${PROJECT_VERSION_FULL}")
+LibraryManager_Project()
+message(VERBOSE "PROJECT_VERSION=${PROJECT_VERSION}")
+message(VERBOSE "PROJECT_VERSION_FULL=${PROJECT_VERSION_FULL}")
 
 option(BUILD_TESTS "Whether to build tests or not" ON)
 option(BUILD_PROGRAM "Whether to build sjef bash program or not" ON)

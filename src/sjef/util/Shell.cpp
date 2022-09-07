@@ -1,11 +1,12 @@
 #include "Shell.h"
-namespace fs = std::filesystem;
 #include <boost/process/search_path.hpp>
 #include <boost/process/spawn.hpp>
 #include <chrono>
 #include <filesystem>
 #include <regex>
 #include <thread>
+
+namespace fs = std::filesystem;
 
 namespace sjef::util {
 

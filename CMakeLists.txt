@@ -48,7 +48,7 @@ if (DOXYGEN_FOUND)
     add_custom_target(${PROJECT_NAME}-doc ALL
             DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/html/index.html
             )
-    file(GLOB headers src/*.h */*.md *.md src/*.cpp)
+    file(GLOB_RECURSE headers src/*.h */*.md *.md src/*.cpp)
     add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/html/index.html
             COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
             DEPENDS ${headers} ${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile

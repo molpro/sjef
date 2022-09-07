@@ -161,12 +161,6 @@ public:
 
   /*!
    * @brief Obtain the status of the job started by run()
-   * @param verbosity
-   * - 0 print nothing
-   * - 1 show result from underlying status commands
-   * @param cached If true, don't actually get status, but instead use the last
-   * cached value. initiate the request and return immediately; a subsequent
-   * call with wait=true will complete
    * @return
    * - 0 not found
    * - 1 running

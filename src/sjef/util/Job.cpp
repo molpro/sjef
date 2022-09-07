@@ -235,7 +235,6 @@ void Job::poll_job(int verbosity) {
     m_trace(4 - verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta '" + m_remote_cache_directory +
                                                           "' 2>&1")
                            << std::endl;
-    using namespace std::literals::chrono_literals;
     auto rundir_result = pull_rundir(verbosity);
     m_trace(4 - verbosity) << Shell()("echo local rundir;ls -lta '" + m_project.filename("", "", 0).string()) + "'"
                            << std::endl;

@@ -16,7 +16,7 @@
 #include <boost/interprocess/sync/file_lock.hpp>
 #include <mutex>
 
-namespace sjef {
+namespace sjef::util {
 
 inline std::string hash_path(const fs::path& path) {
   if (auto parent = path.parent_path(); !parent.string().empty())

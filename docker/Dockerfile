@@ -6,7 +6,7 @@ RUN ( \
     echo 'LogLevel DEBUG2'; \
     echo 'PermitRootLogin yes'; \
     echo 'PasswordAuthentication yes'; \
-    echo 'Subsystem sftp /usr/lib/openssh/sftp-server'; \
+    echo 'Subsystem sftp /usr/src/openssh/sftp-server'; \
   ) > /etc/ssh/sshd_config \
   && mkdir /run/sshd
 

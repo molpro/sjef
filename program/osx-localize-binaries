@@ -10,7 +10,7 @@ mkdir -p "$1"
 cd "$1" ; shift
 outlibg=$(pwd -L)
 
-excluded='^/System|^/usr/lib'
+excluded='^/System|^/usr/src'
 
 function resolve() {
     workdone=0
@@ -23,7 +23,7 @@ function resolve() {
     # echo outlib=$outlib >&2
     for target in $@ ; do
 	writable=0; if [ ! -w $target ]; then writable=0; fi; chmod +w $target
-	for lib in $(otool -L $target | sed -e '/:[[:space:]]*$/d' -e 's/^[[:space:]]*//' -e 's/[[:space:]].*$//' |egrep -v "$excluded|@executable_path"|egrep -v "@rpath" ) ; do
+	for src in $(otool -L $target | sed -e '/:[[:space:]]*$/d' -e 's/^[[:space:]]*//' -e 's/[[:space:]].*$//' |egrep -v "$excluded|@executable_path"|egrep -v "@rpath" ) ; do
 	    libcopy=$outlibg/$(basename $lib)
 	    if [ ! -r $libcopy ]; then
 		cp -pf $lib $libcopy

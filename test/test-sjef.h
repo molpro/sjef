@@ -1,8 +1,8 @@
 #ifndef SJEF_TEST_TEST_SJEF_H_
 #define SJEF_TEST_TEST_SJEF_H_
-#include <Locker.h>
 #include <set>
-#include <sjef.h>
+#include <sjef/sjef.h>
+#include <sjef/util/Locker.h>
 #include <stdlib.h>
 #include <string>
 #include <vector>
@@ -31,7 +31,7 @@ protected:
   std::string m_default_suffix;
   std::vector<std::string> m_suffixes;
   fs::path m_dot_sjef;
-  std::vector<std::unique_ptr<sjef::Locker>> m_lockers;
+  std::vector<std::unique_ptr<sjef::util::Locker>> m_lockers;
   std::set<std::filesystem::path, std::less<>> m_not_preexisting;
 
 protected:
@@ -46,7 +46,7 @@ protected:
       const auto path = sjef::expand_path(m_dot_sjef / suffix);
       if (!fs::exists(path))
         m_not_preexisting.insert(path);
-      m_lockers.emplace_back(std::make_unique<sjef::Locker>(path.string() + ".lock"));
+      m_lockers.emplace_back(std::make_unique<sjef::util::Locker>(path.string() + ".lock"));
       m_lockers.back()->add_bolt();
       auto path_ = path;
       path_ += ".save";
@@ -57,13 +57,11 @@ protected:
         throw std::runtime_error(std::string{"Creating directory "} + path.string() + " has failed");
     }
 
-    auto path = fs::absolute(fs::current_path().parent_path() / "lib").string() + path_environment_separator +
+    auto path = fs::absolute(fs::current_path().parent_path() / "src" / "sjef").string() + path_environment_separator +
                 std::getenv("PATH");
     setenv("PATH", path.c_str(), 1);
   }
-  void SetUp() override {
-    _SetUp({});
-  }
+  void SetUp() override { _SetUp({}); }
   //  explicit test_sjef(const std::string& suffix) : test_sjef(std::vector<std::string>{{suffix}}) {}
   //  test_sjef(const test_sjef&) = delete;
   virtual void TearDown() override {

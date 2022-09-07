@@ -2,7 +2,7 @@
 #define SJEF_JOB_SERVER_H
 #include "../sjef.h"
 #include "Logger.h"
-#include "sjef-backend.h"
+#include "../sjef-backend.h"
 #include <future>
 
 namespace sjef::util {

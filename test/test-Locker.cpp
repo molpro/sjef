@@ -5,15 +5,15 @@
 #include <gtest/gtest.h>
 #include <sstream>
 #include <thread>
+#include <sjef/util/Locker.h>
 
-#include "Locker.h"
 namespace fs = std::filesystem;
 
 TEST(Locker, Locker) {
   fs::path lockfile{"testing-lockfile"};
   if (fs::exists(lockfile))
     fs::remove_all(lockfile);
-  sjef::Locker locker(lockfile);
+  sjef::util::Locker locker(lockfile);
   {
     auto l1 = locker.bolt();
     //    EXPECT_TRUE(fs::exists(lockfile));
@@ -30,7 +30,7 @@ TEST(Locker, directory) {
   if (fs::exists(lockfile))
     fs::remove_all(lockfile);
   fs::create_directories(lockfile);
-  sjef::Locker locker(lockfile);
+  sjef::util::Locker locker(lockfile);
   {
     auto l1 = locker.bolt();
     //    EXPECT_TRUE(fs::exists(lockfile / sjef::Interprocess_lock::directory_lock_file));
@@ -44,8 +44,8 @@ TEST(Locker, no_permission) {
   fs::path lockdir{"no_permission_dir"};
   std::ofstream(lockdir.string()) << "content" << std::endl;
   fs::path lockfile{lockdir / "file"};
-  EXPECT_ANY_THROW(sjef::Locker locker(lockfile); locker.bolt());
-  EXPECT_THROW(sjef::Locker locker(lockfile); locker.bolt(), std::domain_error);
+  EXPECT_ANY_THROW(sjef::util::Locker locker(lockfile); locker.bolt());
+  EXPECT_THROW(sjef::util::Locker locker(lockfile); locker.bolt(), std::domain_error);
   EXPECT_FALSE(fs::exists(lockfile));
   if (fs::exists(lockdir))
     fs::remove_all(lockdir);
@@ -61,7 +61,7 @@ TEST(Locker, write_many_threads) {
     fs::remove_all(datafile);
   if (fs::exists(lockfile))
     fs::remove_all(lockfile);
-  sjef::Locker locker(lockfile);
+  sjef::util::Locker locker(lockfile);
   //  { auto toucher = std::ofstream(lockfile); }
   ASSERT_TRUE(fs::exists(lockfile));
   int n{100};
@@ -118,7 +118,7 @@ TEST(Locker, write_many_threads) {
 
 TEST(Locker, thread_common_mutex) {
   std::string lockfile{"thread_common_mutex.lock"};
-  sjef::Locker locker(lockfile);
+  sjef::util::Locker locker(lockfile);
   int flag = 0;
   //  std::cout << "master: sets flag=0 " << std::this_thread::get_id() << std::endl;
 
@@ -145,7 +145,7 @@ TEST(Locker, thread_common_mutex) {
 
 // TODO test interprocess locking
 TEST(Locker, Interprocess) {
-  sjef::Locker l(".Interprocess.lock");
+  sjef::util::Locker l(".Interprocess.lock");
   auto b = l.bolt();
   namespace bp = ::boost::process;
   const std::string logfile = "Interprocess.log";

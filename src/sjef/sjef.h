@@ -19,10 +19,11 @@ class xpath_node_set; ///< @private
 namespace sjef {
 namespace util {
 class Job;
+class Locker;  ///< @private
 }
 class Backend; ///< @private
-class Locker;  ///< @private
 using util::Logger;
+using util::Locker;
 struct pugi_xml_document; ///< @private
 static constexpr int recentMax = 128;
 enum status : int { unknown = 0, running = 1, waiting = 2, completed = 3, unevaluated = 4, killed = 5 };

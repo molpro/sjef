@@ -56,7 +56,7 @@ private:
   mutable Logger m_warn{std::cerr, Logger::Levels::WARNING, {"sjef:: Error: ", "sjef:: Warning: ", "sjef:: Note:"}};
   mutable Logger m_trace{std::cout, Logger::Levels::QUIET};
   friend class util::Job;
-  std::unique_ptr<util::Job> m_job;
+  mutable std::unique_ptr<util::Job> m_job;
 
 public:
   /*!

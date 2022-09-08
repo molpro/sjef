@@ -961,8 +961,7 @@ std::string Project::recent(const std::string& suffix, int number) {
   //  std::cout << "recent_projects_directory " << recent_projects_directory << std::endl;
   std::ifstream in(expand_path(recent_projects_directory / "projects"));
   std::string line;
-  for (int position = 0; in >> line;) {
-    //    std::cout << "line " << line << std::endl;
+  for (int position = 0; std::getline(in, line);) {
     if (fs::exists(line))
       ++position;
     if (position == number)

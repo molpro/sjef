@@ -231,13 +231,13 @@ TEST_F(test_sjef, recent_files) {
     auto oldfile = fs::exists(rf);
     if (oldfile)
       fs::rename(rf, rf_);
-    std::string probername("prober." + suffix);
+    std::string probername("p r o b e r." + suffix);
     testfile(probername);
     sjef::Project prober(probername);
     std::list<std::filesystem::path> p;
     for (size_t i = 0; i < 3; i++) {
       {
-        sjef::Project proj("p" + std::to_string(i) + "." + suffix);
+        sjef::Project proj("p " + std::to_string(i) + "." + suffix);
         p.emplace_back(proj.filename());
       }
       testfile(p.back());

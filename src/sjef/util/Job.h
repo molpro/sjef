@@ -64,6 +64,9 @@ protected:
   status m_initial_status;
   std::tuple<bool, std::string, std::string> push_rundir(int verbosity = 0);
   std::tuple<bool, std::string, std::string> pull_rundir(int verbosity = 0);
+  std::string m_remote_rsync;
+  std::string m_remote_rsync_version;
+  std::string m_local_rsync_version;
   const bool localhost() const;
   void poll_job(int verbosity = 0);
   void set_status(status stat);

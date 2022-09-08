@@ -14,7 +14,7 @@ Shell::Shell(std::string host, std::string shell) : m_host(std::move(host)) {
   if (!localhost()) {
     m_out.reset(new bp::ipstream);
     m_err.reset(new bp::ipstream);
-    m_process = bp::child(bp::search_path("ssh"), m_host, std::move(shell), bp::std_in<m_in, bp::std_err> * m_err,
+    m_process = bp::child(bp::search_path("ssh"), m_host, std::move(shell), "-l", bp::std_in<m_in, bp::std_err> * m_err,
                           bp::std_out > *m_out);
     if (!m_process.valid())
       throw std::runtime_error("Spawning run process has failed");

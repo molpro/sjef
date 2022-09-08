@@ -27,11 +27,18 @@ sjef::util::Job::Job(const sjef::Project& project)
   //  std::cout << "Job constructor, m_job_number=" << m_job_number << std::endl;
   m_poll_task = std::async(std::launch::async, [this]() { this->poll_job(); });
   //  std::cout << "Job constructor has launched poll task" << std::endl;
+  if (!localhost()) {
+    m_remote_rsync = (*m_backend_command_server)("which rsync");
+    if (m_remote_rsync.empty())
+      m_remote_rsync = "rsync";
+//        std::cout << "remote rsync: " << m_remote_rsync << std::endl;
+  }
 }
 std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verbosity) {
   if (localhost())
     return {true, "", ""};
   std::string command = "rsync --archive --copy-links --timeout=5 --protect-args -v";
+  command += " --rsync-path=" + m_remote_rsync;
   command += " --exclude=*.out* --exclude=*.log* --exclude=*.xml*";
   command += " --exclude=Info.plist --exclude=.Info.plist.writing_object";
   command += " --rsh 'ssh -o ControlPath=~/.ssh/sjef-control-%h-%p-%r -o ControlMaster=auto -o ControlPersist=300'";
@@ -58,6 +65,7 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::pull_rundir(int verb
   if (localhost())
     return {true, "", ""};
   std::string command = "rsync --archive --copy-links --timeout=5 --protect-args -v";
+  command += " --rsync-path=" + m_remote_rsync;
   command += " --exclude=*.out_* --exclude=*.log_* --exclude=*.xml_* --exclude=backup --exclude=*.d";
   command += " --exclude=Info.plist --exclude=.Info.plist.writing_object";
   command += " --rsh 'ssh -o ControlPath=~/.ssh/sjef-control-%h-%p-%r -o ControlMaster=auto -o ControlPersist=300'";

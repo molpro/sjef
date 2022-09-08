@@ -14,7 +14,6 @@ echo "Project name: ${project_name}"
 rm -rf "${work_directory}"
 export SJEF_CONFIG="${work_directory}/dot-sjef"
 mkdir -p "${SJEF_CONFIG}/molpro"
-ssh ${host} mkdir -p "${cache}"
 cat << EOF >"${SJEF_CONFIG}/molpro/backends.xml"
 <?xml version="1.0"?>
 <backends>

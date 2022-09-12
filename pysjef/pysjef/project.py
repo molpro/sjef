@@ -46,17 +46,14 @@ class Project(Node):
 
     def __init__(self, name="", location=None, construct=True, parent=None, suffix="",
                  # file_suffixes={"inp":"inp","out":"out","xml":"xml"},
-                 file_suffixes=None,
-                 monitor=True, sync=True):
+                 file_suffixes=None):
         Node.__init__(self)
         self._project_wrapper = \
             ProjectWrapper(name=name, location=location, construct=construct, suffix=suffix,
-                           file_suffixes=file_suffixes, monitor=monitor, sync=sync)
+                           file_suffixes=file_suffixes)
         self.nodename = "project"
         self.parent = parent
         self.suffix = suffix
-        self.monitor = monitor #TODO maybe not needed
-        self.sync = sync #TODO maybe not needed
         self.is_project = True
         if name:
             self._set_attributes()

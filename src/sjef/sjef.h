@@ -1,6 +1,6 @@
 #ifndef SJEF_SJEF_H
 #define SJEF_SJEF_H
-#include "util/Logger.h"
+#include <sjef/util/Logger.h>
 #include <atomic>
 #include <filesystem>
 #include <iostream>

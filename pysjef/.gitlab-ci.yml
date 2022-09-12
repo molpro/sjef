@@ -1,0 +1,36 @@
+cache:
+  key: ${CI_PROJECT_NAME}
+  paths:
+    - public
+    - cmake-build
+
+build:
+  stage: build
+  image: ${CI_REGISTRY}/molpro/${CI_PROJECT_NAME}
+  script:
+    - cat ~/.bashrc
+    - . ~/.bashrc
+    - TOP=$PWD
+    - git checkout $CI_COMMIT_SHA # because of cache
+    - git fetch --tags
+    - git reset --hard
+    - conda activate pysjef-ci-dev
+    - bash build.sh
+    - cd $TOP/cmake-build && pytest ../
+
+pages:
+  stage: deploy
+  image: ${CI_REGISTRY}/molpro/${CI_PROJECT_NAME}
+  only:
+    - master
+  script:
+    - cat ~/.bashrc
+    - . ~/.bashrc
+    - conda activate pysjef-ci-dev
+    - TOP=$PWD
+    - cd $TOP/docs; make html; cd $TOP
+    - mkdir -p $TOP/public/
+    - rsync -a --delete $TOP/docs/_build/html/ $TOP/public/
+  artifacts:
+    paths:
+      - public

@@ -1,0 +1,10 @@
+cmake-build*
+.idea
+__pycache__/
+.pytest_cache/
+*.pyc
+*.so
+.ipynb_checkpoints
+docs/_*
+pysjef_molpro.egg-info/
+pysjef_molpro/_version.py

@@ -1,7 +1,7 @@
 #set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15.0" CACHE STRING "Minimum OS X deployment version" FORCE)
 LibraryManager_Append(${PROJECT_NAME}
         SOURCES sjef-backend.cpp sjef.cpp sjef-customization.cpp sjef-c.cpp util/Locker.cpp sjef-program.cpp util/Job.cpp util/Shell.cpp
-        PUBLIC_HEADER sjef.h sjef-c.h util/Shell.h sjef-program.h util/Locker.h
+        PUBLIC_HEADER sjef.h sjef-c.h util/Shell.h sjef-program.h util/Locker.h util/Logger.h
         PRIVATE_HEADER util/util.h
         )
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)

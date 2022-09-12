@@ -36,13 +36,11 @@ cdef class ProjectWrapper:
     cdef public object construct
     cdef public object suffix
     cdef public object file_suffix
-    cdef public object monitor
-    cdef public object sync
     cdef public object _input_variables
     cdef public object __property_name_prefix
 
     def __init__(self, str name="", location=None, bool construct=True, suffix='',
-                 file_suffixes=None, bool monitor=True, bool sync=True):
+                 file_suffixes=None):
         """
         Create a new Project bundle called *name* at the specified *location*.
 
@@ -55,14 +53,12 @@ cdef class ProjectWrapper:
         if file_suffixes is None:
             file_suffixes = {}
         if name:
-            self._create(name, location, construct, suffix, file_suffixes, monitor, sync)
+            self._create(name, location, construct, suffix, file_suffixes)
 
-    def _create(self, str name, location, bool construct, suffix, file_suffixes, bool monitor, bool sync):
+    def _create(self, str name, location, bool construct, suffix, file_suffixes):
         self.__property_name_prefix = "user::"
         self.name = name
         self.construct = construct
-        self.monitor = monitor
-        self.sync = sync
         cdef string csuffix = str(suffix).encode('utf-8')
         cdef map[string, string] cfile_suffixes
         cdef string ckey, cval
@@ -82,13 +78,13 @@ cdef class ProjectWrapper:
         if not location.is_dir():
             # this isn't a directory!
             raise ValueError(f"The chosen location doesn't seem to be a directory ({location})")
-        self._input_variables = [name, location, construct, suffix, file_suffixes, monitor, sync]
+        self._input_variables = [name, location, construct, suffix, file_suffixes]
         location = location / name
         cdef string fname = str(location).encode('utf-8')
         if file_suffixes:
-            self.c_project = make_unique[Project](fname, construct, csuffix, cfile_suffixes, monitor, sync)
+            self.c_project = make_unique[Project](fname, construct, csuffix, cfile_suffixes)
         else:
-            self.c_project = make_unique[Project](fname, construct, csuffix, cfile_suffixes, monitor, sync)
+            self.c_project = make_unique[Project](fname, construct, csuffix, cfile_suffixes)
         self.location = Path(self.filename())
         self.suffix = self.location.suffix
 
@@ -197,16 +193,11 @@ cdef class ProjectWrapper:
     def run_needed(self, int verbosity = 0):
         return deref(self.c_project).run_needed(verbosity)
 
-    def status(self, int verbosity=0, bool cached=True):
+    def status(self):
         """
         Checks job status
-        :param verbosity: 0 - print nothing; 1 - print results from underlying commands to std::out
-        :param cached: if True, uses the cached status value from previous run
         """
-        return str_status(deref(self.c_project).status(verbosity, cached))
-
-    def synchronize(self, int verbosity=0):
-        return deref(self.c_project).synchronize(verbosity)
+        return str_status(deref(self.c_project).status())
 
     def clean(self, bool old_output=True, bool output=False,
               bool unused=False):

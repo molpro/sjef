@@ -26,7 +26,7 @@ then
     CXX=$CONDA_PREFIX/bin/c++
 fi
 
-echo '__version__ = "'$(git -C ./${BUILD}/_deps/sjef-src describe --tags --abbrev=0)'"' > pysjef/_version.py
+echo '__version__ = "'$(git describe --tags --abbrev=0)'"' > pysjef/_version.py
 
 mkdir -p $BUILD
 cd $BUILD
@@ -38,7 +38,7 @@ if [ -f "CMakeCache.txt" ]
 then
     rm CMakeCache.txt
 fi
-cmake ../ -DCMAKE_INSTALL_PREFIX=$PREFIX -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF || { echo 'cmake build failed' ; exit 1; }
+cmake ../.. -DCMAKE_INSTALL_PREFIX=$PREFIX -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF || { echo 'cmake build failed' ; exit 1; }
 cmake --build . -t install || { echo 'make install failed' ; exit 1; }
 cd ../
 

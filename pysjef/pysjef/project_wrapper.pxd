@@ -4,7 +4,7 @@ from libcpp.vector cimport vector
 from libcpp.map cimport map
 from libcpp cimport bool
 
-cdef extern from "sjef.h" namespace "sjef":
+cdef extern from "sjef/sjef.h" namespace "sjef":
     cdef enum status:
         unknown = 0
         running = 1
@@ -15,7 +15,7 @@ cdef extern from "sjef.h" namespace "sjef":
 
     cdef cppclass Project:
         # constructor function
-        Project(string, bool, string, map[string, string], bool, bool) except +
+        Project(string, bool, string, map[string, string]) except +
         # Project(string, bool, string) except +
         string filename(string, string, int) except +
         bool copy(string &, bool, bool) except +
@@ -34,8 +34,7 @@ cdef extern from "sjef.h" namespace "sjef":
         void kill() except +
         void wait() except +
         void wait(unsigned int) except +
-        status status(int, bool) except +
-        bool synchronize(int) except +
+        status status() except +
         string name() except +
         string filename() except +
         void property_set(map[string, string]) except +

@@ -6,3 +6,6 @@ __pycache__/
 *.so
 .ipynb_checkpoints
 docs/_*
+pysjef.egg-info/
+pysjef/_version.py
+pysjef/project_wrapper.cpp

@@ -32,6 +32,7 @@ EOF
 
 sjef new "${project}"
 sjef import "${project}" "${work_directory}/${project_name}.inp"
+echo another > "${project}/another.out"
 sjef run -b testing-remote "${project}"
 if [ $debug -gt 0 ]; then
 echo Project: ${project}; ls -lR "${project}"

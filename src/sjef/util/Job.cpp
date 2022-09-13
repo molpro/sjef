@@ -39,7 +39,7 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verb
     return {true, "", ""};
   std::string command = "rsync --archive --copy-links --timeout=5 --protect-args -v";
   command += " --rsync-path=" + m_remote_rsync;
-  command += " --exclude=*.out* --exclude=*.log* --exclude=*.xml*";
+  command += " --exclude=*.out_* --exclude=*.log_* --exclude=*.xml_*";
   command += " --exclude=Info.plist --exclude=.Info.plist.writing_object";
   command += " --rsh 'ssh -o ControlPath=~/.ssh/sjef-control-%h-%p-%r -o ControlMaster=auto -o ControlPersist=300'";
   command += " '" + m_project.filename("", "", 0).string() + "/'";

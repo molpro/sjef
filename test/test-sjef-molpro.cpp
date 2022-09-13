@@ -77,6 +77,7 @@ TEST_F(test_sjef_molpro, molpro_workflow) {
         auto file = testfile(id.first + "_" + backend + ".molpro");
         projects.insert({id.first, std::make_unique<sjef::Project>(fs::exists(file) ? file : testfile(file))});
         std::ofstream(projects[id.first]->filename("inp")) << id.second;
+        std::ofstream(projects[id.first]->filename("out","another")) << "another";
         projects[id.first]->change_backend(backend);
       }
       auto start_time = std::chrono::steady_clock::now();

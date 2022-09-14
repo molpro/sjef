@@ -2,8 +2,6 @@
 #include <gtest/gtest.h>
 #include <signal.h>
 
-#include <sjef/sjef-backend.h>
-#include <sjef/sjef.h>
 #include <boost/process/search_path.hpp>
 #include <chrono>
 #include <fstream>
@@ -12,11 +10,13 @@
 #include <map>
 #include <memory>
 #include <regex>
+#include <sjef/sjef-backend.h>
+#include <sjef/sjef.h>
 #include <unistd.h>
 
 #include "test-sjef.h"
-#include <sjef/util/Shell.h>
 #include <sjef/util/Locker.h>
+#include <sjef/util/Shell.h>
 
 namespace {
 
@@ -25,16 +25,16 @@ class test_sjef_molpro : public test_sjef {
 protected:
   sjef::Locker locker = sjef::Locker(".molpro_lock");
   virtual void SetUp() override {
-//    this->m_default_suffix = "molpro";
+    //    this->m_default_suffix = "molpro";
     test_sjef::_SetUp({"molpro"});
     //    molpro_mutex.lock();
     //    locker.add_bolt();
     //    std::cout << "Hello from molpro_test "<<&molpro_mutex<<" pid "<<getpid()<<std::endl;
   }
 
-//  virtual void TearDown() override { // molpro_mutex.unlock();
-//        locker.remove_bolt();
-//  }
+  //  virtual void TearDown() override { // molpro_mutex.unlock();
+  //        locker.remove_bolt();
+  //  }
 };
 } // namespace
 
@@ -77,7 +77,7 @@ TEST_F(test_sjef_molpro, molpro_workflow) {
         auto file = testfile(id.first + "_" + backend + ".molpro");
         projects.insert({id.first, std::make_unique<sjef::Project>(fs::exists(file) ? file : testfile(file))});
         std::ofstream(projects[id.first]->filename("inp")) << id.second;
-        std::ofstream(projects[id.first]->filename("out","another")) << "another";
+        std::ofstream(projects[id.first]->filename("out", "another")) << "another";
         projects[id.first]->change_backend(backend);
       }
       auto start_time = std::chrono::steady_clock::now();
@@ -137,4 +137,15 @@ TEST_F(test_sjef_molpro, input_from_output) {
 TEST_F(test_sjef_molpro, run_needed) {
   sjef::Project He("He.molpro");
   EXPECT_FALSE(He.run_needed());
+}
+
+TEST_F(test_sjef_molpro, failure) {
+  sjef::Project p(testfile("test.molpro"));
+  { std::ofstream(p.filename("inp")) << "geometry={He};rhf"; }
+  p.run(0, true, true);
+  EXPECT_EQ(p.status(), sjef::status::completed);
+  { std::ofstream(p.filename("inp")) << "geometry={Ze};rhf"; }
+  p.run(0, true, true);
+  EXPECT_EQ(p.status(), sjef::status::failed) << p.xml() << p.file_contents("out") << p.file_contents("xml")
+                                              << sjef::util::Shell()("ls -lRa " + p.filename().string()) << std::endl;
 }

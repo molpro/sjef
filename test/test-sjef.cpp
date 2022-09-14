@@ -503,7 +503,7 @@ TEST_F(test_sjef, atomic) {
   //    std::cout << "@@@ constructors done"<<std::endl;
   object1.property_set("testprop", testval);
   //    std::cout << "@@@ set done"<<std::endl;
-  std::cout << std::ifstream(fs::path{filename} / "Info.plist").rdbuf() << "\n@@@@@@@@@@@@@@@@@@@@" << std::endl;
+  //  std::cout << std::ifstream(fs::path{filename} / "Info.plist").rdbuf() << "\n@@@@@@@@@@@@@@@@@@@@" << std::endl;
   ASSERT_EQ(sjef::Project(filename).property_get("testprop"), testval);
   auto testval2 = object2.property_get("testprop");
   //    std::cout << "@@@ get done"<<std::endl;

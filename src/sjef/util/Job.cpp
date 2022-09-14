@@ -273,6 +273,8 @@ void Job::poll_job(int verbosity) {
                           << " '" << m_project.filename("", "", 0).string() + "'" << std::endl;
     }
   }
+  m_project.m_xml_cached = "";
+  set_status(m_project.status_from_output());
   m_backend_command_server.reset(); // close down backend server as no longer needed
   m_trace(4 - verbosity) << "Polling stops" << std::endl;
 }

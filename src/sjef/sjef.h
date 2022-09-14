@@ -26,7 +26,7 @@ using util::Logger;
 using util::Locker;
 struct pugi_xml_document; ///< @private
 static constexpr int recentMax = 128;
-enum status : int { unknown = 0, running = 1, waiting = 2, completed = 3, unevaluated = 4, killed = 5 };
+enum status : int { unknown = 0, running = 1, waiting = 2, completed = 3, unevaluated = 4, killed = 5, failed=6 };
 using mapstringstring_t = std::map<std::string, std::string>;
 
 class Project {
@@ -202,6 +202,11 @@ public:
    * deduced, an empty string.
    */
   std::string input_from_output(bool sync = true) const;
+  /*!
+   * @brief Obtain the job status, if possible, by examining the output
+   * @return The status. If nothing can be found, returns status()
+   */
+  sjef::status status_from_output() const;
   void rewrite_input_file(const std::string& input_file_name, const std::string& old_name);
   /*!
    * @brief Perform any project initialisation specific to the project suffix

@@ -14,7 +14,7 @@ struct sjef::pugi_xml_document : public pugi::xml_document {};
 std::string sjef::Project::input_from_output(bool sync) const {
   std::string result;
   sjef::pugi_xml_document outxml;
-  outxml.load_string(xml(sync).c_str());
+  outxml.load_string(xml().c_str());
 
   if (m_project_suffix == "molpro") { // look for Molpro input in Molpro output
     for (const auto& node : outxml.select_nodes("/molpro/job/input/p"))
@@ -26,6 +26,15 @@ std::string sjef::Project::input_from_output(bool sync) const {
   return result;
 }
 
+sjef::status sjef::Project::status_from_output() const {
+  if (m_project_suffix == "molpro") {
+    sjef::pugi_xml_document outxml;
+    outxml.load_string(xml().c_str());
+    for (const auto& node : outxml.select_nodes("//error"))
+      return sjef::status::failed;
+  }
+  return status();
+}
 std::string sjef::Project::referenced_file_contents(const std::string& line) const {
   // TODO full robust implementation for Molpro geometry= and include
   auto pos = line.find("geometry=");

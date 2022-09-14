@@ -26,7 +26,7 @@ def all_completed(projects):
     :param projects: list of project nodes
     :return: True/False whether all projects completed
     """
-    return all(p.status == 'completed')
+    return all(p.status == 'completed' for p in projects)
 
 
 def recent_project(suffix, rank=1):

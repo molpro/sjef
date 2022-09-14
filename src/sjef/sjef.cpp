@@ -587,6 +587,8 @@ bool Project::run_needed(int verbosity) const {
       << ", time "
       << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
       << std::endl;
+  if (status() == failed)
+    return true;
   if (auto statuss = status(); statuss == running || statuss == waiting)
     return false;
   auto inpfile = filename("inp");

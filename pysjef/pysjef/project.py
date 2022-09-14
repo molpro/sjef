@@ -284,6 +284,16 @@ class Project(Node):
         # return Path(self.location / (self.name + ".out"))
         return filename("out")
 
+    @property
+    def out(self):
+        from pathlib import Path
+        return Path(self.filename("out")).read_text()
+
+    @property
+    def xml(self):
+        from pathlib import Path
+        return Path(self.filename("xml")).read_text()
+
     def view_input(self):
         """
         Opens the input file in editor as specified by '$EDITOR' environment
@@ -400,7 +410,7 @@ class Project(Node):
         """
         return self._project_wrapper.list_files()
 
-    def filename(self, suffix="", name="", run=-1):
+    def filename(self, suffix="", name="", run=0):
         """
         Get the file name of the bundle, or a primary file of particular type, or a general file in the bundle
 
@@ -414,4 +424,5 @@ class Project(Node):
         :return: the fully-qualified name of the file
         """
         return self._project_wrapper.filename(suffix, name, run)
+
 

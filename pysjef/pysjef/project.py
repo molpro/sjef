@@ -26,7 +26,7 @@ def all_completed(projects):
     :param projects: list of project nodes
     :return: True/False whether all projects completed
     """
-    return all(p.status == 'completed' for p in projects)
+    return all(p.status == 'completed')
 
 
 def recent_project(suffix, rank=1):
@@ -106,7 +106,7 @@ class Project(Node):
     def status(self):
         """
         String status of the project. Can be one of: ``unknown``, ``running``, ``waiting``,
-        ``completed``, ``unevaluated``, ``killed``.
+        ``completed``, ``unevaluated``, ``killed``, or ``failed``.
         """
         return self._project_wrapper.status()
 

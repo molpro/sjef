@@ -106,7 +106,7 @@ class Project(Node):
     def status(self):
         """
         String status of the project. Can be one of: ``unknown``, ``running``, ``waiting``,
-        ``completed``, ``unevaluated``, ``killed``.
+        ``completed``, ``unevaluated``, ``killed``, or ``failed``.
         """
         return self._project_wrapper.status()
 

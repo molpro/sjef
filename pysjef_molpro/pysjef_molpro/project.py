@@ -56,3 +56,18 @@ class MProject(Project):
         if value:
             selector += '.value'
         return self.select(selector)
+
+    def error_messages(self):
+        """
+        Get any error messages resulting from the run
+
+        :return: An array of dictionaries for each error found
+        """
+        result = []
+        for i in range(len(self.xpath_search('//error'))):
+            node={}
+            for key in ['type','message','location']:
+                value=self.xpath_search('(//error)['+str(i+1)+']',key)[0]
+                if (value !=''): node[key]=value
+            result.append(node)
+        return result

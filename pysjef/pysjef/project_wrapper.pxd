@@ -12,6 +12,7 @@ cdef extern from "sjef/sjef.h" namespace "sjef":
         completed = 3
         unevaluated = 4
         killed = 5
+        failed = 6
 
     cdef cppclass Project:
         # constructor function

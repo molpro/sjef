@@ -25,6 +25,8 @@ cdef str_status(status stat):
         return "unevaluated"
     elif stat == 5:
         return "killed"
+    elif stat == 6:
+        return "failed"
     else:
         raise ValueError("Unknown status {}".format(stat))
 

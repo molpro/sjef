@@ -30,9 +30,9 @@ sjef::util::Job::Job(const sjef::Project& project)
     if (m_remote_rsync.empty())
       m_remote_rsync = "rsync";
 //        std::cout << "remote rsync: " << m_remote_rsync << std::endl;
+  }
   m_poll_task = std::async(std::launch::async, [this]() { this->poll_job(); });
   //  std::cout << "Job constructor has launched poll task" << std::endl;
-  }
 }
 std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verbosity) {
   if (localhost())

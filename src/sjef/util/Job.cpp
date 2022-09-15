@@ -25,14 +25,14 @@ sjef::util::Job::Job(const sjef::Project& project)
       m_job_number(std::stoi("0" + m_project.property_get("jobnumber"))),
       m_initial_status(static_cast<sjef::status>(std::stoi("0" + m_project.property_get("_status")))) {
   //  std::cout << "Job constructor, m_job_number=" << m_job_number << std::endl;
-  m_poll_task = std::async(std::launch::async, [this]() { this->poll_job(); });
-  //  std::cout << "Job constructor has launched poll task" << std::endl;
   if (!localhost()) {
     m_remote_rsync = (*m_backend_command_server)("which rsync");
     if (m_remote_rsync.empty())
       m_remote_rsync = "rsync";
 //        std::cout << "remote rsync: " << m_remote_rsync << std::endl;
   }
+  m_poll_task = std::async(std::launch::async, [this]() { this->poll_job(); });
+  //  std::cout << "Job constructor has launched poll task" << std::endl;
 }
 std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verbosity) {
   if (localhost())

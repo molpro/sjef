@@ -7,6 +7,7 @@
 #include <regex>
 #include <sstream>
 #include <string>
+#include <set>
 namespace fs = std::filesystem;
 
 namespace sjef::util {
@@ -198,6 +199,13 @@ void Job::kill(int verbosity) {
   m_killed = true;
   //  std::cout << "Job::kill() set sentinel"<<std::endl;
 }
+
+template <class T>
+std::set<T> vector_to_set(std::vector<T>&& v) {
+   auto s=std::set<T>(std::make_move_iterator(v.begin()),
+                std::make_move_iterator(v.end()));
+  return s;
+}
 void Job::poll_job(int verbosity) {
   using Clock = std::chrono::high_resolution_clock;
   status status;
@@ -251,17 +259,17 @@ void Job::poll_job(int verbosity) {
     m_trace(4 - verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta '" + m_remote_cache_directory +
                                                           "'  2>&1")
                            << std::endl;
-    auto remote_manifest = util::splitString(
-        (*m_backend_command_server)("ls -1 '" + m_remote_cache_directory + "' 2>&1 | grep -v Info.plist"), '\n');
-    auto local_manifest = util::splitString(
-        Shell()("ls -1 '" + m_project.filename("", "", 0).string() + "' 2>&1 | grep -v Info.plist"), '\n');
+    auto remote_manifest = vector_to_set(util::splitString(
+        (*m_backend_command_server)("ls -1 '" + m_remote_cache_directory + "' 2>&1 | grep -v Info.plist"), '\n'));
+    auto local_manifest = vector_to_set(util::splitString(
+        Shell()("ls -1 '" + m_project.filename("", "", 0).string() + "' 2>&1 | grep -v Info.plist"), '\n'));
     //    std::cout << "rundir_result " << std::get<0>(rundir_result) << std::endl;
     if (!std::get<0>(rundir_result) or remote_manifest == local_manifest) {
 
       m_trace(4 - verbosity) << "remove run directory " + m_remote_cache_directory + " at end of job " << std::endl;
       (*m_backend_command_server)("rm -rf '" + m_remote_cache_directory + "'");
-    } else if (remote_manifest.front().find("No such file") ==
-               std::string::npos) { // sometimes sync will be tried before the remote cache exists, so stay quiet when
+    } else if (remote_manifest.count("No such file") !=
+               0) { // sometimes sync will be tried before the remote cache exists, so stay quiet when
                                     // that happens
       m_trace(-verbosity) << "Not removing remote cache " << m_backend.host + ":'" + m_remote_cache_directory + "'"
                           << " because master local copy " << m_project.filename("", "", 0) << " has failed to update"

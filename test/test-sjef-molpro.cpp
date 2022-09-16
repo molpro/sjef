@@ -146,6 +146,9 @@ TEST_F(test_sjef_molpro, failure) {
   EXPECT_EQ(p.status(), sjef::status::completed);
   { std::ofstream(p.filename("inp")) << "geometry={Ze};rhf"; }
   p.run(0, true, true);
-  EXPECT_EQ(p.status(), sjef::status::failed) << p.xml() << p.file_contents("out") << p.file_contents("xml")
-                                              << sjef::util::Shell()("ls -lRa " + p.filename().string()) << std::endl;
+  EXPECT_EQ(p.status(), sjef::status::failed)
+      << "status: " << p.status_message() << "\nxml:\n"
+      << p.xml() << "\noutput file:\n"
+      << p.file_contents("out") << "\nxml file:\n"
+      << p.file_contents("xml") << sjef::util::Shell()("ls -lRa " + p.filename().string()) << std::endl;
 }

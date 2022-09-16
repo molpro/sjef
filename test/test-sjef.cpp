@@ -863,8 +863,9 @@ TEST_F(test_sjef, kill) {
   std::ofstream(p.filename("inp")) << "some input";
   p.run("test-local", 0, true, false);
   p.kill();
-  EXPECT_EQ(p.status(), sjef::killed);
+  p.wait();
+  EXPECT_EQ(p.status(), sjef::killed)<<"Found status: "<<p.status_message();
   p.run("test-remote", 0, true, false);
   p.kill();
-  EXPECT_EQ(p.status(), sjef::killed);
+  EXPECT_EQ(p.status(), sjef::killed)<<"Found status: "<<p.status_message();
 }

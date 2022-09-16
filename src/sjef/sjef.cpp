@@ -696,6 +696,7 @@ std::string sjef::Project::status_message(int verbosity) const {
   message[sjef::status::completed] = "Completed";
   message[sjef::status::unevaluated] = "Unevaluated";
   message[sjef::status::killed] = "Killed";
+  message[sjef::status::failed] = "Failed";
   auto statu = this->status();
   auto result = message[statu];
   if (statu != sjef::status::unknown && !property_get("jobnumber").empty())

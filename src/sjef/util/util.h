@@ -31,6 +31,12 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& v) {
   return os;
 }
 
+template <class T>
+std::ostream& operator<<(std::ostream& os, const std::set<T>& v) {
+  for (const auto& e : v) os << e <<" ";
+  return os;
+}
+
 
 } // namespace sjef::util
 #endif // SJEF_LIB_UTIL_UTIL_H_

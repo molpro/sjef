@@ -247,7 +247,7 @@ Project::Project(const std::filesystem::path& filename, bool construct, const st
       if (initial_status == running or initial_status == waiting) {
         auto new_status = util::Job(*this).get_status();
         if (new_status == unknown) {
-          //          std::cout << "setting status from " << initial_status <<" to completed"<< std::endl;
+          //          std::cout << "setting status from " << initial_status << " to completed" << std::endl;
           property_set("_status", std::to_string(static_cast<int>(completed)));
         }
       }

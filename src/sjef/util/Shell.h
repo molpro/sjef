@@ -31,6 +31,7 @@ public:
 
 private:
   const std::string m_host;
+  const std::string m_shell;
   mutable bp::opstream m_in;
   mutable std::unique_ptr<bp::ipstream> m_out;
   mutable std::unique_ptr<bp::ipstream> m_err;

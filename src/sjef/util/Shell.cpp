@@ -10,7 +10,7 @@ namespace fs = std::filesystem;
 
 namespace sjef::util {
 
-Shell::Shell(std::string host, std::string shell) : m_host(std::move(host)) {
+Shell::Shell(std::string host, std::string shell) : m_host(std::move(host)), m_shell((shell)) {
   if (!localhost()) {
     m_out.reset(new bp::ipstream);
     m_err.reset(new bp::ipstream);
@@ -68,9 +68,7 @@ std::string Shell::operator()(const std::string& command, bool wait, const std::
     m_out.reset(new bp::ipstream);
     m_err.reset(new bp::ipstream);
     m_trace(2 - verbosity) << "launching local process" << std::endl;
-    m_process = bp::child(executable("nohup"), "sh", "-c", pipeline,
-                          //        bp::child(executable("sh"),"-vxc",pipeline,
-                          //        bp::args(splitString(pipeline)),
+    m_process = bp::child(executable("nohup"), m_shell, "-c", pipeline,
                           bp::std_out > *m_out, bp::std_err > *m_err);
     fs::current_path(current_path_save);
     if (!m_process.valid())
@@ -134,7 +132,7 @@ void Shell::wait(int min_wait_milliseconds, int max_wait_milliseconds) const {
 }
 
 bool Shell::running() const {
-  if (localhost() and m_job_number==0)
+  if (localhost() and m_job_number == 0)
     return m_process.running();
   return (*this)(std::string{"ps -p "} + std::to_string(m_job_number) + " > /dev/null 2>/dev/null; echo $?") == "0";
 }

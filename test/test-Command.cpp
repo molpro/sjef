@@ -6,6 +6,7 @@
 #ifndef HOST_NAME_MAX
 #define HOST_NAME_MAX 64
 #endif
+#include <fstream>
 
 #include <sjef/util/Shell.h>
 namespace fs = std::filesystem;
@@ -36,6 +37,35 @@ TEST(Shell, local_asynchronous) {
   EXPECT_NE(comm.job_number(), 0)<<"Output stream:\n"<<comm.out()<<std::endl<<"Error stream:\n"<<comm.err()<<std::endl;
   comm.wait();
   EXPECT_FALSE(comm.running());
+}
+
+TEST(Shell, bad_shell) {
+  const std::string outfile{"/tmp/outfile"};
+  {
+  sjef::util::Shell comm("localhost","/bin/sh");
+  EXPECT_EQ(comm("echo hello"),"hello");
+  EXPECT_EQ(comm("echo hello",false,".",0,outfile),"");
+  std::ifstream t(outfile);
+  comm.wait();
+  std::stringstream buffer;
+  buffer << t.rdbuf();
+  EXPECT_EQ(buffer.str(),"hello\n");
+  sjef::util::Shell()("rm -rf "+outfile);
+  }
+
+  {
+    sjef::util::Shell comm("localhost", "/bin/badshell");
+    EXPECT_EQ(comm("echo hello"), ""); // TODO this should throw an exception
+    //  EXPECT_ANY_THROW(comm("echo hello"));
+    EXPECT_EQ(comm("echo hello",false,".",0,outfile),""); // TODO this should throw an exception
+//    EXPECT_ANY_THROW(comm("echo hello",false,".",0,outfile)); // TODO this should throw an exception
+    std::ifstream t(outfile);
+    comm.wait();
+    std::stringstream buffer;
+    buffer << t.rdbuf();
+    EXPECT_EQ(buffer.str(),"");
+    sjef::util::Shell()("rm -rf "+outfile);
+  }
 }
 
 TEST(Shell, remote_asynchronous) {

@@ -358,7 +358,6 @@ public:
    */
   static std::string recent(const std::string& suffix, int number = 1);
   std::string recent(int number = 1) const;
-  void ensure_remote_server() const;
   /*!
    * @brief Change the active backend
    * @param backend The name of the backend. If not a valid name, the function

@@ -13,9 +13,7 @@ namespace fs = std::filesystem;
 namespace sjef::util {
 
 ///> @private
-const bool Job::localhost() const {
-  return (m_backend.host.empty() || m_backend.host == "localhost" || m_backend.host == "127.0.0.1");
-}
+const bool Job::localhost() const { return (m_backend.host.empty() || m_backend.host == "localhost"); }
 
 std::mutex kill_mutex;
 sjef::util::Job::Job(const sjef::Project& project)
@@ -31,6 +29,10 @@ sjef::util::Job::Job(const sjef::Project& project)
     if (m_remote_rsync.empty())
       m_remote_rsync = "rsync";
 //        std::cout << "remote rsync: " << m_remote_rsync << std::endl;
+    // don't allow remote cache directory name that could lead to shell expansion
+    std::cout << m_remote_cache_directory<<std::endl;
+    if (not std::regex_search(m_remote_cache_directory,std::regex("^[-a-zA-Z0-9_=/]*$")))
+      throw std::runtime_error("Invalid remote cache directory "+m_remote_cache_directory);
   }
   m_poll_task = std::async(std::launch::async, [this]() { this->poll_job(); });
   //  std::cout << "Job constructor has launched poll task" << std::endl;

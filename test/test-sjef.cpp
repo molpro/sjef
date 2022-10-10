@@ -624,7 +624,7 @@ TEST_F(test_sjef, sync_backend) {
   ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{m_dot_sjef / suffix})));
   std::map<std::string, bool> cache_names{
       {"test-remote-cache", true},  {"test-r$mote-cache", false}, {"test-r?mote-cache", false},
-      {"test-rémote-cache", false}, {"test-r%mote-cache", false}, {"test-r^mote-cache", false},
+      {"test-rémote-cache", true}, {"test-r%mote-cache", false}, {"test-rümote-cache", true},
       {"test-r*mote-cache", false}, {"test-r&mote-cache", false}, {"test-r mote-cache", false}};
   for (const auto& cache_name : cache_names) {
     const auto cache = testfile(fs::current_path() / cache_name.first);
@@ -673,7 +673,7 @@ TEST_F(test_sjef, sync_backend) {
       //        start_time).count()
       //        << "ms" << std::endl;
     } else {
-      EXPECT_THROW(p.run("test-remote", 0, true, false), std::runtime_error);
+      EXPECT_THROW(p.run("test-remote", 0, true, false), std::runtime_error) <<"cache name: "<< cache_name.first;
     }
   }
 }

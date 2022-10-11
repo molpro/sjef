@@ -265,6 +265,7 @@ void Job::poll_job(int verbosity) {
     //    std::cout << "rundir_result " << std::get<0>(rundir_result) << std::endl;
     if (!std::get<0>(rundir_result) or remote_manifest == local_manifest) {
       {
+        m_trace(4 - verbosity) << "remove run directory " + m_remote_cache_directory + " at end of job " << std::endl;
         auto slash = m_remote_cache_directory.rfind("/");
         (*m_backend_command_server)("cd '" + m_remote_cache_directory.substr(0, slash) + "' && rm -rf '" + m_remote_cache_directory.substr(slash + 1) + "'");
       }

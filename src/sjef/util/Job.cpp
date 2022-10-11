@@ -13,9 +13,7 @@ namespace fs = std::filesystem;
 namespace sjef::util {
 
 ///> @private
-const bool Job::localhost() const {
-  return (m_backend.host.empty() || m_backend.host == "localhost" || m_backend.host == "127.0.0.1");
-}
+const bool Job::localhost() const { return (m_backend.host.empty() || m_backend.host == "localhost"); }
 
 std::mutex kill_mutex;
 sjef::util::Job::Job(const sjef::Project& project)
@@ -31,6 +29,10 @@ sjef::util::Job::Job(const sjef::Project& project)
     if (m_remote_rsync.empty())
       m_remote_rsync = "rsync";
 //        std::cout << "remote rsync: " << m_remote_rsync << std::endl;
+    // don't allow remote cache directory name that could lead to shell expansion
+    std::cout << m_remote_cache_directory<<std::endl;
+    if (not std::regex_search(m_remote_cache_directory,std::regex("^[-A-zÀ-ú0-9=/]*$")))
+      throw std::runtime_error("Invalid remote cache directory "+m_remote_cache_directory);
   }
   m_poll_task = std::async(std::launch::async, [this]() { this->poll_job(); });
   //  std::cout << "Job constructor has launched poll task" << std::endl;
@@ -262,9 +264,11 @@ void Job::poll_job(int verbosity) {
         Shell()("ls -1 '" + m_project.filename("", "", 0).string() + "' 2>&1 | grep -v Info.plist"), '\n'));
     //    std::cout << "rundir_result " << std::get<0>(rundir_result) << std::endl;
     if (!std::get<0>(rundir_result) or remote_manifest == local_manifest) {
-
-      m_trace(4 - verbosity) << "remove run directory " + m_remote_cache_directory + " at end of job " << std::endl;
-      (*m_backend_command_server)("rm -rf '" + m_remote_cache_directory + "'");
+      {
+        m_trace(4 - verbosity) << "remove run directory " + m_remote_cache_directory + " at end of job " << std::endl;
+        auto slash = m_remote_cache_directory.rfind("/");
+        (*m_backend_command_server)("cd '" + m_remote_cache_directory.substr(0, slash) + "' && rm -rf '" + m_remote_cache_directory.substr(slash + 1) + "'");
+      }
     } else if (remote_manifest.count("No such file") !=
                0) { // sometimes sync will be tried before the remote cache exists, so stay quiet when
                                     // that happens

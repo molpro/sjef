@@ -622,46 +622,60 @@ TEST_F(test_sjef, run_directory) {
 TEST_F(test_sjef, sync_backend) {
   auto suffix = this->suffix();
   ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{m_dot_sjef / suffix})));
-  const auto cache = testfile(fs::current_path() / "test-remote-cache");
-  if (not fs::create_directories(cache))
-    throw std::runtime_error("cannot create " + cache.string());
-  const auto run_script = testfile("light.sh").string();
-  std::ofstream(sjef::expand_path(std::string{m_dot_sjef / suffix / "backends.xml"}))
-      << "<?xml version=\"1.0\"?>\n<backends>\n <backend name=\"local\" run_command=\"true\"/><backend "
-         "name=\"test-remote\" run_command=\"sh "
-      << run_script << "\" host=\"127.0.0.1\" cache=\"" << cache.string() << "\"/>\n</backends>";
-  std::ofstream(run_script) << "while [ ${1#-} != ${1} ]; do shift; done; "
-                               "echo dummy > \"${1%.*}.out\";echo '<?xml "
-                               "version=\"1.0\"?>\n<root/>' > \"${1%.*}.xml\";";
-  auto start_time = std::chrono::steady_clock::now();
-  auto p = sjef::Project(testfile(std::string{"test_sync_backend."} + suffix));
-  std::cout
-      << "time to end of Project() "
-      << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
-      << "ms" << std::endl;
-  std::ofstream(p.filename("inp")) << "some input";
-  //  std::cerr << "input file created " << p.filename("inp") << std::endl;
+  std::map<std::string, bool> cache_names{
+      {"test-remote-cache", true},  {"test-r$mote-cache", false}, {"test-r?mote-cache", false},
+      {"test-rémote-cache", true}, {"test-r%mote-cache", false}, {"test-rümote-cache", true},
+      {"test-r*mote-cache", false}, {"test-r&mote-cache", false}, {"test-r mote-cache", false}};
+  for (const auto& cache_name : cache_names) {
+    const auto cache = testfile(fs::current_path() / cache_name.first);
+    if (not fs::create_directories(cache))
+      throw std::runtime_error("cannot create " + cache.string());
+    const auto run_script = testfile("light.sh").string();
+    std::ofstream(sjef::expand_path(std::string{m_dot_sjef / suffix / "backends.xml"}))
+        << "<?xml version=\"1.0\"?>\n<backends>\n <backend name=\"local\" run_command=\"true\"/><backend "
+           "name=\"test-remote\" run_command=\"sh "
+        << run_script << "\" host=\"127.0.0.1\" cache=\"" << cache.string() << "\"/>\n</backends>";
+    std::ofstream(run_script) << "while [ ${1#-} != ${1} ]; do shift; done; "
+                                 "echo dummy > \"${1%.*}.out\";echo '<?xml "
+                                 "version=\"1.0\"?>\n<root/>' > \"${1%.*}.xml\";";
+    auto start_time = std::chrono::steady_clock::now();
+    auto p = sjef::Project(testfile(std::string{"test_sync_backend."} + suffix));
+    //    std::cout
+    //        << "time to end of Project() "
+    //        << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() -
+    //        start_time).count()
+    //        << "ms" << std::endl;
+    std::ofstream(p.filename("inp")) << "some input";
+    //  std::cerr << "input file created " << p.filename("inp") << std::endl;
 
-  p.run("test-remote", 0, true, false);
-  std::cout
-      << "time to end of run() "
-      << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
-      << "ms" << std::endl;
-  p.wait();
-  std::cout
-      << "time to end of wait() "
-      << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
-      << "ms" << std::endl;
-  ASSERT_EQ(p.file_contents("out"), "dummy");
-  ASSERT_EQ(p.file_contents("xml"), "<?xml version=\"1.0\"?>\n<root/>");
-  //  std::cout << "output: " << p.file_contents("out");
-  //  std::cout << "xml: " << p.file_contents("xml");
-  //      std::cout << "sleeping"<<std::endl;
-  //      sleep(3);
-  std::cout
-      << "time to end "
-      << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
-      << "ms" << std::endl;
+    if (cache_name.second) {
+      p.run("test-remote", 0, true, false);
+      //    std::cout
+      //        << "time to end of run() "
+      //        << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() -
+      //        start_time).count()
+      //        << "ms" << std::endl;
+      p.wait();
+      //    std::cout
+      //        << "time to end of wait() "
+      //        << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() -
+      //        start_time).count()
+      //        << "ms" << std::endl;
+      ASSERT_EQ(p.file_contents("out"), "dummy");
+      ASSERT_EQ(p.file_contents("xml"), "<?xml version=\"1.0\"?>\n<root/>");
+      //  std::cout << "output: " << p.file_contents("out");
+      //  std::cout << "xml: " << p.file_contents("xml");
+      //      std::cout << "sleeping"<<std::endl;
+      //      sleep(3);
+      //    std::cout
+      //        << "time to end "
+      //        << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() -
+      //        start_time).count()
+      //        << "ms" << std::endl;
+    } else {
+      EXPECT_THROW(p.run("test-remote", 0, true, false), std::runtime_error) <<"cache name: "<< cache_name.first;
+    }
+  }
 }
 #endif
 

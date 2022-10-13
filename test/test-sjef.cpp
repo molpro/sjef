@@ -625,7 +625,8 @@ TEST_F(test_sjef, sync_backend) {
   std::map<std::string, bool> cache_names{
       {"test-remote-cache", true},  {"test-r$mote-cache", false}, {"test-r?mote-cache", false},
       {"test-rémote-cache", true}, {"test-r%mote-cache", false}, {"test-rümote-cache", true},
-      {"test-r*mote-cache", false}, {"test-r&mote-cache", false}, {"test-r mote-cache", false}};
+      {"test-r*mote-cache", false}, {"test-r&mote-cache", false}, {"test-r mote-cache", false},
+      {"test-r.mote-cache", true}};
   for (const auto& cache_name : cache_names) {
     const auto cache = testfile(fs::current_path() / cache_name.first);
     if (not fs::create_directories(cache))

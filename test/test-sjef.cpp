@@ -622,11 +622,11 @@ TEST_F(test_sjef, run_directory) {
 TEST_F(test_sjef, sync_backend) {
   auto suffix = this->suffix();
   ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{m_dot_sjef / suffix})));
-  std::map<std::string, bool> cache_names{
-      {"test-remote-cache", true},  {"test-r$mote-cache", false}, {"test-r?mote-cache", false},
-      {"test-rémote-cache", true}, {"test-r%mote-cache", false}, {"test-rümote-cache", true},
-      {"test-r*mote-cache", false}, {"test-r&mote-cache", false}, {"test-r mote-cache", false},
-      {"test-r.mote-cache", true}};
+  std::map<std::string, bool> cache_names{{"test-remote-cache", true},  {"test-r$mote-cache", false},
+                                          {"test-r?mote-cache", false}, {"test-rémote-cache", true},
+                                          {"test-r%mote-cache", false}, {"test-rümote-cache", true},
+                                          {"test-r*mote-cache", false}, {"test-r&mote-cache", false},
+                                          {"test-r mote-cache", false}, {"test-r.mote-cache", true}};
   for (const auto& cache_name : cache_names) {
     const auto cache = testfile(fs::current_path() / cache_name.first);
     if (not fs::create_directories(cache))
@@ -674,7 +674,7 @@ TEST_F(test_sjef, sync_backend) {
       //        start_time).count()
       //        << "ms" << std::endl;
     } else {
-      EXPECT_THROW(p.run("test-remote", 0, true, false), std::runtime_error) <<"cache name: "<< cache_name.first;
+      EXPECT_THROW(p.run("test-remote", 0, true, false), std::runtime_error) << "cache name: " << cache_name.first;
     }
   }
 }
@@ -714,6 +714,9 @@ TEST_F(test_sjef, xpath_search) {
   ASSERT_EQ(p.xpath_search("//try[@att1='value1']").size(), 1);
   EXPECT_EQ(p.xpath_search("//try[@att1='value1']").front(), "content1");
   EXPECT_EQ(p.xpath_search("//try[@att1='value1']", "att1").front(), "value1");
+  EXPECT_EQ(p.xpath_xml("//try").size(), 2);
+  for (const auto& doc : p.xpath_xml("/*"))
+    EXPECT_EQ(doc, "<root>\n\t<try att1=\"value1\">content1</try>\n\t<try>content2<subtry />\n\t</try>\n</root>\n");
 }
 
 TEST_F(test_sjef, molpro_xpath_search) {
@@ -808,6 +811,8 @@ TEST_F(test_sjef, molpro_xpath_search) {
   const std::vector<std::string>& input = p.xpath_search("//input/p");
   ASSERT_EQ(input.size(), 1);
   EXPECT_EQ(input.front(), "geometry={He};rhf;rks");
+  auto input_xml = p.xpath_xml("//input");
+  std::cout << input_xml.front()<<std::endl;
   //  for (const auto& s : input)
   //    std::cout << s << std::endl;
 }
@@ -879,8 +884,8 @@ TEST_F(test_sjef, kill) {
   p.run("test-local", 0, true, false);
   p.kill();
   p.wait();
-  EXPECT_EQ(p.status(), sjef::killed)<<"Found status: "<<p.status_message();
+  EXPECT_EQ(p.status(), sjef::killed) << "Found status: " << p.status_message();
   p.run("test-remote", 0, true, false);
   p.kill();
-  EXPECT_EQ(p.status(), sjef::killed)<<"Found status: "<<p.status_message();
+  EXPECT_EQ(p.status(), sjef::killed) << "Found status: " << p.status_message();
 }

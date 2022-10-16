@@ -1283,6 +1283,17 @@ std::vector<std::string> Project::xpath_search(const std::string& xpath_query, c
   }
   return result;
 }
+std::vector<std::string> Project::xpath_xml(const std::string& xpath_query, int run) const {
+  auto node_set = select_nodes(xpath_query, run);
+  std::vector<std::string> result;
+  result.reserve(node_set.size());
+  for (const auto& node : node_set) {
+    std::stringstream ss;
+    node.node().print(ss);
+    result.emplace_back(ss.str());
+  }
+  return result;
+}
 
 const std::string Project::backend_cache() const {
   auto& backend = m_backends.at(m_backend);

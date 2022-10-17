@@ -82,6 +82,23 @@ class Project(Node):
         self.parse()
         return Node.select(self, selection_string, **options_and_callables)
 
+
+    def xpath(self, query):
+        """
+        Run xpath search on the job xml, with support for default namespace
+        :param query:
+        :return: list of etree.Element objects
+        """
+        from lxml import etree
+        from io import StringIO
+        tree = etree.parse(StringIO(self.xml), etree.XMLParser())
+        root = tree.getroot()
+        default_ns_name = '__default__'
+        ns = {k if k is not None else default_ns_name: v for k, v in root.nsmap.items()}
+        import re
+        queryns = re.sub(r'(::|/|^)([_a-zA-Z][-._a-zA-Z0-9]*)(/|$|@|\[)', r'\1' + default_ns_name + r':\2\3', query)
+        return tree.xpath(queryns, namespaces=ns)
+
     def completed(self):
         '''
         :return: True if status is `completed`
@@ -257,6 +274,10 @@ class Project(Node):
         output = RootXml(xml=xml_tree, parent=self, suffix=self.suffix, **options)
         self.children = [output]
         return output
+
+    def findall(self, search_pattern):
+        tree = etree.fromstring(self._project_wrapper.xml())
+        return tree.findall(search_pattern, namespace=tree.getroot().nsmap.items())
 
     def import_input(self, fpath):
         """

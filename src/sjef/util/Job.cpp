@@ -31,7 +31,7 @@ sjef::util::Job::Job(const sjef::Project& project)
 //        std::cout << "remote rsync: " << m_remote_rsync << std::endl;
     // don't allow remote cache directory name that could lead to shell expansion
     std::cout << m_remote_cache_directory<<std::endl;
-    if (not std::regex_search(m_remote_cache_directory,std::regex("^[-A-zÀ-ú0-9=\\./]*$")))
+    if (not std::regex_search(m_remote_cache_directory,std::regex("^[-A-Za-zÀ-ú0-9_=\\./]*$")))
       throw std::runtime_error("Invalid remote cache directory "+m_remote_cache_directory);
   }
   m_poll_task = std::async(std::launch::async, [this]() { this->poll_job(); });

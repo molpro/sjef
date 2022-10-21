@@ -861,6 +861,7 @@ TEST_F(test_sjef, reopen) {
 }
 
 TEST_F(test_sjef, kill) {
+#ifndef WIN32
   auto suffix = this->suffix();
   ASSERT_TRUE(fs::is_directory(sjef::expand_path((m_dot_sjef / suffix).string())));
   const auto cache = testfile(fs::current_path() / "test-remote-cache");
@@ -883,4 +884,5 @@ TEST_F(test_sjef, kill) {
   p.run("test-remote", 0, true, false);
   p.kill();
   EXPECT_EQ(p.status(), sjef::killed)<<"Found status: "<<p.status_message();
+#endif
 }

@@ -53,8 +53,8 @@ private:
   static const std::string s_propertyFile;
   ///> @private
   std::shared_ptr<Locker> m_locker;
-  mutable Logger m_warn{std::cerr, Logger::Levels::WARNING, {"sjef:: Error: ", "sjef:: Warning: ", "sjef:: Note:"}};
-  mutable Logger m_trace{std::cout, Logger::Levels::QUIET};
+  mutable Logger m_warn{std::cerr, Logger::Levels::warning, {"sjef:: Error: ", "sjef:: Warning: ", "sjef:: Note:"}};
+  mutable Logger m_trace{std::cout, Logger::Levels::quiet};
   friend class util::Job;
   mutable std::unique_ptr<util::Job> m_job;
 
@@ -138,7 +138,7 @@ public:
    * @param level
    * @param preambles
    */
-  void set_warnings(const Logger::Levels level = Logger::Levels::WARNING, std::ostream& stream = std::cerr,
+  void set_warnings(const Logger::Levels level = Logger::Levels::warning, std::ostream& stream = std::cerr,
                     std::vector<std::string> preambles = {"sjef:: Error: ", "sjef:: Warning: ", "sjef:: Note:"}) {
     m_warn = Logger{stream, level, std::move(preambles)};
   }

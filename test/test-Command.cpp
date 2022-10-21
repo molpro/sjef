@@ -7,6 +7,9 @@
 #define HOST_NAME_MAX 64
 #endif
 #include <fstream>
+#ifdef WIN32
+#include <winsock.h>
+#endif
 
 #include <sjef/util/Shell.h>
 namespace fs = std::filesystem;

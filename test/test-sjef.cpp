@@ -387,7 +387,7 @@ TEST_F(test_sjef, backend_cache) {
   const auto& backend = sjef::Backend::dummy_name;
   ASSERT_TRUE(p.run(backend, -1, true, true));
   auto host = p.backends().at(backend).host;
-  auto cache = p.backends().at(backend).cache + std::filesystem::path::preferred_separator + p.filename().string();
+  auto cache = p.backends().at(backend).cache + "/" + p.filename().string();
   EXPECT_EQ(p.backend_cache(), host + ":" + cache);
 }
 
@@ -557,7 +557,7 @@ TEST_F(test_sjef, dummy_backend) {
 
 TEST_F(test_sjef, project_name_embedded_space) {
   auto suffix = this->suffix();
-  ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{m_dot_sjef / suffix})));
+  ASSERT_TRUE(fs::is_directory(sjef::expand_path((m_dot_sjef / suffix).string())));
   sjef::Project p(testproject("completely new"));
   std::ofstream(p.filename("inp")) << "geometry={He};rhf\n";
   p.run(sjef::Backend::dummy_name, 0, true, false);
@@ -572,7 +572,7 @@ TEST_F(test_sjef, project_dir_embedded_space) {
   fs::remove_all(dir);
   std::cout << dir << std::endl;
   ASSERT_TRUE(fs::create_directories(dir));
-  ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{m_dot_sjef / suffix})));
+  ASSERT_TRUE(fs::is_directory(sjef::expand_path((m_dot_sjef / suffix).string())));
   {
     sjef::Project p(testfile((dir / (std::string{"run_directory."} + suffix)).string()));
     std::ofstream(p.filename("inp")) << "geometry={He};rhf\n";
@@ -862,12 +862,12 @@ TEST_F(test_sjef, reopen) {
 
 TEST_F(test_sjef, kill) {
   auto suffix = this->suffix();
-  ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{m_dot_sjef / suffix})));
+  ASSERT_TRUE(fs::is_directory(sjef::expand_path((m_dot_sjef / suffix).string())));
   const auto cache = testfile(fs::current_path() / "test-remote-cache");
   if (not fs::create_directories(cache))
     throw std::runtime_error("cannot create " + cache.string());
   const auto run_script = testfile("light.sh").string();
-  std::ofstream(sjef::expand_path(std::string{m_dot_sjef / suffix} + "/backends.xml"))
+  std::ofstream(sjef::expand_path((m_dot_sjef / suffix).string() + "/backends.xml"))
       << "<?xml version=\"1.0\"?>\n<backends>\n <backend name=\"local\" run_command=\"true\"/>"
       << "<backend name=\"test-local\" run_command=\"sh " << run_script << "\" />\n"
       << "<backend name=\"test-remote\" run_command=\"sh " << run_script << "\" host=\"127.0.0.1\" cache=\""

@@ -38,6 +38,10 @@ protected:
   void _SetUp(const std::vector<std::string>& suffixes = {}) {
     m_default_suffix = ::testing::UnitTest::GetInstance()->current_test_info()->name();
     m_suffixes = suffixes;
+    std::string tmp="/tmp";
+    if (std::getenv("TMPDIR") != nullptr) tmp = std::getenv("TMPDIR");
+    if (std::getenv("TEMP") != nullptr) tmp = std::getenv("TEMP");
+    if (std::getenv("TMP") != nullptr) tmp = std::getenv("TMP");
     m_dot_sjef = "/tmp/test_sjef_config";
     fs::create_directories(sjef::expand_path(m_dot_sjef));
     setenv("SJEF_CONFIG", m_dot_sjef.string().c_str(), 1);

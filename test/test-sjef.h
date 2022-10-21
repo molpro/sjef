@@ -45,7 +45,7 @@ protected:
       tmp = std::getenv("TEMP");
     if (std::getenv("TMP") != nullptr)
       tmp = std::getenv("TMP");
-    m_dot_sjef = (tmp / "test_sjef_config").string();
+    m_dot_sjef = tmp / "test_sjef_config";
     fs::create_directories(sjef::expand_path(m_dot_sjef));
     setenv("SJEF_CONFIG", m_dot_sjef.string().c_str(), 1);
     m_suffixes.push_back(m_default_suffix);

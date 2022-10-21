@@ -32,10 +32,15 @@ TEST(Shell, remote) {
   char hostname[HOST_NAME_MAX];
   gethostname(hostname, HOST_NAME_MAX);
   sjef::util::Shell comm(hostname);
+  auto pwd = fs::current_path().string();
+#ifdef WIN32
+  pwd = std::regex_replace(pwd, std::regex{"C:"}, "/c");
+  pwd = std::regex_replace(pwd, std::regex{"\\\\"}, "/");
+#endif
   for (int i = 0; i < 2; ++i)
-    EXPECT_EQ(comm("cd " + fs::current_path().string() + ";pwd"), fs::current_path().string());
+    EXPECT_EQ(comm("cd " + fs::current_path().string() + ";pwd"), pwd);
   for (int i = 0; i < 2; ++i)
-    EXPECT_EQ(comm("pwd", true, fs::current_path().string()), fs::current_path().string());
+    EXPECT_EQ(comm("pwd", true, fs::current_path().string()), pwd);
   EXPECT_EQ(comm.job_number(), 0);
 }
 

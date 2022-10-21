@@ -11,14 +11,20 @@
 #include <winsock.h>
 #endif
 
+#include <regex>
 #include <sjef/util/Shell.h>
 namespace fs = std::filesystem;
 
 TEST(Shell, local) {
   sjef::util::Shell comm;
+  auto pwd = fs::current_path().string();
+#ifdef WIN32
+  pwd = std::regex_replace(pwd, std::regex{"C:"}, "/c");
+  pwd = std::regex_replace(pwd, std::regex{"\\\\"}, "/");
+#endif
   for (int i = 0; i < 1; ++i)
-    EXPECT_EQ(comm("pwd"), fs::current_path().string());
-  EXPECT_EQ(comm.out(), fs::current_path().string());
+    EXPECT_EQ(comm("pwd"), pwd);
+  EXPECT_EQ(comm.out(), pwd);
   EXPECT_EQ(comm.job_number(), 0);
 }
 

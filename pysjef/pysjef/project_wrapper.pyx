@@ -111,10 +111,8 @@ cdef class ProjectWrapper:
         """
         Get the file name of the bundle, or a primary file of particular type, or a general file in the bundle
 
-        :param suffix: If present without ``name``, look for a primary file with that type.
-            If absent, the file name of the bundle is instead selected
-        :param name: If present,  look for a file of this name, appended with ``.suffix``
-            if that is non-blank
+        :param suffix: If present without ``name``, look for a primary file with that type. If absent, the file name of the bundle is instead selected
+        :param name: If present,  look for a file of this name, appended with ``.suffix`` if that is non-blank
         :param run
             - 0: the currently focussed run directory
             - other: the specified run directory
@@ -264,7 +262,7 @@ cdef class ProjectWrapper:
 
     def property_set(self, props):
         """
-        Set the value of a user property.
+        Set the value of a project property.
         """
         cdef map[string, string] cprops
         for key, val in props:
@@ -275,7 +273,7 @@ cdef class ProjectWrapper:
 
     def property_delete(self, props):
         """
-        Delete a user variable
+        Delete a project property
         @note Only properties defined via property_set() can be deleted
         """
         cdef vector[string] cprops
@@ -285,10 +283,10 @@ cdef class ProjectWrapper:
 
     def property_get(self, properties):
         """
-        Return the value of a variable
+        Return the value of a project property
 
         Variables set by users are protected with a prefix in their name.
-        We search twice, first without prefix and than with it.
+        We search twice, first without prefix and then with it.
         Union of results is returned.
         """
 

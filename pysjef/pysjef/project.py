@@ -96,7 +96,7 @@ class Project(Node):
         default_ns_name = '__default__'
         ns = {k if k is not None else default_ns_name: v for k, v in root.nsmap.items()}
         import re
-        queryns = re.sub(r'(::|/|^)([_a-zA-Z][-._a-zA-Z0-9]*)(/|$|@|\[)', r'\1' + default_ns_name + r':\2\3', query)
+        queryns = re.sub(r'(::|/|^)([_a-zA-Z][-._a-zA-Z0-9]*)', r'\1' + default_ns_name + r':\2', query)
         return tree.xpath(queryns, namespaces=ns)
 
     def completed(self):
@@ -333,7 +333,7 @@ class Project(Node):
 
     def property_set(self, **kwargs):
         """
-        Set the value of a variable
+        Set the value of a project property
         """
         self._project_wrapper.property_set(kwargs)
 

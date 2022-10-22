@@ -111,10 +111,8 @@ cdef class ProjectWrapper:
         """
         Get the file name of the bundle, or a primary file of particular type, or a general file in the bundle
 
-        :param suffix: If present without ``name``, look for a primary file with that type.
-            If absent, the file name of the bundle is instead selected
-        :param name: If present,  look for a file of this name, appended with ``.suffix``
-            if that is non-blank
+        :param suffix: If present without ``name``, look for a primary file with that type. If absent, the file name of the bundle is instead selected
+        :param name: If present,  look for a file of this name, appended with ``.suffix`` if that is non-blank
         :param run
             - 0: the currently focussed run directory
             - other: the specified run directory

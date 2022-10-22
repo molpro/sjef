@@ -264,7 +264,7 @@ cdef class ProjectWrapper:
 
     def property_set(self, props):
         """
-        Set the value of a user property.
+        Set the value of a project property.
         """
         cdef map[string, string] cprops
         for key, val in props:
@@ -275,7 +275,7 @@ cdef class ProjectWrapper:
 
     def property_delete(self, props):
         """
-        Delete a user variable
+        Delete a project property
         @note Only properties defined via property_set() can be deleted
         """
         cdef vector[string] cprops
@@ -285,10 +285,10 @@ cdef class ProjectWrapper:
 
     def property_get(self, properties):
         """
-        Return the value of a variable
+        Return the value of a project property
 
         Variables set by users are protected with a prefix in their name.
-        We search twice, first without prefix and than with it.
+        We search twice, first without prefix and then with it.
         Union of results is returned.
         """
 

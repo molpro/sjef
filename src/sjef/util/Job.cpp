@@ -144,8 +144,8 @@ std::string Job::run(const std::string& command, int verbosity, bool wait) {
     m_trace(4 - verbosity) << "Job::run is_run_command m_job_number=" << m_job_number << std::endl;
   }
   m_poll_task = std::async(std::launch::async, [this]() { this->poll_job(); });
-  return run_output;
   m_trace(2 - verbosity) << "Job::run() returns " << run_output << std::endl;
+  return run_output;
 }
 
 void Job::set_status(status stat) {

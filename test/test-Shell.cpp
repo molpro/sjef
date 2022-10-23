@@ -58,6 +58,7 @@ TEST(Shell, bad_shell) {
   {
   sjef::util::Shell comm("localhost","/bin/sh");
   EXPECT_EQ(comm("echo hello"),"hello");
+#ifndef WIN32
   EXPECT_EQ(comm("echo hello",false,".",0,outfile),"");
   std::ifstream t(outfile);
   comm.wait();
@@ -65,6 +66,7 @@ TEST(Shell, bad_shell) {
   buffer << t.rdbuf();
   EXPECT_EQ(buffer.str(),"hello\n");
   sjef::util::Shell()("rm -rf "+outfile);
+#endif
   }
 
   {

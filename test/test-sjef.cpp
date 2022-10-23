@@ -816,6 +816,7 @@ TEST_F(test_sjef, molpro_xpath_search) {
          "</molpro>"
       << std::endl;
   EXPECT_EQ(p.xpath_search("/property[@name='Energy']").size(), 0);
+#ifndef WIN32 // FIXME issue #41
   const std::vector<std::string>& energies = p.xpath_search("//property[@name='Energy']", "value");
   ASSERT_EQ(energies.size(), 2);
   EXPECT_NEAR(std::stod(energies[0]), -2.85516047724273, 1e-15);
@@ -829,6 +830,7 @@ TEST_F(test_sjef, molpro_xpath_search) {
   std::cout << input_xml.front() << std::endl;
   //  for (const auto& s : input)
   //    std::cout << s << std::endl;
+#endif
 }
 
 TEST_F(test_sjef, corrupt_geometry_include) {

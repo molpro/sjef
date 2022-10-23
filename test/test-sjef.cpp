@@ -392,26 +392,28 @@ TEST_F(test_sjef, backend_cache) {
 }
 
 TEST_F(test_sjef, many_projects) {
-  constexpr int n_projects = 500;
-  constexpr int n_projects_with_jobs = 10;
-  std::vector<std::unique_ptr<sjef::Project>> projects;
-  projects.reserve(n_projects);
-  for (int i = 0; i < n_projects; ++i)
-    projects.emplace_back(
-        new sjef::Project(testfile(std::string{"many_projects_"} + std::to_string(i) + ".molpro"), true, "molpro", {}));
-  const auto& backend = sjef::Backend::dummy_name;
-  for (auto& p : projects)
-    EXPECT_EQ(p->status(), sjef::status::unevaluated);
-  for (int i = 0; i < n_projects_with_jobs; ++i) {
-    const auto& p = projects[i];
-    { std::ofstream(p->filename("inp")) << ""; }
-    ASSERT_TRUE(p->run(backend, -1, true, false));
-    EXPECT_NE(p->property_get("jobnumber"), "-1");
-  }
-  for (int i = 0; i < n_projects_with_jobs; ++i) {
-    const auto& p = projects[i];
-    p->wait();
-    EXPECT_EQ(p->status(), sjef::completed);
+  if (sjef::util::Shell::local_asynchronous_supported()) {
+    constexpr int n_projects = 500;
+    constexpr int n_projects_with_jobs = 10;
+    std::vector<std::unique_ptr<sjef::Project>> projects;
+    projects.reserve(n_projects);
+    for (int i = 0; i < n_projects; ++i)
+      projects.emplace_back(
+          new sjef::Project(testfile(std::string{"many_projects_"} + std::to_string(i) + ".molpro"), true, "molpro", {}));
+    const auto& backend = sjef::Backend::dummy_name;
+    for (auto& p : projects)
+      EXPECT_EQ(p->status(), sjef::status::unevaluated);
+    for (int i = 0; i < n_projects_with_jobs; ++i) {
+      const auto& p = projects[i];
+      { std::ofstream(p->filename("inp")) << ""; }
+      ASSERT_TRUE(p->run(backend, -1, true, false));
+      EXPECT_NE(p->property_get("jobnumber"), "-1");
+    }
+    for (int i = 0; i < n_projects_with_jobs; ++i) {
+      const auto& p = projects[i];
+      p->wait();
+      EXPECT_EQ(p->status(), sjef::completed);
+    }
   }
 }
 
@@ -543,13 +545,13 @@ TEST_F(test_sjef, dummy_backend) {
   delay.tv_nsec = 100000000;
   nanosleep(&delay, NULL);
   EXPECT_EQ(p.file_contents("out"), "dummy")
-      << "\nstdout:\n"
-      << p.file_contents("stdout") << "\nstderr:\n"
-      << p.file_contents("stderr") << sjef::util::Shell()("ls -lRa " + p.filename().string())
-      << "\nPATH: " << std::getenv("PATH") << "\noutput from dummy thing.inp:\n"
-      << sjef::util::Shell()("dummy thing.inp") << "\noutput from ../src/sjef/dummy another_thing.inp:\n"
-      << sjef::util::Shell()("../src/sjef/dummy another_thing.inp") << "\ncurrent dir:\n"
-      << sjef::util::Shell()("pwd; ls -lRa .") << std::endl;
+          << "\nstdout:\n"
+          << p.file_contents("stdout") << "\nstderr:\n"
+          << p.file_contents("stderr") << sjef::util::Shell()("ls -lRa " + p.filename().string())
+          << "\nPATH: " << std::getenv("PATH") << "\noutput from dummy thing.inp:\n"
+          << sjef::util::Shell()("dummy thing.inp") << "\noutput from ../src/sjef/dummy another_thing.inp:\n"
+          << sjef::util::Shell()("../src/sjef/dummy another_thing.inp") << "\ncurrent dir:\n"
+          << sjef::util::Shell()("pwd; ls -lRa .") << std::endl;
   EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
   EXPECT_EQ(p.file_contents("out", "", 1), "dummy");
   EXPECT_EQ(p.xml(1), "<?xml version=\"1.0\"?>\n<root/>");

@@ -19,8 +19,8 @@
 #include <sys/wait.h>
 #endif
 #include "util/Job.h"
-#include "util/Shell.h"
 #include "util/util.h"
+#include <sstream>
 #include <random>
 
 namespace fs = std::filesystem;

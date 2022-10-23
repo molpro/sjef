@@ -356,39 +356,43 @@ TEST_F(test_sjef, spawn_many_dummy) {
 }
 
 TEST_F(test_sjef, restart) {
-  std::string path(getenv("PATH"));
-  path = fs::current_path().string() + ":" + path;
-  //  std::cout << "PATH " << path << std::endl;
-  setenv("PATH", path.c_str(), 1);
-  { std::ofstream("dummy") << "#!/bin/sh\nsleep 0;if [ $1 = '-v' ]; then shift; fi; echo dummyxml > ${1%.inp}.xml"; }
-  fs::permissions("dummy", fs::perms::owner_exec, fs::perm_options::add);
+  if (sjef::util::Shell::local_asynchronous_supported()) {
+    std::string path(getenv("PATH"));
+    path = fs::current_path().string() + ":" + path;
+    //  std::cout << "PATH " << path << std::endl;
+    setenv("PATH", path.c_str(), 1);
+    { std::ofstream("dummy") << "#!/bin/sh\nsleep 0;if [ $1 = '-v' ]; then shift; fi; echo dummyxml > ${1%.inp}.xml"; }
+    fs::permissions("dummy", fs::perms::owner_exec, fs::perm_options::add);
 
-  const std::filesystem::path& filename = testproject("restart");
-  for (int restart = 0; restart < 2; ++restart) {
-    sjef::Project p(filename);
-    EXPECT_EQ(p.status(), restart == 0 ? sjef::status::unevaluated : sjef::status::completed);
-    const auto& backend = sjef::Backend::dummy_name;
-    for (auto i = 0; i < 2; ++i) {
-      //      std::cerr << "run number " << i << std::endl;
-      ASSERT_TRUE(p.run(backend, 0, true, false));
-      p.wait();
-      //    std::cout << p.xml() <<std::endl;
-      EXPECT_EQ(p.xml(), "dummyxml") << p.file_contents("xml");
-      EXPECT_EQ(p.status(), sjef::completed);
-      EXPECT_NE(p.property_get("jobnumber"), "-1");
+    const std::filesystem::path& filename = testproject("restart");
+    for (int restart = 0; restart < 2; ++restart) {
+      sjef::Project p(filename);
+      EXPECT_EQ(p.status(), restart == 0 ? sjef::status::unevaluated : sjef::status::completed);
+      const auto& backend = sjef::Backend::dummy_name;
+      for (auto i = 0; i < 2; ++i) {
+        //      std::cerr << "run number " << i << std::endl;
+        ASSERT_TRUE(p.run(backend, 0, true, false));
+        p.wait();
+        //    std::cout << p.xml() <<std::endl;
+        EXPECT_EQ(p.xml(), "dummyxml") << p.file_contents("xml");
+        EXPECT_EQ(p.status(), sjef::completed);
+        EXPECT_NE(p.property_get("jobnumber"), "-1");
+      }
     }
+    fs::remove("dummy");
   }
-  fs::remove("dummy");
 }
 
 TEST_F(test_sjef, backend_cache) {
-  sjef::Project p(testproject("backend_cache"));
-  { std::ofstream(p.filename("inp")) << ""; }
-  const auto& backend = sjef::Backend::dummy_name;
-  ASSERT_TRUE(p.run(backend, -1, true, true));
-  auto host = p.backends().at(backend).host;
-  auto cache = p.backends().at(backend).cache + "/" + p.filename().string();
-  EXPECT_EQ(p.backend_cache(), host + ":" + cache);
+  if (sjef::util::Shell::local_asynchronous_supported()) {
+    sjef::Project p(testproject("backend_cache"));
+    { std::ofstream(p.filename("inp")) << ""; }
+    const auto& backend = sjef::Backend::dummy_name;
+    ASSERT_TRUE(p.run(backend, -1, true, true));
+    auto host = p.backends().at(backend).host;
+    auto cache = p.backends().at(backend).cache + "/" + p.filename().string();
+    EXPECT_EQ(p.backend_cache(), host + ":" + cache);
+  }
 }
 
 TEST_F(test_sjef, many_projects) {
@@ -398,8 +402,8 @@ TEST_F(test_sjef, many_projects) {
     std::vector<std::unique_ptr<sjef::Project>> projects;
     projects.reserve(n_projects);
     for (int i = 0; i < n_projects; ++i)
-      projects.emplace_back(
-          new sjef::Project(testfile(std::string{"many_projects_"} + std::to_string(i) + ".molpro"), true, "molpro", {}));
+      projects.emplace_back(new sjef::Project(testfile(std::string{"many_projects_"} + std::to_string(i) + ".molpro"),
+                                              true, "molpro", {}));
     const auto& backend = sjef::Backend::dummy_name;
     for (auto& p : projects)
       EXPECT_EQ(p->status(), sjef::status::unevaluated);
@@ -545,13 +549,13 @@ TEST_F(test_sjef, dummy_backend) {
   delay.tv_nsec = 100000000;
   nanosleep(&delay, NULL);
   EXPECT_EQ(p.file_contents("out"), "dummy")
-          << "\nstdout:\n"
-          << p.file_contents("stdout") << "\nstderr:\n"
-          << p.file_contents("stderr") << sjef::util::Shell()("ls -lRa " + p.filename().string())
-          << "\nPATH: " << std::getenv("PATH") << "\noutput from dummy thing.inp:\n"
-          << sjef::util::Shell()("dummy thing.inp") << "\noutput from ../src/sjef/dummy another_thing.inp:\n"
-          << sjef::util::Shell()("../src/sjef/dummy another_thing.inp") << "\ncurrent dir:\n"
-          << sjef::util::Shell()("pwd; ls -lRa .") << std::endl;
+      << "\nstdout:\n"
+      << p.file_contents("stdout") << "\nstderr:\n"
+      << p.file_contents("stderr") << sjef::util::Shell()("ls -lRa " + p.filename().string())
+      << "\nPATH: " << std::getenv("PATH") << "\noutput from dummy thing.inp:\n"
+      << sjef::util::Shell()("dummy thing.inp") << "\noutput from ../src/sjef/dummy another_thing.inp:\n"
+      << sjef::util::Shell()("../src/sjef/dummy another_thing.inp") << "\ncurrent dir:\n"
+      << sjef::util::Shell()("pwd; ls -lRa .") << std::endl;
   EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
   EXPECT_EQ(p.file_contents("out", "", 1), "dummy");
   EXPECT_EQ(p.xml(1), "<?xml version=\"1.0\"?>\n<root/>");
@@ -688,37 +692,39 @@ TEST_F(test_sjef, version) {
 }
 
 TEST_F(test_sjef, xpath_search) {
-  auto suffix = this->suffix();
-  auto p = sjef::Project(testfile(std::string{"xpath_search."} + suffix));
-  std::ofstream(p.filename("inp")) << "test" << std::endl;
-  p.run(sjef::Backend::dummy_name, 0, true, true);
-  std::ofstream(p.filename("xml", "", 0))
-      << "<?xml version=\"1.0\"?>\n<root><try att1=\"value1\">content1</try><try>content2<subtry/> </try></root>"
-      << std::endl;
-  EXPECT_EQ(p.status(), sjef::status::completed);
-  EXPECT_EQ(p.select_nodes("/try").size(), 0) << p.xml() << std::endl;
-  ASSERT_EQ(p.select_nodes("//try").size(), 2) << p.xml() << std::endl;
-  auto node_set = p.select_nodes("//try");
-  EXPECT_EQ(std::string{node_set[0].node().attribute("att1").value()}, "value1");
-  EXPECT_EQ(std::string{node_set[1].node().attribute("att1").value()}, "");
-  EXPECT_EQ(std::string{node_set[0].node().child_value()}, "content1");
-  //  for (const auto& node : node_set) {
-  //    std::cout << node.node().attribute("att1").value() <<std::endl;
-  //    std::cout << node.node().child_value() <<std::endl;
-  //  }
-  EXPECT_EQ(p.xpath_search("/try").size(), 0);
-  EXPECT_EQ(p.xpath_search("//try").size(), 2);
-  //  for (const auto& s : p.xpath_search("//try"))
-  //    std::cout << s << std::endl;
-  EXPECT_EQ(p.xpath_search("//try", "att1").size(), 2);
-  //  for (const auto& s : p.xpath_search("//try", "att1"))
-  //    std::cout << s << std::endl;
-  ASSERT_EQ(p.xpath_search("//try[@att1='value1']").size(), 1);
-  EXPECT_EQ(p.xpath_search("//try[@att1='value1']").front(), "content1");
-  EXPECT_EQ(p.xpath_search("//try[@att1='value1']", "att1").front(), "value1");
-  EXPECT_EQ(p.xpath_xml("//try").size(), 2);
-  for (const auto& doc : p.xpath_xml("/*"))
-    EXPECT_EQ(doc, "<root>\n\t<try att1=\"value1\">content1</try>\n\t<try>content2<subtry />\n\t</try>\n</root>\n");
+  if (sjef::util::Shell::local_asynchronous_supported()) {
+    auto suffix = this->suffix();
+    auto p = sjef::Project(testfile(std::string{"xpath_search."} + suffix));
+    std::ofstream(p.filename("inp")) << "test" << std::endl;
+    p.run(sjef::Backend::dummy_name, 0, true, true);
+    std::ofstream(p.filename("xml", "", 0))
+        << "<?xml version=\"1.0\"?>\n<root><try att1=\"value1\">content1</try><try>content2<subtry/> </try></root>"
+        << std::endl;
+    EXPECT_EQ(p.status(), sjef::status::completed);
+    EXPECT_EQ(p.select_nodes("/try").size(), 0) << p.xml() << std::endl;
+    ASSERT_EQ(p.select_nodes("//try").size(), 2) << p.xml() << std::endl;
+    auto node_set = p.select_nodes("//try");
+    EXPECT_EQ(std::string{node_set[0].node().attribute("att1").value()}, "value1");
+    EXPECT_EQ(std::string{node_set[1].node().attribute("att1").value()}, "");
+    EXPECT_EQ(std::string{node_set[0].node().child_value()}, "content1");
+    //  for (const auto& node : node_set) {
+    //    std::cout << node.node().attribute("att1").value() <<std::endl;
+    //    std::cout << node.node().child_value() <<std::endl;
+    //  }
+    EXPECT_EQ(p.xpath_search("/try").size(), 0);
+    EXPECT_EQ(p.xpath_search("//try").size(), 2);
+    //  for (const auto& s : p.xpath_search("//try"))
+    //    std::cout << s << std::endl;
+    EXPECT_EQ(p.xpath_search("//try", "att1").size(), 2);
+    //  for (const auto& s : p.xpath_search("//try", "att1"))
+    //    std::cout << s << std::endl;
+    ASSERT_EQ(p.xpath_search("//try[@att1='value1']").size(), 1);
+    EXPECT_EQ(p.xpath_search("//try[@att1='value1']").front(), "content1");
+    EXPECT_EQ(p.xpath_search("//try[@att1='value1']", "att1").front(), "value1");
+    EXPECT_EQ(p.xpath_xml("//try").size(), 2);
+    for (const auto& doc : p.xpath_xml("/*"))
+      EXPECT_EQ(doc, "<root>\n\t<try att1=\"value1\">content1</try>\n\t<try>content2<subtry />\n\t</try>\n</root>\n");
+  }
 }
 
 TEST_F(test_sjef, molpro_xpath_search) {
@@ -814,23 +820,25 @@ TEST_F(test_sjef, molpro_xpath_search) {
   ASSERT_EQ(input.size(), 1);
   EXPECT_EQ(input.front(), "geometry={He};rhf;rks");
   auto input_xml = p.xpath_xml("//input");
-  std::cout << input_xml.front()<<std::endl;
+  std::cout << input_xml.front() << std::endl;
   //  for (const auto& s : input)
   //    std::cout << s << std::endl;
 }
 
 TEST_F(test_sjef, corrupt_geometry_include) {
-  sjef::Project p(testproject("corrupt_geometry_include"));
-  std::ofstream(p.filename("inp")) << "orient,mass;\n"
-                                      "geomtyp=xyz;\n"
-                                      "geometry=\n"
-                                      "nanotube10-0-zigzag.xyz\n"
-                                      "\n"
-                                      "basis=vdz\n"
-                                      "\n"
-                                      "df-hf";
-  p.change_backend(sjef::Backend::dummy_name);
-  p.run(0, true, true);
+  if (sjef::util::Shell::local_asynchronous_supported()) {
+    sjef::Project p(testproject("corrupt_geometry_include"));
+    std::ofstream(p.filename("inp")) << "orient,mass;\n"
+                                        "geomtyp=xyz;\n"
+                                        "geometry=\n"
+                                        "nanotube10-0-zigzag.xyz\n"
+                                        "\n"
+                                        "basis=vdz\n"
+                                        "\n"
+                                        "df-hf";
+    p.change_backend(sjef::Backend::dummy_name);
+    p.run(0, true, true);
+  }
 }
 
 TEST_F(test_sjef, reopen) {

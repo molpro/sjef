@@ -52,6 +52,10 @@ std::string Shell::operator()(const std::string& command, bool wait, const std::
   const std::string jobnumber_tag{"@@@JOBNUMBER"};
   const std::string terminator{"@@@EOF"};
   auto pipeline = command;
+#ifdef WIN32
+  if (!wait and localhost())
+    throw std::logic_error("Shell::operator() with wait==false is not supported on Windows");
+#endif
   if (!wait)
     pipeline = "(( " + command + " >" + out + " 2>" + err + ") & echo " + jobnumber_tag + " $! 1>&2)";
   m_trace(2 - verbosity) << "Command::operator() pipeline=" << pipeline << std::endl;

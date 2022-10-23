@@ -19,8 +19,8 @@
 #include <sys/wait.h>
 #endif
 #include "util/Job.h"
-#include "util/Shell.h"
 #include "util/util.h"
+#include <sstream>
 #include <random>
 
 namespace fs = std::filesystem;
@@ -1280,6 +1280,17 @@ std::vector<std::string> Project::xpath_search(const std::string& xpath_query, c
       result.emplace_back(node.node().child_value());
     else
       result.emplace_back(node.node().attribute(attribute.c_str()).value());
+  }
+  return result;
+}
+std::vector<std::string> Project::xpath_xml(const std::string& xpath_query, int run) const {
+  auto node_set = select_nodes(xpath_query, run);
+  std::vector<std::string> result;
+  result.reserve(node_set.size());
+  for (const auto& node : node_set) {
+    std::stringstream ss;
+    node.node().print(ss);
+    result.emplace_back(ss.str());
   }
   return result;
 }

@@ -578,6 +578,15 @@ public:
    */
   std::vector<std::string> xpath_search(const std::string& xpath_query, const std::string& attribute = "",
                                         int run = 0) const;
+
+  /*!
+   * @brief Simple XPath search on the xml document. For each matching node found, return a string that
+   * contains a complete XML document with the node as root element
+   * @param xpath_query
+   * @param run
+   * @return
+   */
+  std::vector<std::string> xpath_xml(const std::string& xpath_query, int run = 0) const;
 };
 
 /*!

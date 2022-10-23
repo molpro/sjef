@@ -45,15 +45,17 @@ TEST(Shell, remote) {
 }
 
 TEST(Shell, local_asynchronous) {
-  const std::string testfile{"testfile"};
-  sjef::util::Shell comm;
-  comm("pwd", false);
-  EXPECT_NE(comm.job_number(), 0) << "Output stream:\n"
-                                  << comm.out() << std::endl
-                                  << "Error stream:\n"
-                                  << comm.err() << std::endl;
-  comm.wait();
-  EXPECT_FALSE(comm.running());
+  if (sjef::util::Shell::local_asynchronous_supported()) {
+    const std::string testfile{"testfile"};
+    sjef::util::Shell comm;
+    comm("pwd", false);
+    EXPECT_NE(comm.job_number(), 0) << "Output stream:\n"
+                                    << comm.out() << std::endl
+                                    << "Error stream:\n"
+                                    << comm.err() << std::endl;
+    comm.wait();
+    EXPECT_FALSE(comm.running());
+  }
 }
 
 TEST(Shell, bad_shell) {

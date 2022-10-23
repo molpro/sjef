@@ -343,15 +343,17 @@ TEST_F(test_sjef, xmloutput) {
 // }
 
 TEST_F(test_sjef, spawn_many_dummy) {
-  sjef::Project p(testproject("spawn_many"));
-  { std::ofstream(p.filename("inp")) << ""; }
-  const auto& backend = sjef::Backend::dummy_name;
-  for (auto i = 0; i < 5; ++i) {
-    //    std::cerr << "run number " << i << std::endl;
-    ASSERT_TRUE(p.run(backend, -1, true, true));
-    EXPECT_EQ(p.status(), sjef::completed);
-    //    p.wait();
-    EXPECT_NE(p.property_get("jobnumber"), "-1");
+  if (sjef::util::Shell::local_asynchronous_supported()) {
+    sjef::Project p(testproject("spawn_many"));
+    { std::ofstream(p.filename("inp")) << ""; }
+    const auto& backend = sjef::Backend::dummy_name;
+    for (auto i = 0; i < 5; ++i) {
+      //    std::cerr << "run number " << i << std::endl;
+      ASSERT_TRUE(p.run(backend, -1, true, true));
+      EXPECT_EQ(p.status(), sjef::completed);
+      //    p.wait();
+      EXPECT_NE(p.property_get("jobnumber"), "-1");
+    }
   }
 }
 
@@ -541,24 +543,26 @@ TEST_F(test_sjef, recent) {
 }
 
 TEST_F(test_sjef, dummy_backend) {
-  sjef::Project p(testproject("completely_new"));
-  p.run(sjef::Backend::dummy_name, 0, true, false);
-  p.wait();
-  timespec delay;
-  delay.tv_sec = 0;
-  delay.tv_nsec = 100000000;
-  nanosleep(&delay, NULL);
-  EXPECT_EQ(p.file_contents("out"), "dummy")
-      << "\nstdout:\n"
-      << p.file_contents("stdout") << "\nstderr:\n"
-      << p.file_contents("stderr") << sjef::util::Shell()("ls -lRa " + p.filename().string())
-      << "\nPATH: " << std::getenv("PATH") << "\noutput from dummy thing.inp:\n"
-      << sjef::util::Shell()("dummy thing.inp") << "\noutput from ../src/sjef/dummy another_thing.inp:\n"
-      << sjef::util::Shell()("../src/sjef/dummy another_thing.inp") << "\ncurrent dir:\n"
-      << sjef::util::Shell()("pwd; ls -lRa .") << std::endl;
-  EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
-  EXPECT_EQ(p.file_contents("out", "", 1), "dummy");
-  EXPECT_EQ(p.xml(1), "<?xml version=\"1.0\"?>\n<root/>");
+  if (sjef::util::Shell::local_asynchronous_supported()) {
+    sjef::Project p(testproject("completely_new"));
+    p.run(sjef::Backend::dummy_name, 0, true, false);
+    p.wait();
+    timespec delay;
+    delay.tv_sec = 0;
+    delay.tv_nsec = 100000000;
+    nanosleep(&delay, NULL);
+    EXPECT_EQ(p.file_contents("out"), "dummy")
+        << "\nstdout:\n"
+        << p.file_contents("stdout") << "\nstderr:\n"
+        << p.file_contents("stderr") << sjef::util::Shell()("ls -lRa " + p.filename().string())
+        << "\nPATH: " << std::getenv("PATH") << "\noutput from dummy thing.inp:\n"
+        << sjef::util::Shell()("dummy thing.inp") << "\noutput from ../src/sjef/dummy another_thing.inp:\n"
+        << sjef::util::Shell()("../src/sjef/dummy another_thing.inp") << "\ncurrent dir:\n"
+        << sjef::util::Shell()("pwd; ls -lRa .") << std::endl;
+    EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
+    EXPECT_EQ(p.file_contents("out", "", 1), "dummy");
+    EXPECT_EQ(p.xml(1), "<?xml version=\"1.0\"?>\n<root/>");
+  }
 }
 
 TEST_F(test_sjef, project_name_embedded_space) {
@@ -566,10 +570,12 @@ TEST_F(test_sjef, project_name_embedded_space) {
   ASSERT_TRUE(fs::is_directory(sjef::expand_path((m_dot_sjef / suffix).string())));
   sjef::Project p(testproject("completely new"));
   std::ofstream(p.filename("inp")) << "geometry={He};rhf\n";
-  p.run(sjef::Backend::dummy_name, 0, true, false);
-  p.wait();
-  EXPECT_EQ(p.file_contents("out"), "dummy");
-  EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
+  if (sjef::util::Shell::local_asynchronous_supported()) {
+    p.run(sjef::Backend::dummy_name, 0, true, false);
+    p.wait();
+    EXPECT_EQ(p.file_contents("out"), "dummy");
+    EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
+  }
 }
 
 TEST_F(test_sjef, project_dir_embedded_space) {
@@ -579,7 +585,7 @@ TEST_F(test_sjef, project_dir_embedded_space) {
   std::cout << dir << std::endl;
   ASSERT_TRUE(fs::create_directories(dir));
   ASSERT_TRUE(fs::is_directory(sjef::expand_path((m_dot_sjef / suffix).string())));
-  {
+  if (sjef::util::Shell::local_asynchronous_supported()) {
     sjef::Project p(testfile((dir / (std::string{"run_directory."} + suffix)).string()));
     std::ofstream(p.filename("inp")) << "geometry={He};rhf\n";
     p.run(sjef::Backend::dummy_name, 0, true, false);

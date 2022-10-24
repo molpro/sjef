@@ -129,7 +129,7 @@ std::string Job::run(const std::string& command, int verbosity, bool wait) {
   auto run_output = (*m_backend_command_server)(
       command, wait or backend_submits_batch,
       localhost() ? m_project.filename("", "", 0).string() : m_remote_cache_directory, verbosity,
-      m_project.filename("stdout", "", 0).filename(), m_project.filename("stderr", "", 0).filename());
+      m_project.filename("stdout", "", 0).filename().string(), m_project.filename("stderr", "", 0).filename().string());
   if (backend_submits_batch) {
     std::smatch match;
     if (std::regex_search(run_output, match, std::regex{m_backend.run_jobnumber})) {
@@ -144,8 +144,8 @@ std::string Job::run(const std::string& command, int verbosity, bool wait) {
     m_trace(4 - verbosity) << "Job::run is_run_command m_job_number=" << m_job_number << std::endl;
   }
   m_poll_task = std::async(std::launch::async, [this]() { this->poll_job(); });
-  return run_output;
   m_trace(2 - verbosity) << "Job::run() returns " << run_output << std::endl;
+  return run_output;
 }
 
 void Job::set_status(status stat) {

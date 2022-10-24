@@ -28,6 +28,11 @@ public:
   int job_number() const { return m_job_number; }
   void wait(int min_wait_milliseconds = 1, int max_wait_milliseconds = 1000) const;
   bool running() const;
+  /*!
+   * @brief Whether local asynchronous commands are supported
+   * @return
+   */
+  static bool local_asynchronous_supported();
 
 private:
   const std::string m_host;

@@ -19,9 +19,9 @@ class Logger {
   std::vector<std::string> m_preambles;
 
 public:
-  enum class Levels : int { QUIET = -1, ERROR = 0, WARNING = 1, NOTIFICATION = 2, DETAIL = 3 };
+  enum class Levels : int { quiet = -1, error = 0, warning = 1, notification = 2, detail = 3 };
   explicit Logger(std::ostream& stream, int level) : m_stream(&stream), m_level(level) {}
-  explicit Logger(std::ostream& stream = std::cout, const Levels level = Levels::ERROR,
+  explicit Logger(std::ostream& stream = std::cout, const Levels level = Levels::error,
                   std::vector<std::string> preambles = {})
       : m_stream(&stream), m_level(static_cast<int>(level)), m_preambles(std::move(preambles)) {}
   explicit Logger(const Logger& source)
@@ -54,10 +54,10 @@ public:
   std::ostream& operator()(const Levels level, const std::string& message = "") const {
     return ((*this)(static_cast<int>(level), message));
   }
-  std::ostream& detail(const std::string& message = "") const { return ((*this)(Levels::DETAIL, message)); }
-  std::ostream& notify(const std::string& message = "") const { return ((*this)(Levels::NOTIFICATION, message)); }
-  std::ostream& warn(const std::string& message = "") const { return ((*this)(Levels::WARNING, message)); }
-  std::ostream& error(const std::string& message = "") const { return ((*this)(Levels::ERROR, message)); }
+  std::ostream& detail(const std::string& message = "") const { return ((*this)(Levels::detail, message)); }
+  std::ostream& notify(const std::string& message = "") const { return ((*this)(Levels::notification, message)); }
+  std::ostream& warn(const std::string& message = "") const { return ((*this)(Levels::warning, message)); }
+  std::ostream& error(const std::string& message = "") const { return ((*this)(Levels::error, message)); }
   int level() const { return m_level; }
   void set_level(int level) { Logger::m_level = level; }
   void set_level(Levels level) { Logger::m_level = static_cast<int>(level); }

@@ -21,7 +21,10 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${tclap_SOURCE_DIR}/include)
 
 find_package(Boost 1.71.0 COMPONENTS filesystem REQUIRED)
 target_link_libraries(${PROJECT_NAME} PUBLIC Boost::headers)
-target_link_libraries(${PROJECT_NAME} PRIVATE pthread Boost::filesystem)
+target_link_libraries(${PROJECT_NAME} PRIVATE Boost::filesystem)
+if (NOT MSVC)
+    target_link_libraries(${PROJECT_NAME} PRIVATE pthread)
+endif()
 
 if (NOT TARGET pugixml)
     find_package(pugixml QUIET)

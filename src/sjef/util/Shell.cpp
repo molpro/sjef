@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <regex>
 #include <thread>
+#include <sstream>
 
 namespace fs = std::filesystem;
 

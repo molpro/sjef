@@ -13,7 +13,7 @@
 #include <regex>
 #include <string>
 #include <thread>
-#include <unistd.h>
+//#include <unistd.h>
 #if defined(__linux__) || defined(__APPLE__)
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -785,7 +785,7 @@ mapstringstring_t Project::property_get(const std::vector<std::string>& properti
 std::vector<std::string> Project::property_names() const {
   check_property_file();
   std::vector<std::string> result;
-  for (const auto& node : m_properties->select_nodes(((std::string){"/plist/dict/key"}).c_str()))
+  for (const auto& node : m_properties->select_nodes((std::string{"/plist/dict/key"}).c_str()))
     result.push_back(node.node().child_value());
   return result;
 }

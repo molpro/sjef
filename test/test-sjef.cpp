@@ -4,7 +4,7 @@
 #include "test-sjef.h"
 #include <filesystem>
 #include <fstream>
-#include <libgen.h>
+//#include <libgen.h>
 #include <list>
 #include <map>
 #include <regex>
@@ -13,7 +13,7 @@
 #include <sjef/util/Locker.h>
 #include <sjef/util/Shell.h>
 #include <stdlib.h>
-#include <unistd.h>
+//#include <unistd.h>
 
 namespace fs = std::filesystem;
 

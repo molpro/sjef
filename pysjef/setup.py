@@ -33,8 +33,10 @@ def read_version():
 PREFIX = os.environ["PREFIX"]
 
 # Path to libsjef.a
-LIB_DIRS = [PREFIX + "/lib"]
+#LIB_DIRS = [PREFIX + "/lib"]
+LIB_DIRS = [PREFIX + "\Library\lib"]
 # Path to sjef.h
+#INCL_DIRS = [PREFIX + "\include"]
 INCL_DIRS = [PREFIX + "/include"]
 
 with open("README.rst", 'r') as f:
@@ -53,7 +55,7 @@ ext = Extension(
     name="pysjef.project_wrapper",
     sources=["pysjef/project_wrapper.pyx"],
     language="c++",
-    libraries=["sjef", "pugixml", "boost_system", "boost_filesystem"],
+    libraries=["sjef", "pugixml", "boost_system", "boost_filesystem", "Shell32"],
     library_dirs=LIB_DIRS,
     include_dirs=INCL_DIRS,
     extra_compile_args=extra_args

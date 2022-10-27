@@ -6,5 +6,5 @@ cmake -LAH -DBUILD_TESTS=OFF -DCMAKE_PREFIX_PATH="%PREFIX%"  -DCMAKE_INSTALL_PRE
 cmake --build cmake-build --config Release --target install
 
 cd pysjef
-echo '__version__ = "%1"' > pysjef/_version.py
+echo __version__ = "0.0.0" > pysjef/_version.py
 python -m pip install --no-deps --force-reinstall --verbose .

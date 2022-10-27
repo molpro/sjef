@@ -18,7 +18,7 @@ cdef extern from "sjef/sjef.h" namespace "sjef":
         # constructor function
         Project(string, bool, string, map[string, string]) except +
         # Project(string, bool, string) except +
-        string filename(string, string, int) except +
+        string filename_string(string, string, int) except +
         bool copy(string &, bool, bool) except +
         bool move(string &, bool) except +
         void erase(string &) except +
@@ -37,7 +37,7 @@ cdef extern from "sjef/sjef.h" namespace "sjef":
         void wait(unsigned int) except +
         status status() except +
         string name() except +
-        string filename() except +
+        string filename_string() except +
         void property_set(map[string, string]) except +
         void property_delete(vector[string] &) except +
         map[string, string] property_get(vector[string] &) except +

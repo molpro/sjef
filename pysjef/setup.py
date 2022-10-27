@@ -43,6 +43,9 @@ with open("README.rst", 'r') as f:
 import platform
 if platform.system() == "Darwin":
     extra_args = ['-std=c++17', "-mmacosx-version-min=10.15.0"]
+elif platform.system() == "Windows":
+#    extra_args = ['/std:c++17', '/EHsc', '/permissive-']
+    extra_args = ['/std:c++17']
 else:
     extra_args = ['-std=c++17']
 

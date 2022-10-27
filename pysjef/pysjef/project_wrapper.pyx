@@ -87,7 +87,7 @@ cdef class ProjectWrapper:
             self.c_project = make_unique[Project](fname, construct, csuffix, cfile_suffixes)
         else:
             self.c_project = make_unique[Project](fname, construct, csuffix, cfile_suffixes)
-        self.location = Path(self.filename())
+        self.location = Path(self.filename_string())
         self.suffix = self.location.suffix
 
     def __getstate__(self):
@@ -120,7 +120,7 @@ cdef class ProjectWrapper:
         """
         suffix = str(suffix).encode('utf-8')
         name = str(name).encode('utf-8')
-        return deref(self.c_project).filename(suffix, name, run).decode('utf-8')
+        return deref(self.c_project).filename_string(suffix, name, run).decode('utf-8')
 
     def import_file(self, fname, bool overwrite=True):
         """Import a file of location *filename* into the bundle"""

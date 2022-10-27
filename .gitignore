@@ -16,3 +16,4 @@ cy.sh
 scrap/
 .ipynb_checkpoints
 .vs
+CMakeSettings.json

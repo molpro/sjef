@@ -4,20 +4,13 @@
 #include <array>
 #include <chrono>
 #include <cstdlib>
-#include <ctime>
 #include <fstream>
 #include <functional>
-#include <iostream>
 #include <map>
 #include <pugixml.hpp>
 #include <regex>
 #include <string>
 #include <thread>
-#include <unistd.h>
-#if defined(__linux__) || defined(__APPLE__)
-#include <sys/types.h>
-#include <sys/wait.h>
-#endif
 #include "util/Job.h"
 #include "util/util.h"
 #include <sstream>

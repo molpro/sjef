@@ -2,19 +2,13 @@
 #include <iostream>
 #include <map>
 #include <mutex>
-#include <sstream>
 #include <string>
-#include <thread>
 #ifdef _WIN32
 #include <windows.h>
-#else
-#include <sys/file.h>
-#include <unistd.h>
 #endif
 
 #include "Locker.h"
 #include <boost/interprocess/sync/file_lock.hpp>
-#include <mutex>
 
 namespace sjef::util {
 

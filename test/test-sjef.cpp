@@ -13,7 +13,9 @@
 #include <sjef/util/Locker.h>
 #include <sjef/util/Shell.h>
 #include <stdlib.h>
-//#include <unistd.h>
+#ifndef WIN32
+#include <unistd.h>
+#endif
 
 namespace fs = std::filesystem;
 

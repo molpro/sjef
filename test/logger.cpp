@@ -3,7 +3,9 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
-//#include <unistd.h>
+#ifndef WIN32
+#include <unistd.h>
+#endif
 std::string msg() {
   std::stringstream s;
   using namespace std::chrono;

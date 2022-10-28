@@ -33,11 +33,11 @@ def read_version():
 PREFIX = os.environ["PREFIX"]
 
 # Path to libsjef.a
-#LIB_DIRS = [PREFIX + "/lib"]
-LIB_DIRS = [PREFIX + "\Library\lib"]
+LIB_DIRS = [PREFIX + "/lib"]
 # Path to sjef.h
-#INCL_DIRS = [PREFIX + "\include"]
 INCL_DIRS = [PREFIX + "/include"]
+# System libraries
+libs=["sjef", "pugixml", "boost_system", "boost_filesystem"]
 
 with open("README.rst", 'r') as f:
   long_description=f.read()
@@ -46,8 +46,10 @@ import platform
 if platform.system() == "Darwin":
     extra_args = ['-std=c++17', "-mmacosx-version-min=10.15.0"]
 elif platform.system() == "Windows":
-#    extra_args = ['/std:c++17', '/EHsc', '/permissive-']
+    LIB_DIRS = [PREFIX + "\Library\lib"]
+    INCL_DIRS = [PREFIX + "\include"]
     extra_args = ['/std:c++17']
+    libs.append('Shell32')
 else:
     extra_args = ['-std=c++17']
 
@@ -55,7 +57,7 @@ ext = Extension(
     name="pysjef.project_wrapper",
     sources=["pysjef/project_wrapper.pyx"],
     language="c++",
-    libraries=["sjef", "pugixml", "boost_system", "boost_filesystem", "Shell32"],
+    libraries=libs,
     library_dirs=LIB_DIRS,
     include_dirs=INCL_DIRS,
     extra_compile_args=extra_args

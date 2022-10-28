@@ -2,7 +2,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <limits.h>
-//#include <unistd.h>
+#ifndef WIN32
+#include <unistd.h>
+#endif
 #ifndef HOST_NAME_MAX
 #define HOST_NAME_MAX 64
 #endif
@@ -23,10 +25,9 @@ TEST(Shell, local) {
   pwd = std::regex_replace(pwd, std::regex{"\\\\"}, "/");
 #endif
   for (int i = 0; i < 1; ++i)
-    EXPECT_EQ(comm("echo 123"), "123");
-  //  EXPECT_EQ(comm("pwd"), pwd);
-  //EXPECT_EQ(comm.out(), pwd);
-  //EXPECT_EQ(comm.job_number(), 0);
+    EXPECT_EQ(comm("pwd"), pwd);
+  EXPECT_EQ(comm.out(), pwd);
+  EXPECT_EQ(comm.job_number(), 0);
 }
 
 TEST(Shell, remote) {

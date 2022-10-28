@@ -6,10 +6,11 @@
 #include <sjef/sjef.h>
 #include "test-sjef.h"
 #include <filesystem>
-//#include <libgen.h>
 #include <list>
 #include <map>
+//#ifndef WIN32
 //#include <unistd.h>
+//#endif
 
 namespace fs = std::filesystem;
 

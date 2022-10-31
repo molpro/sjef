@@ -22,6 +22,10 @@ set(SJEF_VERSION ${PROJECT_VERSION_FULL})
 set(PROGRAM_FILENAME "sjef")
 set(PROGRAM_NAME "sjef-program")
 
+if (MSVC)
+add_compile_options(/EHsc /permissive-)
+endif ()
+
 set(CMAKE_POLICY_DEFAULT_CMP0048 NEW)
 add_subdirectory(src)
 

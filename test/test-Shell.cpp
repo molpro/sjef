@@ -2,7 +2,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <limits.h>
+#ifndef WIN32
 #include <unistd.h>
+#endif
 #ifndef HOST_NAME_MAX
 #define HOST_NAME_MAX 64
 #endif
@@ -94,7 +96,12 @@ TEST(Shell, bad_shell) {
 TEST(Shell, remote_asynchronous) {
   if (sjef::util::Shell::local_asynchronous_supported()) {
     char hostname[HOST_NAME_MAX];
+#ifndef WIN32
     gethostname(hostname, HOST_NAME_MAX);
+#else
+    // test is not called on Windows as cannot ssh to hostname, comment out call to gethostname to avoid linking error
+    strcpy(hostname,"localhost");
+#endif
     sjef::util::Shell comm(hostname);
     fs::path testdir{fs::current_path() / "test directory"};
     fs::path testfile{testdir / "test_remote_asynchronous"};

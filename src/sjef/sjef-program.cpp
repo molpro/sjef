@@ -3,9 +3,7 @@
 #include <iostream>
 using Project = sjef::Project;
 static const auto program_name = std::string("Simple Job Execution Framework");
-#include <boost/filesystem.hpp>
 #include <cstdlib>
-#include <map>
 #include <string>
 #include <tclap/CmdLine.h>
 #include <vector>

@@ -4,7 +4,6 @@
 #include "test-sjef.h"
 #include <filesystem>
 #include <fstream>
-#include <libgen.h>
 #include <list>
 #include <map>
 #include <regex>
@@ -13,7 +12,9 @@
 #include <sjef/util/Locker.h>
 #include <sjef/util/Shell.h>
 #include <stdlib.h>
+#ifndef WIN32
 #include <unistd.h>
+#endif
 
 namespace fs = std::filesystem;
 
@@ -547,10 +548,13 @@ TEST_F(test_sjef, dummy_backend) {
     sjef::Project p(testproject("completely_new"));
     p.run(sjef::Backend::dummy_name, 0, true, false);
     p.wait();
+#ifndef WIN32
+    // TODO: implement proper check for completeness rather than just waiting
     timespec delay;
     delay.tv_sec = 0;
     delay.tv_nsec = 100000000;
     nanosleep(&delay, NULL);
+#endif
     EXPECT_EQ(p.file_contents("out"), "dummy")
         << "\nstdout:\n"
         << p.file_contents("stdout") << "\nstderr:\n"

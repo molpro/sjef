@@ -1,19 +1,12 @@
 #include "sjef-c.h"
 #include "sjef-backend.h"
 #include "sjef.h"
-#include <array>
 #include <chrono>
-#include <ctype.h>
 #include <functional>
 #include <iostream>
 #include <map>
 #include <pugixml.hpp>
 #include <string>
-#include <thread>
-#if defined(__linux__) || defined(__APPLE__)
-#include <sys/types.h>
-#include <sys/wait.h>
-#endif
 namespace fs = std::filesystem;
 static std::map<std::string, std::unique_ptr<sjef::Project>> projects;
 struct sjef::pugi_xml_document : public pugi::xml_document {};

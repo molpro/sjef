@@ -298,9 +298,7 @@ public:
    * @return the fully-qualified name of the file
    */
   std::filesystem::path filename(std::string suffix = "", const std::string& name = "", int run = -1) const;
-  std::string filename_string(std::string suffix = "", const std::string& name = "", int run = -1) const {
-    return filename(suffix,name,run).string();
-  }
+  std::string filename_string(std::string suffix = "", const std::string& name = "", int run = -1) const;
   /*!
    * @brief Obtain the path of a run directory
    * @param run

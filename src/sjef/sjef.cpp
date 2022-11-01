@@ -1293,4 +1293,8 @@ const std::string Project::backend_cache() const {
   return backend.host + ":" + backend.cache + "/" + m_filename.string();
 }
 
+std::string Project::filename_string(std::string suffix, const std::string& name, int run) const {
+  return filename(suffix,name,run).string();
+}
+
 } // namespace sjef

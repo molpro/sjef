@@ -43,8 +43,20 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verb
   std::string command = "rsync --archive --copy-links --timeout=5 --protect-args -v";
   command += " --rsync-path=" + m_remote_rsync;
   command += " --exclude=Info.plist --exclude=.Info.plist.writing_object";
+#ifdef WIN32
+  // rsync interprets c:\a\b as a remote filename so windows filenames cause it to fail
+  //   in MSYS2 the C: drive is mounted as /c/
+  //   convert c:\A\B -> c/a/b and pre-prepend /
+  // also ControlPath socket special files do not work on Windows
+  command += " --rsh '/usr/bin/ssh'";
+  std::string fwin = m_project.filename("", "", 0).string();
+  std::replace(fwin.begin(), fwin.end(), '\\', '/');
+  std::replace(fwin.begin(), fwin.end(), ':', '/');
+  command += " '/" + fwin + "/'";
+#else
   command += " --rsh 'ssh -o ControlPath=~/.ssh/sjef-control-%h-%p-%r -o ControlMaster=auto -o ControlPersist=300'";
   command += " '" + m_project.filename("", "", 0).string() + "/'";
+#endif
   command += " " + m_backend.host + ":'" + m_remote_cache_directory + "'";
   if (verbosity > 0)
     command += " -v";
@@ -70,9 +82,18 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::pull_rundir(int verb
   command += " --rsync-path=" + m_remote_rsync;
   command += " --exclude=backup --exclude=*.d";
   command += " --exclude=Info.plist --exclude=.Info.plist.writing_object";
+#ifndef WIN32
   command += " --rsh 'ssh -o ControlPath=~/.ssh/sjef-control-%h-%p-%r -o ControlMaster=auto -o ControlPersist=300'";
+#endif
   command += " " + m_backend.host + ":'" + m_remote_cache_directory + "/'";
+#ifdef WIN32
+  std::string fwin = m_project.filename("", "", 0).string();
+  std::replace(fwin.begin(), fwin.end(), '\\', '/');
+  std::replace(fwin.begin(), fwin.end(), ':', '/');
+  command += " '/" + fwin + "'";
+#else
   command += " '" + m_project.filename("", "", 0).string() + "'";
+#endif
   if (verbosity > 0)
     command += " -v";
   m_project.m_trace(2 - verbosity) << "Pull rsync: " << command << std::endl;

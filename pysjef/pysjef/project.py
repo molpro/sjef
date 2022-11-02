@@ -82,22 +82,25 @@ class Project(Node):
         self.parse()
         return Node.select(self, selection_string, **options_and_callables)
 
-
-    def xpath(self, query):
+    def xpath(self, query, element=None):
         """
-        Run xpath search on the job xml, with support for default namespace
-        :param query:
-        :return: list of etree.Element objects
+        Run xpath search on an element in the job xml, with support for default namespace
+        :param query: Any xpath search expression supported by lxml.etree.Element
+        :param element: The root element for the search, defaulting to the job xml root element
+        :return: list of etree.Element objects or of strings, depending on whether the xpath expression results in an attribute
         """
         from lxml import etree
         from io import StringIO
-        tree = etree.parse(StringIO(self.xml), etree.XMLParser())
-        root = tree.getroot()
+        if element == None:
+            element = etree.parse(StringIO(self.xml), etree.XMLParser()).getroot()
         default_ns_name = '__default__'
-        ns = {k if k is not None else default_ns_name: v for k, v in root.nsmap.items()}
+        ns = {k if k is not None else default_ns_name: v for k, v in element.getroottree().getroot().nsmap.items()}
         import re
-        queryns = re.sub(r'(::|/|^)([_a-zA-Z][-._a-zA-Z0-9]*)', r'\1' + default_ns_name + r':\2', query)
-        return tree.xpath(queryns, namespaces=ns)
+        queryns = re.sub(r'(::|/|^)([_a-zA-Z][-._a-zA-Z0-9]*)(/|$)', r'\1' + default_ns_name + r':\2\3', query)
+        try:
+            return element.xpath(queryns, namespaces=ns)
+        except:
+            print("xpath query failed, query =", query, ", queryns =", queryns, ", namespaces =",ns)
 
     def completed(self):
         '''

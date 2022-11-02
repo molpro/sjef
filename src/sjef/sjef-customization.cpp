@@ -59,7 +59,7 @@ void sjef::Project::custom_initialisation() {
     auto lock = source_lock.bolt();
     if (not std::filesystem::exists(molprorc)) {
       std::ofstream s(molprorc);
-      s << "--xml-output --no-backup" << std::endl;
+      s << "--xml-output --no-backup";
     }
   }
 }

@@ -85,6 +85,7 @@ class Project(Node):
     def xpath(self, query, element=None):
         """
         Run xpath search on an element in the job xml, with support for default namespace
+
         :param query: Any xpath search expression supported by lxml.etree.Element
         :param element: The root element for the search, defaulting to the job xml root element
         :return: list of etree.Element objects or of strings, depending on whether the xpath expression results in an attribute

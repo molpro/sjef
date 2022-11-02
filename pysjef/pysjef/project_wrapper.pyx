@@ -87,7 +87,7 @@ cdef class ProjectWrapper:
             self.c_project = make_unique[Project](fname, construct, csuffix, cfile_suffixes)
         else:
             self.c_project = make_unique[Project](fname, construct, csuffix, cfile_suffixes)
-        self.location = Path(self.filename_string())
+        self.location = Path(self.filename())
         self.suffix = self.location.suffix
 
     def __getstate__(self):

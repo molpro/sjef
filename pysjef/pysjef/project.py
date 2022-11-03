@@ -97,11 +97,12 @@ class Project(Node):
         default_ns_name = '__default__'
         ns = {k if k is not None else default_ns_name: v for k, v in element.getroottree().getroot().nsmap.items()}
         import re
-        queryns = re.sub(r'(::|/|^)([_a-zA-Z][-._a-zA-Z0-9]*)(/|$)', r'\1' + default_ns_name + r':\2\3', query)
+        queryns = re.sub(r'(::|/|^)([_a-zA-Z][-._a-zA-Z0-9]*)(/|$|\[)', r'\1' + default_ns_name + r':\2\3', query)
         try:
             return element.xpath(queryns, namespaces=ns)
-        except:
-            print("xpath query failed, query =", query, ", queryns =", queryns, ", namespaces =",ns)
+        except Exception as e:
+            print("xpath query failed:", e)
+            print("query =", query, ", queryns =", queryns, ", namespaces =", ns)
 
     def completed(self):
         '''
@@ -225,18 +226,6 @@ class Project(Node):
         while self.status in ["running", "waiting"]:
             time.sleep(epoch)
             epoch = min(epoch * 2, max_epoch)
-
-    def synchronize(self, verbosity=0):
-        """
-        Synchronize the project with a cached copy belonging to a backend.
-        name.inp, name.xyz, Info.plist, and any files brought in with import(),
-        will be pushed from the master copy to the backend, and all other
-        files will be pulled from the backend.
-
-        :param verbosity: If >0, show underlying processing
-        :return:
-        """
-        return self._project_wrapper.synchronize(verbosity)
 
     def kill(self):
         """Kill the job started by ``run()``"""

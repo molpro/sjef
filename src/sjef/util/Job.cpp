@@ -30,7 +30,7 @@ sjef::util::Job::Job(const sjef::Project& project)
       m_remote_rsync = "rsync";
 //        std::cout << "remote rsync: " << m_remote_rsync << std::endl;
     // don't allow remote cache directory name that could lead to shell expansion
-    std::cout << m_remote_cache_directory<<std::endl;
+//    std::cout << m_remote_cache_directory<<std::endl;
     if (not std::regex_search(m_remote_cache_directory,std::regex("^[-A-Za-zÀ-ú0-9_=\\./]*$")))
       throw std::runtime_error("Invalid remote cache directory "+m_remote_cache_directory);
   }

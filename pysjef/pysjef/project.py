@@ -97,7 +97,7 @@ class Project(Node):
         default_ns_name = '__default__'
         ns = {k if k is not None else default_ns_name: v for k, v in element.getroottree().getroot().nsmap.items()}
         import re
-        queryns = re.sub(r'(::|/|^)([_a-zA-Z][-._a-zA-Z0-9]*)(/|$|\[)', r'\1' + default_ns_name + r':\2\3', query)
+        queryns = re.sub(r'(::|/|^)([_a-zA-Z][-._a-zA-Z0-9]*)(?=/|$|\[)', r'\1' + default_ns_name + r':\2', query)
         try:
             return element.xpath(queryns, namespaces=ns)
         except Exception as e:

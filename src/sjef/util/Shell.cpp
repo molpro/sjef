@@ -143,9 +143,9 @@ bool Shell::running() const {
   return (*this)(std::string{"ps -p "} + std::to_string(m_job_number) + " > /dev/null 2>/dev/null; echo $?") == "0";
 }
 bool Shell::local_asynchronous_supported() {
-#ifdef WIN32
-  return false;
-#endif
+//#ifdef WIN32
+//  return false;
+//#endif
 return true;
 }
 } // namespace sjef::util

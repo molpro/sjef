@@ -41,9 +41,14 @@ public:
   struct Windows {};
   Backend(Windows x, std::string name = Backend::default_name, std::string host = "localhost",
           std::string cache = "sjef\\cache", std::string run_command = "dummy", std::string run_jobnumber = "([0-9]+)",
-          std::string status_command = "tasklist /FO LIST /FI \"PID eq \"",
-          std::string status_running = "^PID: *[0-9][0-9]* *[DIRSTUtWx]", std::string status_waiting = " ",
-          std::string kill_command = "taskkill /f /PID ")
+// cmd tasklist not implemented, using MSYS2 ps and kill
+//          std::string status_command = "tasklist /FO LIST /FI \"PID eq \"",
+//          std::string status_running = "^PID: *[0-9][0-9]* *[DIRSTUtWx]", std::string status_waiting = " ",
+//          std::string kill_command = "taskkill /f /PID ")
+// MSYS2 PID and Windows PID are different and ps -o not implemented
+          std::string status_command = "ps -p ",
+          std::string status_running = "^ *[0-9][0-9]*  *[0-9][0-9]* ", std::string status_waiting = "not_implemented",
+          std::string kill_command = "kill ")
       : Backend(std::move(name), std::move(host), std::move(cache), std::move(run_command), std::move(run_jobnumber),
                 std::move(status_command), std::move(status_running), std::move(status_waiting),
                 std::move(kill_command)) {}

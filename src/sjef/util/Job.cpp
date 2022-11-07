@@ -5,9 +5,9 @@
 #include <functional>
 #include <future>
 #include <regex>
+#include <set>
 #include <sstream>
 #include <string>
-#include <set>
 namespace fs = std::filesystem;
 
 namespace sjef::util {
@@ -28,11 +28,11 @@ sjef::util::Job::Job(const sjef::Project& project)
     m_remote_rsync = (*m_backend_command_server)("which rsync");
     if (m_remote_rsync.empty())
       m_remote_rsync = "rsync";
-//        std::cout << "remote rsync: " << m_remote_rsync << std::endl;
+    //        std::cout << "remote rsync: " << m_remote_rsync << std::endl;
     // don't allow remote cache directory name that could lead to shell expansion
-//    std::cout << m_remote_cache_directory<<std::endl;
-    if (not std::regex_search(m_remote_cache_directory,std::regex("^[-A-Za-zÀ-ú0-9_=\\./]*$")))
-      throw std::runtime_error("Invalid remote cache directory "+m_remote_cache_directory);
+    //    std::cout << m_remote_cache_directory<<std::endl;
+    if (not std::regex_search(m_remote_cache_directory, std::regex("^[-A-Za-zÀ-ú0-9_=\\./]*$")))
+      throw std::runtime_error("Invalid remote cache directory " + m_remote_cache_directory);
   }
   m_poll_task = std::async(std::launch::async, [this]() { this->poll_job(); });
   //  std::cout << "Job constructor has launched poll task" << std::endl;
@@ -128,45 +128,57 @@ std::string Job::run(const std::string& command, int verbosity, bool wait) {
   m_poll_task.wait();
   m_closing = false;
   m_backend_command_server.reset(new Shell(m_backend.host));
-  auto l = std::lock_guard(kill_mutex);
-  //  const auto& substr = std::regex_replace(command, std::regex{"'"}, "").substr(0, m_backend.run_command.size());
-  m_trace(4 - verbosity) << "Job::run() command=" << command << std::endl;
-  //  m_trace(4 - verbosity) << "Job::run substr=" << substr << " m_backend.run_command=" << m_backend.run_command
-  //                         << std::endl;
-  //  auto is_run_command = substr == m_backend.run_command;
-  m_initial_status = waiting;
-  m_job_number = 0; // pauses status polling
-                    //    std::cout << "Job::run() set initial status to waiting, and pause polling"<<std::endl;
-  set_status(waiting);
-  auto backend_submits_batch = m_backend.run_jobnumber != "([0-9]+)";
-  if (!localhost()) {
-    const auto& push_rundir_result = push_rundir(verbosity);
-    if (!std::get<0>(push_rundir_result))
-      throw std::runtime_error("Push of data to remote cache has failed\nOutput:\n" + std::get<1>(push_rundir_result) +
-                               "\nError:" + std::get<2>(push_rundir_result));
-  }
-  push_rundir(verbosity); // do it again to allow time to settle
-  m_trace(4 - verbosity) << "Job::run() gives directory " << m_project.filename("", "", 0) << std::endl;
-  m_trace(4 - verbosity) << "before submit, m_backend_command_server? " << (m_backend_command_server == nullptr)
-                         << std::endl;
-  auto run_output = (*m_backend_command_server)(
-      command, wait or backend_submits_batch,
-      localhost() ? m_project.filename("", "", 0).string() : m_remote_cache_directory, verbosity,
-      m_project.filename("stdout", "", 0).filename().string(), m_project.filename("stderr", "", 0).filename().string());
-  if (backend_submits_batch) {
-    std::smatch match;
-    if (std::regex_search(run_output, match, std::regex{m_backend.run_jobnumber})) {
-      //        m_trace(5 - verbosity) << "... a match was found: " << match[1] << std::endl;
-      m_job_number = std::stoi(match[1]);
-      m_trace(4 - verbosity) << "Job::run backend_submits_batch m_job_number=" << m_job_number << std::endl;
+  std::string run_output;
+  {
+    auto l = std::lock_guard(kill_mutex);
+    //  const auto& substr = std::regex_replace(command, std::regex{"'"}, "").substr(0, m_backend.run_command.size());
+    m_trace(4 - verbosity) << "Job::run() command=" << command << std::endl;
+    //  m_trace(4 - verbosity) << "Job::run substr=" << substr << " m_backend.run_command=" << m_backend.run_command
+    //                         << std::endl;
+    //  auto is_run_command = substr == m_backend.run_command;
+    m_initial_status = waiting;
+    m_job_number = 0; // pauses status polling
+                      //    std::cout << "Job::run() set initial status to waiting, and pause polling"<<std::endl;
+    set_status(waiting);
+    auto backend_submits_batch = m_backend.run_jobnumber != "([0-9]+)";
+    if (!localhost()) {
+      const auto& push_rundir_result = push_rundir(verbosity);
+      if (!std::get<0>(push_rundir_result))
+        throw std::runtime_error("Push of data to remote cache has failed\nOutput:\n" +
+                                 std::get<1>(push_rundir_result) + "\nError:" + std::get<2>(push_rundir_result));
     }
-  } else {
-    m_trace(4 - verbosity) << "before job_number(), m_backend_command_server? " << (m_backend_command_server == nullptr)
+    push_rundir(verbosity); // do it again to allow time to settle
+    m_trace(4 - verbosity) << "Job::run() gives directory " << m_project.filename("", "", 0) << std::endl;
+    m_trace(4 - verbosity) << "before submit, m_backend_command_server? " << (m_backend_command_server == nullptr)
                            << std::endl;
-    m_job_number = m_backend_command_server->job_number();
-    m_trace(4 - verbosity) << "Job::run is_run_command m_job_number=" << m_job_number << std::endl;
+    run_output =
+        (*m_backend_command_server)(command, wait or backend_submits_batch,
+                                    localhost() ? m_project.filename("", "", 0).string() : m_remote_cache_directory,
+                                    verbosity, m_project.filename("stdout", "", 0).filename().string(),
+                                    m_project.filename("stderr", "", 0).filename().string());
+    if (backend_submits_batch) {
+      std::smatch match;
+      if (std::regex_search(run_output, match, std::regex{m_backend.run_jobnumber})) {
+        //        m_trace(5 - verbosity) << "... a match was found: " << match[1] << std::endl;
+        m_job_number = std::stoi(match[1]);
+        m_trace(4 - verbosity) << "Job::run backend_submits_batch m_job_number=" << m_job_number << std::endl;
+      }
+    } else {
+      m_trace(4 - verbosity) << "before job_number(), m_backend_command_server? "
+                             << (m_backend_command_server == nullptr) << std::endl;
+      m_job_number = m_backend_command_server->job_number();
+      m_trace(4 - verbosity) << "Job::run is_run_command m_job_number=" << m_job_number << std::endl;
+    }
+    m_poll_task = std::async(std::launch::async, [this]() { this->poll_job(); });
   }
-  m_poll_task = std::async(std::launch::async, [this]() { this->poll_job(); });
+  // give the poll task time to get a first result
+  //  std::cout << "status immediately after launching poll_task "<<m_project.status_message()<<" id
+  //  "<<std::this_thread::get_id()<<std::endl;
+  for (int i = 0; i < 20 && m_project.status() == sjef::status::waiting; ++i) {
+    using namespace std::literals::chrono_literals;
+    std::this_thread::sleep_for(50ms);
+    //  std::cout << "status after waiting "<<m_project.status_message()<<std::endl;
+  }
   m_trace(2 - verbosity) << "Job::run() returns " << run_output << std::endl;
   return run_output;
 }
@@ -224,8 +236,7 @@ void Job::kill(int verbosity) {
 
 template <class T>
 std::set<T> vector_to_set(std::vector<T>&& v) {
-   auto s=std::set<T>(std::make_move_iterator(v.begin()),
-                std::make_move_iterator(v.end()));
+  auto s = std::set<T>(std::make_move_iterator(v.begin()), std::make_move_iterator(v.end()));
   return s;
 }
 void Job::poll_job(int verbosity) {
@@ -290,11 +301,11 @@ void Job::poll_job(int verbosity) {
       {
         m_trace(4 - verbosity) << "remove run directory " + m_remote_cache_directory + " at end of job " << std::endl;
         auto slash = m_remote_cache_directory.rfind("/");
-        (*m_backend_command_server)("cd '" + m_remote_cache_directory.substr(0, slash) + "' && rm -rf '" + m_remote_cache_directory.substr(slash + 1) + "'");
+        (*m_backend_command_server)("cd '" + m_remote_cache_directory.substr(0, slash) + "' && rm -rf '" +
+                                    m_remote_cache_directory.substr(slash + 1) + "'");
       }
-    } else if (remote_manifest.count("No such file") !=
-               0) { // sometimes sync will be tried before the remote cache exists, so stay quiet when
-                                    // that happens
+    } else if (remote_manifest.count("No such file") != 0) { // sometimes sync will be tried before the remote cache
+                                                             // exists, so stay quiet when that happens
       m_trace(-verbosity) << "Not removing remote cache " << m_backend.host + ":'" + m_remote_cache_directory + "'"
                           << " because master local copy " << m_project.filename("", "", 0) << " has failed to update"
                           << std::endl;

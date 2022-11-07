@@ -47,7 +47,7 @@ std::string Shell::operator()(const std::string& command, bool wait, const std::
                               const std::string& out, const std::string& err) const {
   std::lock_guard lock(m_run_mutex);
 #ifdef WIN32
-  _putenv_s("PATH", "c:\\msys64\\usr\\bin;/usr/bin;/bin");
+  _putenv_s("PATH", "C:\\msys64\\usr\\bin;C:\\Program Files\\Molpro\\bin;/usr/local/bin;/usr/bin;/bin");
 #endif
   m_trace(2 - verbosity) << "Command::operator() " << command << std::endl;
   m_trace(2 - verbosity) << "Command::operator() m_host=" << m_host << ", wait=" << wait

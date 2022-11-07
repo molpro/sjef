@@ -73,7 +73,12 @@ void sjef::Project::custom_run_preface() {
 sjef::Backend sjef::Project::default_backend() {
   if (m_project_suffix == "molpro") {
     return Backend(Backend::local(),"local", "localhost", "${PWD}",
-                         "molpro {-n %n!MPI size} {-M %M!Total memory} {-m %m!Process memory} {-G %G!GA memory}");
+#ifdef WIN32
+           "mpiexec -np {%n:1!MPI processses} -localonly -genvall molpro_program {-M %M!Total memory} {-m %m!Process memory} {-G %G!GA memory}"
+#else
+           "molpro {-n %n!MPI size} {-M %M!Total memory} {-m %m!Process memory} {-G %G!GA memory}"
+#endif
+           );
   } else
     return Backend(Backend::local(),"local");
 }

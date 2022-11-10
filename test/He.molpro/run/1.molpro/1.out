@@ -1,19 +1,21 @@
 
- Primary working directories    : /var/folders/pb/cdv3flcs7f5_rv7kw9zqg65m0000gp/T//molpro.TYFcmLBKfU
- Secondary working directories  : /var/folders/pb/cdv3flcs7f5_rv7kw9zqg65m0000gp/T//molpro.TYFcmLBKfU
+ Working directory              : /var/folders/qd/f26v1rbd3g5341rsg3s9j4v80000gn/T//molpro.gZlcGQXhSe/
+ Global scratch directory       : /var/folders/qd/f26v1rbd3g5341rsg3s9j4v80000gn/T//molpro.gZlcGQXhSe/
  Wavefunction directory         : /Users/peterk/wfu/
- Main file repository           : /var/folders/pb/cdv3flcs7f5_rv7kw9zqg65m0000gp/T//molpro.TYFcmLBKfU/
+ Main file repository           : /var/folders/qd/f26v1rbd3g5341rsg3s9j4v80000gn/T//molpro.gZlcGQXhSe/
 
  id        : peterk
 
- Nodes                 nprocs
- pjkws10.chemy.cf.ac.uk    1
+ Nodes          nprocs
+ pjk2022.connect    1
+ GA implementation: MPI file
+ GA implementation (serial work in mppx): MPI file
 
  Using customized tuning parameters: mindgm=1; mindgv=20; mindgc=4; mindgr=1; noblas=0; minvec=7
  default implementation of scratch files=df  
 
 
- Variables initialized (935), CPU time= 0.00 sec
+ Variables initialized (1022), CPU time= 0.00 sec
  geometry={He}
  rhf
  mp2
@@ -21,8 +23,8 @@
  
  ccsd
  
- Commands  initialized (796), CPU time= 0.01 sec, 620 directives.
- Default parameters read. Elapsed time= 0.23 sec
+ Commands initialized (841), CPU time= 0.01 sec, 683 directives.
+ Default parameters read. Elapsed time= 0.05 sec
 
  Checking input...
  Passed
@@ -31,18 +33,24 @@
 
                                          ***  PROGRAM SYSTEM MOLPRO  ***
                                        Copyright, TTI GmbH Stuttgart, 2015
-                                    Version 2020.1 linked Jan 07 2020 17:18:37
+                                    Version 2022.3 linked Thu Nov 10 18:04:24 2022
 
 
  **********************************************************************************************************************************
  LABEL *                                                                                 
-  64 bit serial version                                                                  DATE: 09-Jan-20          TIME: 16:52:45  
+  64 bit serial version                                                                  DATE: 10-Nov-22          TIME: 18:31:53  
  **********************************************************************************************************************************
 
- SHA1:             8f558667c1702ea555240e046f4e411da9cf092b
+ SHA1:             fa99d9912ba884475db19361bf6c586b05586219
  **********************************************************************************************************************************
 
- Variable memory set to  500000000 words,  buffer space 
+ Memory per process:        32 MW
+ Total memory per node:     32 MW
+
+ GA preallocation disabled
+ GA check disabled
+
+ Variable memory set to 32.0 MW
 
 
 
@@ -104,7 +112,7 @@
 
  Memory used in sort:       0.56 MW
 
- SORT1 READ          61. AND WROTE          45. INTEGRALS IN      1 RECORDS. CPU TIME:     0.00 SEC, REAL TIME:     0.01 SEC
+ SORT1 READ          61. AND WROTE          45. INTEGRALS IN      1 RECORDS. CPU TIME:     0.00 SEC, REAL TIME:     0.00 SEC
  SORT2 READ          45. AND WROTE          45. INTEGRALS IN      1 RECORDS. CPU TIME:     0.00 SEC, REAL TIME:     0.00 SEC
 
  FILE SIZES:   FILE 1:    30.2 MBYTE,  FILE 4:     4.2 MBYTE,   TOTAL:     34.4 MBYTE
@@ -114,66 +122,59 @@
 
  **********************************************************************************************************************************
  DATASETS  * FILE   NREC   LENGTH (MB)   RECORD NAMES
-              1      19       29.92       500      610      700      900      950      970     1000      129      960     1100   
+              1      19       28.54       500      610      700      900      950      970     1000      129      960     1100   
                                           VAR    BASINP    GEOM    SYMINP    ZMAT    AOBASIS   BASIS     P2S    ABASIS      S 
                                          1400     1410     1200     1210     1080     1600     1650     1300     1700   
                                            T        V       H0       H01     AOSYM     SMH    MOLCAS    ERIS     OPER   
 
  PROGRAMS   *        TOTAL       INT
- CPU TIMES  *         0.42      0.34
- REAL TIME  *         1.68 SEC
- DISK USED  *        34.66 MB
+ CPU TIMES  *         0.13      0.05
+ REAL TIME  *         0.19 SEC
+ DISK USED  *        33.05 MB
  **********************************************************************************************************************************
 
 
- PROGRAM * RHF-SCF (CLOSED SHELL)       Authors: W. Meyer, H.-J. Werner
+ Program * Restricted Hartree-Fock
 
-
- NUMBER OF ELECTRONS:       1+    1-
- CONVERGENCE THRESHOLDS:    1.00E-05 (Density)    1.00E-07 (Energy)
- MAX. NUMBER OF ITERATIONS:       60
- INTERPOLATION TYPE:            DIIS
- INTERPOLATION STEPS:              2 (START)      1 (STEP)
- LEVEL SHIFTS:                  0.00 (CLOSED)  0.00 (OPEN) 
-
-
-
- Orbital guess generated from atomic densities. Full valence occupancy:    1   0   0   0   0   0   0   0
-
-
- Molecular orbital dump at record        2100.2
+ Orbital guess generated from atomic densities.
 
  Initial occupancy:   1   0   0   0   0
 
- ITERATION    DDIFF          GRAD             ENERGY        2-EL.EN.            DIPOLE MOMENTS         DIIS   ORB.
-    1      0.000D+00      0.000D+00        -2.85516035      2.054167    0.00000    0.00000    0.00000    0    start
-    2      0.000D+00      0.370D-03        -2.85516048      2.053762    0.00000    0.00000    0.00000    1    diag
-    3      0.581D-03      0.280D-04        -2.85516048      2.053729    0.00000    0.00000    0.00000    2    diag
-    4      0.476D-04      0.160D-09        -2.85516048      2.053729    0.00000    0.00000    0.00000    3    diag
-    5      0.147D-09      0.735D-10        -2.85516048      2.053729    0.00000    0.00000    0.00000    0    orth
+ NELEC=    2   SYM=1   MS2= 0   THRE=1.0D-08   THRD=3.2D-06   THRG=3.2D-06  HFMA2=F  DIIS_START=2   DIIS_MAX=10   DIIS_INCORE=F
+
+ Level shifts:    0.00 (CLOSED)    0.00 (OPEN)    0.30 (GAP_MIN)
+
+ ITER           ETOT              DE          GRAD        DDIFF     DIIS  NEXP   TIME(IT)  TIME(TOT)  DIAG
+   1       -2.85516035      -2.85516035     0.00D+00     0.82D+00     0     0       0.00      0.01    start
+   2       -2.85516048      -0.00000013     0.37D-03     0.58D-03     1     0       0.00      0.01    diag
+   3       -2.85516048      -0.00000000     0.28D-04     0.48D-04     2     0       0.00      0.01    diag
+   4       -2.85516048      -0.00000000     0.16D-09     0.15D-09     3     0       0.00      0.01    diag
+   5       -2.85516048      -0.00000000     0.73D-10     0.12D-09     0     0       0.00      0.01    diag
 
  Final occupancy:   1   0   0   0   0
 
- !RHF STATE  1.1 Energy                -2.855160477243
- Nuclear energy                         0.00000000
- One-electron energy                   -3.88202510
- Two-electron energy                    1.02686463
- Virial quotient                       -0.99999451
- !RHF STATE  1.1 Dipole moment          0.00000000     0.00000000     0.00000000
+ !RHF STATE 1.1 Energy                 -2.855160477243
+  RHF One-electron energy              -3.882025102604
+  RHF Two-electron energy               1.026864625362
+  RHF Kinetic energy                    2.855176138078
+  RHF Nuclear energy                    0.000000000000
+  RHF Virial quotient                  -0.999994514932
+
+ !RHF STATE 1.1 Dipole moment           0.00000000     0.00000000     0.00000000
  Dipole moment /Debye                   0.00000000     0.00000000     0.00000000
 
  Orbital energies:
 
-         1.1          2.1
+           1.1          2.1
      -0.914148     1.397442
 
-         1.2
+           1.2
       2.524372
 
-         1.3
+           1.3
       2.524372
 
-         1.5
+           1.5
       2.524372
 
 
@@ -181,21 +182,23 @@
  LUMO      2.1     1.397442 =      38.0263eV
  LUMO-HOMO         2.311590 =      62.9016eV
 
+ Orbitals saved in record  2100.2
+
 
  **********************************************************************************************************************************
  DATASETS  * FILE   NREC   LENGTH (MB)   RECORD NAMES
-              1      19       29.92       500      610      700      900      950      970     1000      129      960     1100   
+              1      19       28.54       500      610      700      900      950      970     1000      129      960     1100   
                                           VAR    BASINP    GEOM    SYMINP    ZMAT    AOBASIS   BASIS     P2S    ABASIS      S 
                                          1400     1410     1200     1210     1080     1600     1650     1300     1700   
                                            T        V       H0       H01     AOSYM     SMH    MOLCAS    ERIS     OPER   
 
-              2       4        2.73       700     1000      520     2100   
+              2       4        0.34       700     1000      520     2100   
                                          GEOM     BASIS   MCVARS     RHF  
 
  PROGRAMS   *        TOTAL   RHF-SCF       INT
- CPU TIMES  *         0.50      0.08      0.34
- REAL TIME  *         1.82 SEC
- DISK USED  *        34.66 MB
+ CPU TIMES  *         0.14      0.01      0.05
+ REAL TIME  *         0.20 SEC
+ DISK USED  *        33.05 MB
  **********************************************************************************************************************************
 
 
@@ -204,10 +207,10 @@
 
  Convergence thresholds:  THRVAR = 1.00D-08  THRDEN = 1.00D-06
 
- Number of closed-shell orbitals:   1 (   1   0   0   0   0 )
- Number of external orbitals:       4 (   1   1   1   0   1 )
+ Number of closed-shell orbitals:   1 (   1   0   0   0   0   0   0   0 )
+ Number of external orbitals:       4 (   1   1   1   0   1   0   0   0 )
 
- Molecular orbitals read from record     2100.2  Type=RHF/CANONICAL (state 1.1)
+ Molecular orbitals read from record     2100.2  Type=RHF/CANONICAL  
 
  Number of N-1 electron functions:               1
  Number of N-2 electron functions:               1
@@ -236,18 +239,18 @@
 
  **********************************************************************************************************************************
  DATASETS  * FILE   NREC   LENGTH (MB)   RECORD NAMES
-              1      20       29.92       500      610      700      900      950      970     1000      129      960     1100   
+              1      20       28.54       500      610      700      900      950      970     1000      129      960     1100   
                                           VAR    BASINP    GEOM    SYMINP    ZMAT    AOBASIS   BASIS     P2S    ABASIS      S 
                                          1400     1410     1200     1210     1080     1600     1650     1300     1700     1380   
                                            T        V       H0       H01     AOSYM     SMH    MOLCAS    ERIS     OPER     JKOP   
 
-              2       4        2.73       700     1000      520     2100   
+              2       4        0.34       700     1000      520     2100   
                                          GEOM     BASIS   MCVARS     RHF  
 
  PROGRAMS   *        TOTAL       MP2   RHF-SCF       INT
- CPU TIMES  *         0.52      0.02      0.08      0.34
- REAL TIME  *         1.87 SEC
- DISK USED  *        34.66 MB
+ CPU TIMES  *         0.16      0.02      0.01      0.05
+ REAL TIME  *         0.22 SEC
+ DISK USED  *        33.05 MB
  **********************************************************************************************************************************
 
 
@@ -256,10 +259,10 @@
 
  Convergence thresholds:  THRVAR = 1.00D-08  THRDEN = 1.00D-06
 
- Number of closed-shell orbitals:   1 (   1   0   0   0   0 )
- Number of external orbitals:       4 (   1   1   1   0   1 )
+ Number of closed-shell orbitals:   1 (   1   0   0   0   0   0   0   0 )
+ Number of external orbitals:       4 (   1   1   1   0   1   0   0   0 )
 
- Molecular orbitals read from record     2100.2  Type=RHF/CANONICAL (state 1.1)
+ Molecular orbitals read from record     2100.2  Type=RHF/CANONICAL  
 
  Number of N-1 electron functions:               1
  Number of N-2 electron functions:               1
@@ -287,11 +290,12 @@
    1      1.00658016    -0.03214041    -2.88730089    -0.00631207    -0.00507080  0.32D-06  0.19D-03  1  1     0.00     0.00
    2      1.00728799    -0.03243584    -2.88759632    -0.00029543    -0.00151371  0.62D-07  0.53D-06  2  2     0.00     0.00
    3      1.00730767    -0.03243359    -2.88759407     0.00000225    -0.00002069  0.59D-09  0.59D-12  3  3     0.00     0.00
-   4      1.00730820    -0.03243455    -2.88759503    -0.00000096    -0.00000100  0.53D-32  0.91D-35  4  4     0.00     0.00
-   5      1.00730810    -0.03243435    -2.88759483     0.00000019     0.00000019  0.90D-43  0.31D-44  5  5     0.00     0.00
+   4      1.00730820    -0.03243455    -2.88759503    -0.00000096    -0.00000100  0.39D-32  0.66D-35  4  4     0.00     0.00
+   5      1.00730810    -0.03243435    -2.88759483     0.00000019     0.00000019  0.57D-42  0.39D-43  5  5     0.00     0.00
 
  Norm of t1 vector:      0.00110138      S-energy:     0.00000000      T1 diagnostic:  0.00055069
                                                                        D1 diagnostic:  0.00077880
+                                                                       D2 diagnostic:  0.08548080 (internal)
 
  Doubles amplitudes (print threshold =  0.500E-01):
 
@@ -304,47 +308,38 @@
  =======
 
   Reference energy                     -2.855160477243
-  CCSD singlet pair energy             -0.032434353841
+  CCSD singlet pair energy             -0.032434353976
   CCSD triplet pair energy              0.000000000000
-  CCSD correlation energy              -0.032434353841
+  CCSD correlation energy              -0.032434353976
 
- !CCSD total energy                    -2.887594831084
-
- Timing summary (sec):
-
- STEP                 CPU(USER)    SYS     CPU(TOT)    WALL
- CCSD iterations         0.01      0.01      0.02      0.02
+ !CCSD total energy                    -2.887594831219
 
  Program statistics:
 
- Available memory in ccsd:               499999994
- Min. memory needed in ccsd:                   152
- Max. memory used in ccsd:                     152
- Max. memory used in cckext:                 32887 ( 5 integral passes)
+ Available memory in ccsd:                31999994
+ Min. memory needed in ccsd:                   138
+ Max. memory used in ccsd:                     138
+ Max. memory used in cckext:                 32875 ( 5 integral passes)
 
 
 
  **********************************************************************************************************************************
  DATASETS  * FILE   NREC   LENGTH (MB)   RECORD NAMES
-              1      20       29.92       500      610      700      900      950      970     1000      129      960     1100   
+              1      20       28.54       500      610      700      900      950      970     1000      129      960     1100   
                                           VAR    BASINP    GEOM    SYMINP    ZMAT    AOBASIS   BASIS     P2S    ABASIS      S 
                                          1400     1410     1200     1210     1080     1600     1650     1300     1700     1380   
                                            T        V       H0       H01     AOSYM     SMH    MOLCAS    ERIS     OPER     JKOP   
 
-              2       4        2.73       700     1000      520     2100   
+              2       4        0.34       700     1000      520     2100   
                                          GEOM     BASIS   MCVARS     RHF  
 
  PROGRAMS   *        TOTAL      CCSD       MP2   RHF-SCF       INT
- CPU TIMES  *         0.55      0.02      0.02      0.08      0.34
- REAL TIME  *         1.91 SEC
- DISK USED  *        34.66 MB
+ CPU TIMES  *         0.18      0.02      0.02      0.01      0.05
+ REAL TIME  *         0.25 SEC
+ DISK USED  *        33.05 MB
  **********************************************************************************************************************************
- Molecular orbitals read from record     2100.2  Type=RHF/CANONICAL (state 1.1)
- Occupation numbers read from record     2100.2  Type=RHF/RHF (state 1.1)
- Orbital energies read from record       2100.2  Type=RHF/CANONICAL (state 1.1)
- Redundancy group numbers read from rec  2100.2  Type=RHF/RHF (state 1.1)
 
- CCSD/cc-pVDZ energy=     -2.887594831084
+ CCSD/cc-pVDZ energy=     -2.887594831219
 
             CCSD             MP2         RHF-SCF
      -2.88759483     -2.88098882     -2.85516048

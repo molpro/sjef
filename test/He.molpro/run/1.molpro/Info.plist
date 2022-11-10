@@ -7,17 +7,11 @@
 		<string>0</string>
 		<key>backend_inactive_synced</key>
 		<string>0</string>
-		<key>backend</key>
-		<string>local</string>
 		<key>run_input_hash</key>
 		<string>3769380864574156346</string>
-		<key>run_directories</key>
-		<string>1 </string>
 		<key>current_run</key>
 		<string>0</string>
-		<key>jobnumber</key>
-		<string>64249</string>
-		<key>_status</key>
-		<string>1</string>
+		<key>backend</key>
+		<string>local</string>
 	</dict>
 </plist>

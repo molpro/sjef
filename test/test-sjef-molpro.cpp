@@ -131,11 +131,12 @@ TEST_F(test_sjef_molpro, input_from_output) {
   input = std::regex_replace(input, std::regex{"\n$"}, "");
   EXPECT_EQ(input, He.input_from_output());
   auto copy = testfile("Hecopy.molpro");
-  He.copy(copy);
+  He.copy(copy,false,false,false,0);
   sjef::Project Hecopy(copy);
   EXPECT_EQ(He.file_contents("inp"), Hecopy.file_contents("inp"));
   EXPECT_EQ(input, He.input_from_output());
   EXPECT_EQ(Hecopy.input_from_output(), "");
+  EXPECT_NE(He.local_pid_from_output(),-1);
 }
 
 TEST_F(test_sjef_molpro, run_needed) {

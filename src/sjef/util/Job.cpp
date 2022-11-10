@@ -8,6 +8,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <signal.h>
 namespace fs = std::filesystem;
 
 namespace sjef::util {
@@ -217,7 +218,6 @@ status Job::get_status(int verbosity) {
   //  std::cout << "Job::status() returns " << result << std::endl;
   return result;
 }
-
 void Job::kill(int verbosity) {
   m_trace(4 - verbosity) << "Job::kill()" << std::endl;
   //  std::cout << "Job::kill()"<<std::endl;
@@ -230,6 +230,13 @@ void Job::kill(int verbosity) {
     set_status(killed);
     //    std::cout << "Job::kill() finished set_status()"<<std::endl;
   }
+  if (localhost()) {
+    // catch failure to kill local jobs
+    auto pid = m_project.local_pid_from_output();
+    if (pid > 0)
+      ::kill(pid, SIGTERM); // TODO implement for Windows
+  }
+
   m_killed = true;
   //  std::cout << "Job::kill() set sentinel"<<std::endl;
 }

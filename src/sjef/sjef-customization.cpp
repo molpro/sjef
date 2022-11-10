@@ -35,6 +35,17 @@ sjef::status sjef::Project::status_from_output() const {
   }
   return status();
 }
+
+int sjef::Project::local_pid_from_output() const {
+  if (m_project_suffix == "molpro") {
+    sjef::pugi_xml_document outxml;
+    outxml.load_string(xml().c_str());
+    for (const auto& node : outxml.select_nodes("//platform"))
+      return node.node().attribute("pid").as_int();
+  }
+  return -1;
+}
+
 std::string sjef::Project::referenced_file_contents(const std::string& line) const {
   // TODO full robust implementation for Molpro geometry= and include
   auto pos = line.find("geometry=");

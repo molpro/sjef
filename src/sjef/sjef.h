@@ -203,6 +203,11 @@ public:
    */
   std::string input_from_output(bool sync = true) const;
   /*!
+   * @brief Try to get the process id of the job from its output, if the running program happens to offer that
+   * @return  process id if available, otherwise -1
+   */
+  int local_pid_from_output() const;
+  /*!
    * @brief Obtain the job status, if possible, by examining the output
    * @return The status. If nothing can be found, returns status()
    */

@@ -47,7 +47,17 @@ std::string Shell::operator()(const std::string& command, bool wait, const std::
                               const std::string& out, const std::string& err) const {
   std::lock_guard lock(m_run_mutex);
 #ifdef WIN32
+  //TODO: append to PATH rather than replace
   _putenv_s("PATH", "C:\\msys64\\usr\\bin;C:\\Program Files\\Molpro\\bin;/usr/local/bin;/usr/bin;/bin");
+  // set $SCRATCH to directory which can be safely resolved in MSYS2 and native Windows
+  if (NULL==std::getenv("SCRATCH")){
+    const char* scratch = std::getenv("TEMP");
+    std::string scratch_env = scratch;
+    if (!scratch_env.empty()) {
+      std::replace(scratch_env.begin(), scratch_env.end(), '\\', '/');
+      _putenv_s("SCRATCH", scratch_env.c_str());
+    }
+  }
 #endif
   m_trace(2 - verbosity) << "Command::operator() " << command << std::endl;
   m_trace(2 - verbosity) << "Command::operator() m_host=" << m_host << ", wait=" << wait

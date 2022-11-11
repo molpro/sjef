@@ -5,14 +5,19 @@
 #include <boost/process/search_path.hpp>
 #include <chrono>
 #include <fstream>
+#ifndef WIN32
 #include <libgen.h>
+#endif
 #include <list>
 #include <map>
 #include <memory>
 #include <regex>
 #include <sjef/sjef-backend.h>
 #include <sjef/sjef.h>
+#ifndef WIN32
 #include <unistd.h>
+#endif
+#include <cstdlib>
 
 #include "test-sjef.h"
 #include <sjef/util/Locker.h>

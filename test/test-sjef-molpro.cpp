@@ -17,7 +17,6 @@
 #ifndef WIN32
 #include <unistd.h>
 #endif
-#include <cstdlib>
 
 #include "test-sjef.h"
 #include <sjef/util/Locker.h>

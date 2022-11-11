@@ -10,7 +10,9 @@
 #include <string>
 #include <signal.h>
 #ifdef WIN32
+#ifdef _M_AMD64
 #define _AMD64_
+#endif
 #include<processthreadsapi.h>
 #include<handleapi.h>
 #endif

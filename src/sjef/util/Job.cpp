@@ -9,6 +9,11 @@
 #include <sstream>
 #include <string>
 #include <signal.h>
+#ifdef WIN32
+#define _AMD64_
+#include<processthreadsapi.h>
+#include<handleapi.h>
+#endif
 namespace fs = std::filesystem;
 
 namespace sjef::util {
@@ -221,6 +226,24 @@ status Job::get_status(int verbosity) {
 void Job::kill(int verbosity) {
   m_trace(4 - verbosity) << "Job::kill()" << std::endl;
   //  std::cout << "Job::kill()"<<std::endl;
+  if (localhost()) {
+    // catch failure to kill local jobs
+    auto pid = m_project.local_pid_from_output();
+    if (pid > 0) {
+#ifndef WIN32
+      ::kill(pid, SIGTERM);
+#else
+      HANDLE handle = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
+      if (NULL != handle) {
+        TerminateProcess(handle, 0);
+        CloseHandle(handle);
+      }
+#endif
+    }
+    // wait a second for main script to cleanup and exit before trying to kill
+    using namespace std::literals::chrono_literals;
+    std::this_thread::sleep_for(1000ms);
+  }
   {
     auto l = std::lock_guard(kill_mutex);
     //    std::cout << "Job::kill() gets mutex"<<std::endl;
@@ -230,12 +253,7 @@ void Job::kill(int verbosity) {
     set_status(killed);
     //    std::cout << "Job::kill() finished set_status()"<<std::endl;
   }
-  if (localhost()) {
-    // catch failure to kill local jobs
-    auto pid = m_project.local_pid_from_output();
-    if (pid > 0)
-      ::kill(pid, SIGTERM); // TODO implement for Windows
-  }
+
 
   m_killed = true;
   //  std::cout << "Job::kill() set sentinel"<<std::endl;

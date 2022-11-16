@@ -140,6 +140,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a7de4232a6417f0c047fa82dd4250c947"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsjef_1_1_project.html#a7de4232a6417f0c047fa82dd4250c947">input_from_output</a> (bool sync=true) const</td></tr>
 <tr class="memdesc:a7de4232a6417f0c047fa82dd4250c947"><td class="mdescLeft">&#160;</td><td class="mdescRight">If possible, construct the input embedded in the output file.  <a href="classsjef_1_1_project.html#a7de4232a6417f0c047fa82dd4250c947">More...</a><br /></td></tr>
 <tr class="separator:a7de4232a6417f0c047fa82dd4250c947"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1abe5a386421db539f9e9973b90691cd"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsjef_1_1_project.html#a1abe5a386421db539f9e9973b90691cd">local_pid_from_output</a> () const</td></tr>
+<tr class="memdesc:a1abe5a386421db539f9e9973b90691cd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Try to get the process id of the job from its output, if the running program happens to offer that.  <a href="classsjef_1_1_project.html#a1abe5a386421db539f9e9973b90691cd">More...</a><br /></td></tr>
+<tr class="separator:a1abe5a386421db539f9e9973b90691cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:add1dc3d0158ffbfcb99519562311976e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="namespacesjef.html#a36c95c05a49948d8f97e2c80d80ec787">sjef::status</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsjef_1_1_project.html#add1dc3d0158ffbfcb99519562311976e">status_from_output</a> () const</td></tr>
 <tr class="memdesc:add1dc3d0158ffbfcb99519562311976e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtain the job status, if possible, by examining the output.  <a href="classsjef_1_1_project.html#add1dc3d0158ffbfcb99519562311976e">More...</a><br /></td></tr>
 <tr class="separator:add1dc3d0158ffbfcb99519562311976e"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -1570,6 +1573,26 @@ Friends</h2></td></tr>
 
 </div>
 </div>
+<a id="a1abe5a386421db539f9e9973b90691cd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1abe5a386421db539f9e9973b90691cd">&#9670;&nbsp;</a></span>local_pid_from_output()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">int sjef::Project::local_pid_from_output </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Try to get the process id of the job from its output, if the running program happens to offer that. </p>
+<dl class="section return"><dt>Returns</dt><dd>process id if available, otherwise -1 </dd></dl>
+
+</div>
+</div>
 <a id="a550429e06a211925f928557def37ceb0"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a550429e06a211925f928557def37ceb0">&#9670;&nbsp;</a></span>move()</h2>
 
@@ -2723,7 +2746,7 @@ Friends</h2></td></tr>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Thu Nov 10 2022 19:04:57 for sjef by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
+Generated on Wed Nov 16 2022 15:26:54 for sjef by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
 </small></address>
 </body>
 </html>

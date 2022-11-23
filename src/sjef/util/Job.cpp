@@ -241,17 +241,19 @@ void Job::kill(int verbosity) {
         CloseHandle(handle);
       }
 #endif
-    }
     // wait a second for main script to cleanup and exit before trying to kill
     using namespace std::literals::chrono_literals;
     std::this_thread::sleep_for(1000ms);
+    }
   }
   {
     auto l = std::lock_guard(kill_mutex);
     //    std::cout << "Job::kill() gets mutex"<<std::endl;
+    if(m_backend_command_server!=nullptr){
     auto status_string =
         (*m_backend_command_server)(m_backend.kill_command + " " + std::to_string(m_job_number), true, ".", verbosity);
     //    std::cout << "Job::kill() finished killing"<<std::endl;
+    }
     set_status(killed);
     //    std::cout << "Job::kill() finished set_status()"<<std::endl;
   }

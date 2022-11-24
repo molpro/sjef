@@ -305,8 +305,9 @@ class Project(Node):
 
     @property
     def xml(self):
-        from pathlib import Path
-        return Path(self.filename("xml")).read_text()
+        # from pathlib import Path
+        # return Path(self.filename("xml")).read_text()
+        return self._project_wrapper.xml()
 
     def view_input(self):
         """

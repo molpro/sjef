@@ -56,8 +56,8 @@ class Node:
         Arguments are translated into selectors by attribute name ( see `select`).
         Key word arguements are translated into selectors by attribute name ( see `select`).
 
-        Example
-        --------
+        Example:
+
         out = p.select('container[location, name=directory, exists(location)]',
             exists=os.path.exists)
 

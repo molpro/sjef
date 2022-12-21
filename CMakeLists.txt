@@ -9,7 +9,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(LibraryManager)
 
-LibraryManager_Project("$Format:%H$")
+LibraryManager_Project("$Format:%d$")
 message(VERBOSE "PROJECT_VERSION=${PROJECT_VERSION}")
 message(VERBOSE "PROJECT_VERSION_FULL=${PROJECT_VERSION_FULL}")
 

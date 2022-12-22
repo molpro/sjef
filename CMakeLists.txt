@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(iterative-solver CXX)
+project(sjef LANGUAGES CXX C)
 
 include(FetchContent)
 FetchContent_Declare(
@@ -9,12 +9,12 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(LibraryManager)
 
-LibraryManager_Project("$Format:%(describe:tags)$")
+LibraryManager_Project(DEFAULT_VERSION "$Format:%(describe:tags)$")
 message(VERBOSE "PROJECT_VERSION=${PROJECT_VERSION}")
 message(VERBOSE "PROJECT_VERSION_FULL=${PROJECT_VERSION_FULL}")
 
 option(BUILD_TESTS "Whether to build tests or not" ON)
-option(BUILD_PROGRAM "Whether to build sjef bash program or not" ON)
+option(BUILD_PROGRAM "Whether to build sjef command-line program or not" ON)
 
 project(sjef LANGUAGES CXX C VERSION ${PROJECT_VERSION})
 set(SJEF_VERSION ${PROJECT_VERSION_FULL})
@@ -23,7 +23,7 @@ set(PROGRAM_FILENAME "sjef")
 set(PROGRAM_NAME "sjef-program")
 
 if (MSVC)
-add_compile_options(/EHsc /permissive-)
+    add_compile_options(/EHsc /permissive-)
 endif ()
 
 set(CMAKE_POLICY_DEFAULT_CMP0048 NEW)

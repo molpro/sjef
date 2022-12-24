@@ -5,7 +5,7 @@ include(FetchContent)
 FetchContent_Declare(
         LibraryManager
         GIT_REPOSITORY https://github.com/molpro/library-manager.git
-        GIT_TAG 0.12.2
+        GIT_TAG fix-errors-in-version-discovery
 )
 FetchContent_MakeAvailable(LibraryManager)
 

@@ -26,8 +26,6 @@ then
     CXX=$CONDA_PREFIX/bin/c++
 fi
 
-echo '__version__ = "'$(git describe --tags --abbrev=0)'"' > pysjef/_version.py
-
 mkdir -p $BUILD
 cd $BUILD
 if [ -f "install_manifest.txt" ]
@@ -41,6 +39,8 @@ fi
 cmake ../.. -DCMAKE_INSTALL_PREFIX=$PREFIX -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF || { echo 'cmake build failed' ; exit 1; }
 cmake --build . -t install || { echo 'make install failed' ; exit 1; }
 cd ../
+
+grep CMAKE_PROJECT_VERSION: $BUILD/CMakeCache.txt | sed -e 's/.*=/__version__ = "/' -e 's/$/"/' > pysjef/_version.py
 
 #PREFIX=$PREFIX python setup.py build_ext --inplace
 #PREFIX=$PREFIX python -m pip install --no-deps --force-reinstall --verbose . 

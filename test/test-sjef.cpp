@@ -151,24 +151,14 @@ TEST_F(test_sjef, clean) {
   auto filename = testproject("sjef-project-test");
   sjef::Project x(filename);
   filename = x.filename();
-  ASSERT_FALSE(fs::exists(fs::path(filename) / fs::path(filename.string() + ".out")));
-  { std::ofstream s(fs::path(filename) / fs::path(x.name() + ".out")); }
-  ASSERT_TRUE(fs::exists(fs::path(filename) / fs::path(x.name() + ".out")));
-  x.clean(true, true);
-  ASSERT_FALSE(fs::exists(fs::path(filename) / fs::path(x.name() + ".out")));
-  ASSERT_FALSE(fs::is_directory(fs::path(filename) / fs::path(x.name() + ".d")));
-  fs::create_directory(fs::path(filename) / fs::path(x.name() + ".d"));
-  ASSERT_TRUE(fs::is_directory(fs::path(filename) / fs::path(x.name() + ".d")));
-  x.clean(true);
-  ASSERT_FALSE(fs::is_directory(fs::path(filename) / fs::path(x.name() + ".d")));
   const int ncreate = 5;
   for (int nkeep = 0; nkeep < ncreate + 2; ++nkeep) {
-    x.clean(true, false, false, 0);
+    x.clean(0);
     ASSERT_EQ(x.run_list().size(), 0);
     for (int i = 0; i < ncreate; ++i)
       x.run_directory_new();
     ASSERT_EQ(x.run_list().size(), ncreate);
-    x.clean(true, false, false, nkeep);
+    x.clean(nkeep);
     ASSERT_EQ(x.run_list().size(), std::max(0, std::min(ncreate, nkeep)))
         << std::system((std::string{"ls -lR "} + x.filename().string()).c_str());
     int i = ncreate;

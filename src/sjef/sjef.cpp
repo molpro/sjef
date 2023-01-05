@@ -378,7 +378,7 @@ bool Project::copy(const std::filesystem::path& destination_filename, bool force
   dp.property_delete("jobnumber");
   if (slave)
     dp.property_delete("run_directories");
-  dp.clean(true, true, false, keep_run_directories);
+  dp.clean(keep_run_directories);
   if (!keep_hash)
     dp.property_delete("project_hash");
   return true;
@@ -546,20 +546,7 @@ bool Project::run(int verbosity, bool force, bool wait) {
   return true;
 }
 
-void Project::clean(bool oldOutput, bool output, bool unused, int keep_run_directories) {
-  if (oldOutput || output) {
-    fs::remove_all(fs::path{filename()} / fs::path{name() + ".d"});
-    for (int i = 0; i < 100; ++i) {
-      fs::remove_all(fs::path{m_filename} / fs::path{name() + "." + m_suffixes["out"] + "_" + std::to_string(i)});
-      fs::remove_all(fs::path{m_filename} / fs::path{name() + "." + m_suffixes["xml"] + "_" + std::to_string(i)});
-    }
-  }
-  if (output) {
-    fs::remove(fs::path{filename()} / fs::path{name() + "." + m_suffixes["out"]});
-    fs::remove(fs::path{filename()} / fs::path{name() + "." + m_suffixes["xml"]});
-  }
-  if (unused)
-    throw std::invalid_argument("sjef::project::clean for unused files is not yet implemented");
+void Project::clean(int keep_run_directories) {
   if (auto statuss = status(); statuss == running || statuss == waiting)
     keep_run_directories = std::max(keep_run_directories, 1);
   while (run_list().size() > size_t(keep_run_directories))

@@ -211,7 +211,7 @@ extern "C" int sjef_program(int argc, char* argv[]) {
             success =
                 system(("eval ${PAGER:-${EDITOR:-less}} \\'" + proj.filename("out", "", 0).string() + "\\'").c_str());
         } else if (command == "clean") {
-          proj.clean(true, false, false, run_directories.getValue());
+          proj.clean(run_directories.getValue());
         } else if (command == "property") {
           property_process(extras);
         } else if (command == "interactive") {
@@ -247,7 +247,7 @@ extern "C" int sjef_program(int argc, char* argv[]) {
               auto argv = std::vector<std::string>{arguments};
               property_process(argv);
             } else if (command == "clean") {
-              proj.clean(true, false, false);
+              proj.clean();
             } else if (command == "edit") {
               if (system(("eval ${VISUAL:-${EDITOR:-vi}} \\'" + proj.filename("inp").string() + "\\'").c_str()) != 0)
                 throw std::runtime_error("Editor failed");

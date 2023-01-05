@@ -231,11 +231,11 @@ class Project(Node):
         """Kill the job started by ``run()``"""
         self._project_wrapper.kill()
 
-    def clean(self, old_output=True, output=False, unused=False):
+    def clean(self, keep_run_directories=1):
         """
-        Remove potentially unwanted files from the project
+        Remove run directories from the project
         """
-        self._project_wrapper.clean(old_output, output, unused)
+        self._project_wrapper.clean(keep_run_directories)
 
     def erase(self, path=None):
         """

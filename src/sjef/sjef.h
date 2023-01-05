@@ -249,13 +249,11 @@ public:
                             bool sync = true) const;
 
   /*!
-   * @brief Remove potentially unwanted files from the project
-   * @param oldOutput Whether to remove old output files
-   * @param output Whether to remove all output files
-   * @param unused Whether to remove unused files
+   * @brief Remove run directories from project
    * @param keep_run_directories Maximum number of run directories to keep
    */
-  void clean(bool oldOutput = true, bool output = false, bool unused = false, int keep_run_directories = 0);
+  void clean(int keep_run_directories = 1);
+
   /*!
    * @brief Set a property
    * @param property

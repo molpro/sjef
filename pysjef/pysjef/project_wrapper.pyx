@@ -199,10 +199,9 @@ cdef class ProjectWrapper:
         """
         return str_status(deref(self.c_project).status())
 
-    def clean(self, bool old_output=True, bool output=False,
-              bool unused=False):
-        """Removed potentially unwanted files from the project"""
-        deref(self.c_project).clean(old_output, output, unused)
+    def clean(self, int keep_run_directories = 1):
+        """Removed run directories from the project"""
+        deref(self.c_project).clean(keep_run_directories)
 
     def kill(self):
         """Kill the job started by ``run``"""

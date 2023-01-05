@@ -160,9 +160,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a5cd1316c743aa7da799c47d940d5ee1d"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsjef_1_1_project.html#a5cd1316c743aa7da799c47d940d5ee1d">file_contents</a> (const std::string &amp;suffix=&quot;&quot;, const std::string &amp;<a class="el" href="classsjef_1_1_project.html#a2ab441ee715de6e06991db61576ef6a3">name</a>=&quot;&quot;, int <a class="el" href="classsjef_1_1_project.html#a78a8af26654fada8c1b0799aac21c844">run</a>=0, bool sync=true) const</td></tr>
 <tr class="memdesc:a5cd1316c743aa7da799c47d940d5ee1d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtain the contents of a project file.  <a href="classsjef_1_1_project.html#a5cd1316c743aa7da799c47d940d5ee1d">More...</a><br /></td></tr>
 <tr class="separator:a5cd1316c743aa7da799c47d940d5ee1d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a17e29d1056196500591f6a9169925eef"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsjef_1_1_project.html#a17e29d1056196500591f6a9169925eef">clean</a> (bool oldOutput=true, bool output=false, bool unused=false, int keep_run_directories=0)</td></tr>
-<tr class="memdesc:a17e29d1056196500591f6a9169925eef"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove potentially unwanted files from the project.  <a href="classsjef_1_1_project.html#a17e29d1056196500591f6a9169925eef">More...</a><br /></td></tr>
-<tr class="separator:a17e29d1056196500591f6a9169925eef"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8742201261e5c3b84fa1874757514dcb"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsjef_1_1_project.html#a8742201261e5c3b84fa1874757514dcb">clean</a> (int keep_run_directories=1)</td></tr>
+<tr class="memdesc:a8742201261e5c3b84fa1874757514dcb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove run directories from project.  <a href="classsjef_1_1_project.html#a8742201261e5c3b84fa1874757514dcb">More...</a><br /></td></tr>
+<tr class="separator:a8742201261e5c3b84fa1874757514dcb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab3d2a8b311499e4faacc78972fd357d6"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsjef_1_1_project.html#ab3d2a8b311499e4faacc78972fd357d6">property_set</a> (const std::string &amp;property, const std::string &amp;value)</td></tr>
 <tr class="memdesc:ab3d2a8b311499e4faacc78972fd357d6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set a property.  <a href="classsjef_1_1_project.html#ab3d2a8b311499e4faacc78972fd357d6">More...</a><br /></td></tr>
 <tr class="separator:ab3d2a8b311499e4faacc78972fd357d6"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -997,8 +997,8 @@ Friends</h2></td></tr>
 
 </div>
 </div>
-<a id="a17e29d1056196500591f6a9169925eef"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a17e29d1056196500591f6a9169925eef">&#9670;&nbsp;</a></span>clean()</h2>
+<a id="a8742201261e5c3b84fa1874757514dcb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8742201261e5c3b84fa1874757514dcb">&#9670;&nbsp;</a></span>clean()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1006,41 +1006,16 @@ Friends</h2></td></tr>
         <tr>
           <td class="memname">void sjef::Project::clean </td>
           <td>(</td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>oldOutput</em> = <code>true</code>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>output</em> = <code>false</code>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>unused</em> = <code>false</code>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
           <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>keep_run_directories</em> = <code>0</code>&#160;</td>
-        </tr>
-        <tr>
+          <td class="paramname"><em>keep_run_directories</em> = <code>1</code></td><td>)</td>
           <td></td>
-          <td>)</td>
-          <td></td><td></td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p>Remove potentially unwanted files from the project. </p>
+<p>Remove run directories from project. </p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">oldOutput</td><td>Whether to remove old output files </td></tr>
-    <tr><td class="paramname">output</td><td>Whether to remove all output files </td></tr>
-    <tr><td class="paramname">unused</td><td>Whether to remove unused files </td></tr>
     <tr><td class="paramname">keep_run_directories</td><td>Maximum number of run directories to keep </td></tr>
   </table>
   </dd>
@@ -2746,7 +2721,7 @@ Friends</h2></td></tr>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Sun Dec 25 2022 07:32:05 for sjef by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
+Generated on Thu Jan 5 2023 08:44:30 for sjef by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
 </small></address>
 </body>
 </html>

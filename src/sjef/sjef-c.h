@@ -11,6 +11,7 @@ int sjef_project_copy(const char* project, const char* destination_filename, int
 int sjef_project_move(const char* project, const char* destination_filename);
 void sjef_project_erase(const char* project);
 void sjef_project_property_erase(const char* project);
+void sjef_project_clean(const char* project, int keep_run_directories);
 int sjef_project_import(const char* project, const char* file);
 int sjef_project_export(const char* project, const char* file);
 int sjef_project_run_needed(const char* project);

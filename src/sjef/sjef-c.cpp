@@ -71,6 +71,18 @@ void sjef_project_erase(const char* project) {
   } catch (...) {
   }
 }
+
+void sjef_project_clean(const char* project, int keep_run_directories){
+  try {
+    if (projects.count(project) == 0)
+      sjef_project_open(project);
+    projects.at(project)->clean(keep_run_directories);
+  } catch (std::exception& e) {
+    error(e);
+  } catch (...) {
+  }
+}
+
 int sjef_project_import(const char* project, const char* file) {
   try {
     if (projects.count(project) == 0)

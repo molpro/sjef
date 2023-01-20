@@ -6,6 +6,9 @@
 #ifndef WIN32
 #include <unistd.h>
 #endif
+#ifdef __WIN64
+#include <process.h>
+#endif
 std::string msg() {
   std::stringstream s;
   using namespace std::chrono;

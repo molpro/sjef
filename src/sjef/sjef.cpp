@@ -391,7 +391,14 @@ void Project::erase(const std::filesystem::path& filename, const std::string& de
     auto project = Project(filename_);
     backend = project.backends().at(project.m_backend);
   }
-  if (fs::remove_all(filename_))
+  bool success;
+  try {
+    success = fs::remove_all(filename_);
+  }
+  catch(...) {
+    success = fs::remove_all(filename_);
+  }
+  if (success)
     recent_edit("", filename_);
 }
 

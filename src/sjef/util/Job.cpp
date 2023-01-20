@@ -9,7 +9,7 @@
 #include <sstream>
 #include <string>
 #include <signal.h>
-#ifdef WIN32
+#if defined(WIN32) || defined(__WIN64)
 #ifdef _M_AMD64
 #define _AMD64_
 #endif
@@ -232,7 +232,7 @@ void Job::kill(int verbosity) {
     // catch failure to kill local jobs
     auto pid = m_project.local_pid_from_output();
     if (pid > 0) {
-#ifndef WIN32
+#if !defined(WIN32) && !defined(__WIN64)
       ::kill(pid, SIGTERM);
 #else
       HANDLE handle = OpenProcess(PROCESS_TERMINATE, FALSE, pid);

@@ -5,6 +5,7 @@ from .tree_view import tree_view
 from .node import Node
 from .container import DirectoryNode
 from .settings import Settings
+from .project import xpath
 
 import logging
 

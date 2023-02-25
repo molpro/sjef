@@ -17,3 +17,5 @@ scrap/
 .ipynb_checkpoints
 .vs
 CMakeSettings.json
+Doxyfile.in.bak
+.DS_Store

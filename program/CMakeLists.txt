@@ -21,7 +21,7 @@ add_custom_command(OUTPUT ${deployp}/bin/${PROGRAM_FILENAME}${CMAKE_EXECUTABLE_S
 add_custom_target(${PROGRAM_NAME}-deploy ALL DEPENDS ${deployp}/bin/${PROGRAM_FILENAME}${CMAKE_EXECUTABLE_SUFFIX})
 endif()
 
-if (APPLE_DISABLED)
+if (APPLE)
     add_custom_command(OUTPUT ${package_name}.pkg
             DEPENDS ${deployp}/bin/${PROGRAM_FILENAME}${CMAKE_EXECUTABLE_SUFFIX}
             COMMAND ${CMAKE_COMMAND} -E make_directory ${deployp}/share/${PROGRAM_FILENAME}/lib

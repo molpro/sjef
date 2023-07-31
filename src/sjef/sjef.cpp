@@ -4,6 +4,7 @@
 #include <array>
 #include <chrono>
 #include <cstdlib>
+#include <stdlib.h>
 #include <fstream>
 #include <functional>
 #include <map>

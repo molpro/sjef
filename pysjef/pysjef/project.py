@@ -283,12 +283,12 @@ class Project(Node):
     @property
     def input_file_path(self):
         # return Path(self.location / (self.name + ".inp"))
-        return filename("inp")
+        return self.filename("inp")
 
     @property
     def output_file_path(self):
         # return Path(self.location / (self.name + ".out"))
-        return filename("out")
+        return self.filename("out")
 
     @property
     def out(self):

@@ -44,7 +44,7 @@ with open("README.rst", 'r') as f:
 
 import platform
 if platform.system() == "Darwin":
-    extra_args = ['-std=c++17', "-mmacosx-version-min=10.15.0"]
+    extra_args = ['-std=c++17', "-mmacosx-version-min=11"]
 elif platform.system() == "Windows":
     LIB_DIRS = [PREFIX + "\Library\lib"]
     INCL_DIRS = [PREFIX + "\include"]

@@ -293,7 +293,7 @@ cdef class ProjectWrapper:
         cdef vector[string] cprops_with_prefix
         for prop in properties:
             cprops.push_back(prop.encode('utf-8'))
-            cprops_with_prefix.push_back(str(self.__property_name_prefix + prop.encode('utf-8')))
+            cprops_with_prefix.push_back(str(self.__property_name_prefix + prop).encode('utf-8'))
         cres = deref(self.c_project).property_get(cprops)
         cres_with_prefix = deref(self.c_project).property_get(cprops_with_prefix)
         res = {}

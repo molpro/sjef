@@ -317,7 +317,7 @@ class Project(Node):
         """
         view_file(self.output_file_path.absolute().as_posix())
 
-    def property_set(self, *properties):
+    def property_set(self, properties):
         """
         Set the value of a project property
         """
@@ -342,6 +342,12 @@ class Project(Node):
     def recent_find(self, location):
         return self._project_wrapper.recent_find(location)
 
+
+    def backend_names(self):
+        """
+        Get the names of all the backend objects associated with the object.
+        """
+        return self._project_wrapper.backend_names()
 
     def backend_parameters(self, backend, doc=False):
         """

@@ -58,7 +58,7 @@ cdef class ProjectWrapper:
             self._create(name, location, construct, suffix, file_suffixes)
 
     def _create(self, str name, location, bool construct, suffix, file_suffixes):
-        self.__property_name_prefix = "user::"
+        self.__property_name_prefix = ""
         self.name = name
         self.construct = construct
         cdef string csuffix = str(suffix).encode('utf-8')
@@ -263,10 +263,16 @@ cdef class ProjectWrapper:
         """
         Set the value of a project property.
         """
+        print('property_set',props)
+        print(type(props))
         cdef map[string, string] cprops
-        for key, val in props:
+        for key, val in props.items():
             ckey = str(self.__property_name_prefix + key).encode('utf-8')
             cval = str(val).encode('utf-8')
+            print('key=',key)
+            print('val=',val)
+            print('ckey=',ckey)
+            print('cval=',cval)
             cprops[ckey] = cval
         deref(self.c_project).property_set(cprops)
 
@@ -333,6 +339,10 @@ cdef class ProjectWrapper:
                                     .format(location))
         else:
             return rank
+
+    def backend_names(self):
+        cdef vector[string] cresult = deref(self.c_project).backend_names()
+        return [n.decode('utf-8') for n in cresult]
 
     def backend_parameters(self, backend, bool doc = False):
         """

@@ -25,18 +25,6 @@ Additional features of pysjef include:
 - Processing of the project tree by selecting groups of nodes,
   accessing specific attributes, and creating sub-trees
 
-Documentation
-=============
-
-Documentation for master release is hosted here
-`https://molpro.gitlab.io/pysjef/ <https://molpro.gitlab.io/pysjef/>`_.
-
-Installation
-============
-
-We are in the process of adding pysjef to conda-forge. In the mean time,
-see the `developers section <https://molpro.gitlab.io/pysjef/developers.html#developer-install>`_.
-
 List of Contributors
 ====================
 

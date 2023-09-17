@@ -9,6 +9,7 @@
 #include <sstream>
 #include <string>
 #include <signal.h>
+#include <stdlib.h>
 #if defined(WIN32) || defined(__WIN64)
 #ifdef _M_AMD64
 #define _AMD64_
@@ -45,10 +46,22 @@ sjef::util::Job::Job(const sjef::Project& project)
   m_poll_task = std::async(std::launch::async, [this]() { this->poll_job(); });
   //  std::cout << "Job constructor has launched poll task" << std::endl;
 }
+
+    void setup_rsync_path() {
+#ifdef __APPLE__
+        // don't want to end up with /usr/bin/rsync which (2023) is too old
+        auto oldpath = std::string{std::getenv("PATH")};
+        auto needed_path = std::string{"/opt/homebrew/bin:/usr/local/bin:/opt/local/bin:"};
+        if (oldpath.substr(0,needed_path.length()) != needed_path)
+            setenv("PATH", (needed_path + oldpath).c_str(), 1);
+#endif
+}
+
 std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verbosity) {
   if (localhost())
     return {true, "", ""};
-  std::string command = "rsync --archive --copy-links --timeout=5 --protect-args -v";
+  setup_rsync_path();
+  std::string command = "rsync --archive --copy-links --timeout=5 -s -v";
   command += " --rsync-path=" + m_remote_rsync;
   command += " --exclude=Info.plist --exclude=.Info.plist.writing_object";
 #ifdef WIN32
@@ -86,7 +99,8 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::pull_rundir(int verb
   m_trace(3 - verbosity) << "pull_rundir " << verbosity << std::endl;
   if (localhost())
     return {true, "", ""};
-  std::string command = "rsync --archive --copy-links --timeout=5 --protect-args -v";
+  setup_rsync_path();
+  std::string command = "rsync --archive --copy-links --timeout=5 -s -v";
   command += " --rsync-path=" + m_remote_rsync;
   command += " --exclude=backup --exclude=*.d";
   command += " --exclude=Info.plist --exclude=.Info.plist.writing_object";

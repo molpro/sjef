@@ -1,5 +1,13 @@
 #ifndef SJEF_SJEF_H
 #define SJEF_SJEF_H
+#ifdef __APPLE__
+#if (__DARWIN_C_LEVEL  < __DARWIN_C_FULL) && \
+    (!defined(__STDC_VERSION__) || __STDC_VERSION__ < 201112L) && \
+    (!defined(__cplusplus) || __cplusplus < 201703L)
+#include <boost/align/aligned_alloc.hpp>
+using boost::alignment::aligned_alloc;
+#endif
+#endif
 #include <sjef/util/Logger.h>
 #include <atomic>
 #include <filesystem>

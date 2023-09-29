@@ -1,22 +1,21 @@
 #include "sjef.h"
 #include "sjef-backend.h"
+#include "util/Job.h"
 #include "util/Locker.h"
+#include "util/util.h"
 #include <array>
 #include <chrono>
 #include <cstdlib>
-#include <stdlib.h>
 #include <fstream>
 #include <functional>
 #include <map>
 #include <pugixml.hpp>
-#include <regex>
-#include <string>
-#include <thread>
-#include "util/Job.h"
-#include "util/util.h"
-#include <sstream>
 #include <random>
 #include <regex>
+#include <sstream>
+#include <stdlib.h>
+#include <string>
+#include <thread>
 
 namespace fs = std::filesystem;
 
@@ -396,8 +395,7 @@ void Project::erase(const std::filesystem::path& filename, const std::string& de
   bool success;
   try {
     success = fs::remove_all(filename_);
-  }
-  catch(...) {
+  } catch (...) {
     success = fs::remove_all(filename_);
   }
   if (success)
@@ -847,7 +845,7 @@ std::filesystem::path Project::filename(std::string suffix, const std::string& n
 std::string Project::name() const { return fs::path(m_filename).stem().string(); }
 
 std::string Project::run_directory_basename(int run) const {
-  return std::regex_replace(name(),std::regex{" "},"_") + "_" + std::to_string(run);
+  return std::regex_replace(name(), std::regex{" "}, "_") + "_" + std::to_string(run);
 }
 
 std::filesystem::path Project::run_directory(int run) const {
@@ -857,7 +855,7 @@ std::filesystem::path Project::run_directory(int run) const {
   if (sequence < 1)
     return filename(); // covers the case of old projects without run directories
   auto dirlist = run_list();
-  auto dir = fs::path{filename()} / "run" / (dirlist[sequence-1] + "." + m_project_suffix);
+  auto dir = fs::path{filename()} / "run" / (dirlist[sequence - 1] + "." + m_project_suffix);
   if (!fs::is_directory(dir))
     throw runtime_error("Cannot find directory " + dir.string());
   return dir.string();
@@ -865,9 +863,10 @@ std::filesystem::path Project::run_directory(int run) const {
 fs::path Project::run_directory_new() {
   auto dirlist = run_list();
   std::string stem;
-  for (auto seq=int(dirlist.size()+1); true; ++seq) {
+  for (auto seq = int(dirlist.size() + 1); true; ++seq) {
     stem = run_directory_basename(seq);
-    if (std::find(dirlist.begin(), dirlist.end(), stem) == dirlist.end()) break;
+    if (std::find(dirlist.begin(), dirlist.end(), stem) == dirlist.end())
+      break;
   }
   dirlist.push_back(stem);
   std::stringstream ss;
@@ -895,7 +894,7 @@ void Project::run_delete(int run) {
   auto dirlist = run_list();
   std::stringstream ss;
   for (int i = 0; i < dirlist.size(); ++i) {
-      ss << dirlist[i] << " ";
+    ss << dirlist[i] << " ";
   }
 }
 
@@ -921,9 +920,10 @@ Project::run_list_t Project::run_list() const {
   while (ss >> value && !ss.eof())
     if (fs::exists(fs::path{m_filename} / "run" / (value + "." + m_project_suffix))) {
       rundirs.push_back(value);
-      new_property += value+" ";
+      new_property += value + " ";
     }
-  if (new_property != property) const_cast<Project*>(this)->property_set("run_directories",new_property);
+  if (new_property != property)
+    const_cast<Project*>(this)->property_set("run_directories", new_property);
   return rundirs;
 }
 
@@ -1230,8 +1230,8 @@ unsigned int Project::current_run() const {
 
 void Project::add_backend(const std::string& name, const mapstringstring_t& fields) {
   m_backends[name] = localhost((fields.count("host") > 0 ? fields.at("host") : "localhost"))
-                     ? Backend(Backend::local(), name)
-                     : Backend(Backend::Linux(), name);
+                         ? Backend(Backend::local(), name)
+                         : Backend(Backend::Linux(), name);
   if (fields.count("host") > 0)
     m_backends[name].host = fields.at("host");
   if (fields.count("cache") > 0)
@@ -1289,7 +1289,7 @@ const std::string Project::backend_cache() const {
 }
 
 std::string Project::filename_string(std::string suffix, const std::string& name, int run) const {
-  return filename(suffix,name,run).string();
+  return filename(suffix, name, run).string();
 }
 
 } // namespace sjef

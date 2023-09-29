@@ -1,15 +1,12 @@
 #ifndef SJEF_SJEF_H
 #define SJEF_SJEF_H
 #ifdef __APPLE__
-#if (__DARWIN_C_LEVEL  < __DARWIN_C_FULL) && \
-    (!defined(__STDC_VERSION__) || __STDC_VERSION__ < 201112L) && \
+#if (__DARWIN_C_LEVEL < __DARWIN_C_FULL) && (!defined(__STDC_VERSION__) || __STDC_VERSION__ < 201112L) &&              \
     (!defined(__cplusplus) || __cplusplus < 201703L)
 #include <boost/align/aligned_alloc.hpp>
 using boost::alignment::aligned_alloc;
 #endif
 #endif
-#include <__filesystem/path.h>
-#include <atomic>
 #include <filesystem>
 #include <iostream>
 #include <map>
@@ -28,14 +25,14 @@ class xpath_node_set; ///< @private
 namespace sjef {
 namespace util {
 class Job;
-class Locker;  ///< @private
-}
+class Locker; ///< @private
+} // namespace util
 class Backend; ///< @private
-using util::Logger;
 using util::Locker;
+using util::Logger;
 struct pugi_xml_document; ///< @private
 static constexpr int recentMax = 128;
-enum status : int { unknown = 0, running = 1, waiting = 2, completed = 3, unevaluated = 4, killed = 5, failed=6 };
+enum status : int { unknown = 0, running = 1, waiting = 2, completed = 3, unevaluated = 4, killed = 5, failed = 6 };
 using mapstringstring_t = std::map<std::string, std::string>;
 
 class Project {

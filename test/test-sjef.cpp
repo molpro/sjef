@@ -558,7 +558,7 @@ TEST_F(test_sjef, dummy_backend) {
 TEST_F(test_sjef, project_name_embedded_space) {
   auto suffix = this->suffix();
   ASSERT_TRUE(fs::is_directory(sjef::expand_path((m_dot_sjef / suffix).string())));
-  sjef::Project p(testproject("completely new"));
+  sjef::Project p(testproject("completely new with some spaces"));
   std::ofstream(p.filename("inp")) << "geometry={He};rhf\n";
   if (sjef::util::Shell::local_asynchronous_supported()) {
     p.run(sjef::Backend::dummy_name, 0, true, false);
@@ -597,15 +597,15 @@ TEST_F(test_sjef, run_directory) {
   std::ofstream(p.filename("xyz")) << "1\n\nHe 0 0 0\n";
   EXPECT_TRUE(fs::exists(sjef::expand_path(filename)));
   for (int i = 1; i < 4; i++) {
-    auto si = std::to_string(i) + "." + suffix();
+    auto si = p.run_directory_basename(i) + "." + suffix();
     auto rundir = p.run_directory_new();
     EXPECT_EQ(i, p.run_verify(i));
     EXPECT_EQ(i, p.run_verify(0));
     EXPECT_EQ(p.run_directory(), p.filename("", "", 0));
     EXPECT_EQ(p.run_directory(0), (fs::path{p.filename()} / "run" / si).string());
-    EXPECT_EQ(p.filename("out", "", 0), (fs::path{p.filename()} / "run" / si / (std::to_string(i) + ".out")).string());
+    EXPECT_EQ(p.filename("out", "", 0), (fs::path{p.filename()} / "run" / si / (p.run_directory_basename(i) + ".out")).string());
   }
-  p.take_run_files(3, "3.inp", "copied.inp");
+  p.take_run_files(3, p.run_directory_basename(3)+".inp", "copied.inp");
   std::ifstream(p.filename("", "copied.inp")) >> input2;
   EXPECT_EQ(input, input2);
   int seq = p.run_list().size();

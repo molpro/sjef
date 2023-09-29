@@ -847,8 +847,7 @@ std::filesystem::path Project::filename(std::string suffix, const std::string& n
 std::string Project::name() const { return fs::path(m_filename).stem().string(); }
 
 std::string Project::run_directory_basename(int run) const {
-  return std::to_string(run); // TODO simulation of old behaviour; remove in next stage
-  return name() + "_" + std::to_string(run);
+  return std::regex_replace(name(),std::regex{" "},"_") + "_" + std::to_string(run);
 }
 
 std::filesystem::path Project::run_directory(int run) const {

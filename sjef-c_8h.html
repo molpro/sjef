@@ -163,12 +163,6 @@ Functions</h2></td></tr>
 <tr class="memitem:a65abed33c969db9853b8d1fd305e20e4"><td class="memItemLeft" align="right" valign="top">char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="sjef-c_8h.html#a65abed33c969db9853b8d1fd305e20e4">sjef_project_run_directory</a> (const char *project, int run)</td></tr>
 <tr class="memdesc:a65abed33c969db9853b8d1fd305e20e4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtain the path of a run directory.  <a href="sjef-c_8h.html#a65abed33c969db9853b8d1fd305e20e4">More...</a><br /></td></tr>
 <tr class="separator:a65abed33c969db9853b8d1fd305e20e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afa28430313f97c79c2cd5fdc4952062a"><td class="memItemLeft" align="right" valign="top">int *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="sjef-c_8h.html#afa28430313f97c79c2cd5fdc4952062a">sjef_project_run_list</a> (const char *project)</td></tr>
-<tr class="memdesc:afa28430313f97c79c2cd5fdc4952062a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtain the list of run numbers in reverse order, ie the most recent first.  <a href="sjef-c_8h.html#afa28430313f97c79c2cd5fdc4952062a">More...</a><br /></td></tr>
-<tr class="separator:afa28430313f97c79c2cd5fdc4952062a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0965eb83f822302643e547a1e670b4f3"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="sjef-c_8h.html#a0965eb83f822302643e547a1e670b4f3">sjef_project_run_directory_next</a> (const char *project)</td></tr>
-<tr class="memdesc:a0965eb83f822302643e547a1e670b4f3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtain the sequence number of the next run directory to be created.  <a href="sjef-c_8h.html#a0965eb83f822302643e547a1e670b4f3">More...</a><br /></td></tr>
-<tr class="separator:a0965eb83f822302643e547a1e670b4f3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad36300523350d4dc161746ea3cd64b27"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="sjef-c_8h.html#ad36300523350d4dc161746ea3cd64b27">sjef_project_run_delete</a> (const char *project, int run)</td></tr>
 <tr class="memdesc:ad36300523350d4dc161746ea3cd64b27"><td class="mdescLeft">&#160;</td><td class="mdescRight">Delete a run directory.  <a href="sjef-c_8h.html#ad36300523350d4dc161746ea3cd64b27">More...</a><br /></td></tr>
 <tr class="separator:ad36300523350d4dc161746ea3cd64b27"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -1277,60 +1271,6 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a0965eb83f822302643e547a1e670b4f3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0965eb83f822302643e547a1e670b4f3">&#9670;&nbsp;</a></span>sjef_project_run_directory_next()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int sjef_project_run_directory_next </td>
-          <td>(</td>
-          <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>project</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Obtain the sequence number of the next run directory to be created. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">project</td><td></td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd></dd></dl>
-
-</div>
-</div>
-<a id="afa28430313f97c79c2cd5fdc4952062a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afa28430313f97c79c2cd5fdc4952062a">&#9670;&nbsp;</a></span>sjef_project_run_list()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int* sjef_project_run_list </td>
-          <td>(</td>
-          <td class="paramtype">const char *&#160;</td>
-          <td class="paramname"><em>project</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Obtain the list of run numbers in reverse order, ie the most recent first. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">project</td><td>The project </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>zero-terminated list (note that run numbers are positive integers) </dd></dl>
-
-</div>
-</div>
 <a id="af80952bfef7443876a51817f38e383ed"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#af80952bfef7443876a51817f38e383ed">&#9670;&nbsp;</a></span>sjef_project_run_needed()</h2>
 
@@ -1558,7 +1498,7 @@ Functions</h2></td></tr>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Tue Sep 26 2023 07:59:42 for sjef by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
+Generated on Fri Sep 29 2023 12:57:01 for sjef by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
 </small></address>
 </body>
 </html>

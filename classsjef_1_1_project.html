@@ -82,9 +82,9 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-types"></a>
 Public Types</h2></td></tr>
-<tr class="memitem:a9aa36852c3e5054ba33cb50f07681fad"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsjef_1_1_project.html#a9aa36852c3e5054ba33cb50f07681fad">run_list_t</a> = std::set&lt; int, std::greater&lt; int &gt; &gt;</td></tr>
-<tr class="memdesc:a9aa36852c3e5054ba33cb50f07681fad"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtain the list of run numbers in reverse order, ie the most recent first.  <a href="classsjef_1_1_project.html#a9aa36852c3e5054ba33cb50f07681fad">More...</a><br /></td></tr>
-<tr class="separator:a9aa36852c3e5054ba33cb50f07681fad"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af20e16866d0119ee600f8f4726174b92"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsjef_1_1_project.html#af20e16866d0119ee600f8f4726174b92">run_list_t</a> = std::vector&lt; std::string &gt;</td></tr>
+<tr class="memdesc:af20e16866d0119ee600f8f4726174b92"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtain the list of run directory names.  <a href="classsjef_1_1_project.html#af20e16866d0119ee600f8f4726174b92">More...</a><br /></td></tr>
+<tr class="separator:af20e16866d0119ee600f8f4726174b92"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
@@ -188,23 +188,22 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:a8c43d0fe14bd729d73453349521cf598"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0cd7fe5c286cb1af5041ddd5ed1d25e0"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsjef_1_1_project.html#a0cd7fe5c286cb1af5041ddd5ed1d25e0">filename_string</a> (std::string suffix=&quot;&quot;, const std::string &amp;<a class="el" href="classsjef_1_1_project.html#a2ab441ee715de6e06991db61576ef6a3">name</a>=&quot;&quot;, int <a class="el" href="classsjef_1_1_project.html#a78a8af26654fada8c1b0799aac21c844">run</a>=-1) const</td></tr>
 <tr class="separator:a0cd7fe5c286cb1af5041ddd5ed1d25e0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1ec9364f2e802487d35e9b244359229b"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsjef_1_1_project.html#a1ec9364f2e802487d35e9b244359229b">run_directory_basename</a> (int <a class="el" href="classsjef_1_1_project.html#a78a8af26654fada8c1b0799aac21c844">run</a>=0) const</td></tr>
+<tr class="separator:a1ec9364f2e802487d35e9b244359229b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae8cdb7a5e5a3dc0f928e403c1e514e0b"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsjef_1_1_project.html#ae8cdb7a5e5a3dc0f928e403c1e514e0b">run_directory</a> (int <a class="el" href="classsjef_1_1_project.html#a78a8af26654fada8c1b0799aac21c844">run</a>=0) const</td></tr>
 <tr class="memdesc:ae8cdb7a5e5a3dc0f928e403c1e514e0b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtain the path of a run directory.  <a href="classsjef_1_1_project.html#ae8cdb7a5e5a3dc0f928e403c1e514e0b">More...</a><br /></td></tr>
 <tr class="separator:ae8cdb7a5e5a3dc0f928e403c1e514e0b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8495fd2cfa273c25002940a4f1adc0d0"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsjef_1_1_project.html#a8495fd2cfa273c25002940a4f1adc0d0">run_verify</a> (int <a class="el" href="classsjef_1_1_project.html#a78a8af26654fada8c1b0799aac21c844">run</a>) const</td></tr>
 <tr class="memdesc:a8495fd2cfa273c25002940a4f1adc0d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check a run exists, and resolve most recent.  <a href="classsjef_1_1_project.html#a8495fd2cfa273c25002940a4f1adc0d0">More...</a><br /></td></tr>
 <tr class="separator:a8495fd2cfa273c25002940a4f1adc0d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1f920554234d6103addd3b074180588f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classsjef_1_1_project.html#a9aa36852c3e5054ba33cb50f07681fad">run_list_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsjef_1_1_project.html#a1f920554234d6103addd3b074180588f">run_list</a> () const</td></tr>
+<tr class="memitem:a1f920554234d6103addd3b074180588f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classsjef_1_1_project.html#af20e16866d0119ee600f8f4726174b92">run_list_t</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsjef_1_1_project.html#a1f920554234d6103addd3b074180588f">run_list</a> () const</td></tr>
 <tr class="separator:a1f920554234d6103addd3b074180588f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3310a4c833fd4963932aebf34e34bd6a"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsjef_1_1_project.html#a3310a4c833fd4963932aebf34e34bd6a">run_directory_new</a> ()</td></tr>
-<tr class="memdesc:a3310a4c833fd4963932aebf34e34bd6a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new run directory. Also copy into it the input file, and any of its dependencies.  <a href="classsjef_1_1_project.html#a3310a4c833fd4963932aebf34e34bd6a">More...</a><br /></td></tr>
-<tr class="separator:a3310a4c833fd4963932aebf34e34bd6a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a23371c0bd90f3b184b972e422b6cdd84"><td class="memItemLeft" align="right" valign="top">std::filesystem::path&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsjef_1_1_project.html#a23371c0bd90f3b184b972e422b6cdd84">run_directory_new</a> ()</td></tr>
+<tr class="memdesc:a23371c0bd90f3b184b972e422b6cdd84"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create a new run directory. Also copy into it the input file, and any of its dependencies.  <a href="classsjef_1_1_project.html#a23371c0bd90f3b184b972e422b6cdd84">More...</a><br /></td></tr>
+<tr class="separator:a23371c0bd90f3b184b972e422b6cdd84"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab364eb17dd0a1913d1843ea91e630116"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsjef_1_1_project.html#ab364eb17dd0a1913d1843ea91e630116">run_delete</a> (int <a class="el" href="classsjef_1_1_project.html#a78a8af26654fada8c1b0799aac21c844">run</a>)</td></tr>
 <tr class="memdesc:ab364eb17dd0a1913d1843ea91e630116"><td class="mdescLeft">&#160;</td><td class="mdescRight">Delete a run directory.  <a href="classsjef_1_1_project.html#ab364eb17dd0a1913d1843ea91e630116">More...</a><br /></td></tr>
 <tr class="separator:ab364eb17dd0a1913d1843ea91e630116"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad06cdeea3258cc660f24eb16dca25ccb"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsjef_1_1_project.html#ad06cdeea3258cc660f24eb16dca25ccb">run_directory_next</a> () const</td></tr>
-<tr class="memdesc:ad06cdeea3258cc660f24eb16dca25ccb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Obtain the sequence number of the next run directory to be created.  <a href="classsjef_1_1_project.html#ad06cdeea3258cc660f24eb16dca25ccb">More...</a><br /></td></tr>
-<tr class="separator:ad06cdeea3258cc660f24eb16dca25ccb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2ab441ee715de6e06991db61576ef6a3"><td class="memItemLeft" align="right" valign="top">std::string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsjef_1_1_project.html#a2ab441ee715de6e06991db61576ef6a3">name</a> () const</td></tr>
 <tr class="separator:a2ab441ee715de6e06991db61576ef6a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a29679ad322287f9297d0ff8c7ce89bca"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classsjef_1_1_project.html#a29679ad322287f9297d0ff8c7ce89bca">recent_find</a> (const std::filesystem::path &amp;<a class="el" href="classsjef_1_1_project.html#a8c43d0fe14bd729d73453349521cf598">filename</a>) const</td></tr>
@@ -307,19 +306,19 @@ Friends</h2></td></tr>
 <tr class="separator:a1477b6d3867ff4c6ced762877881f34f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Member Typedef Documentation</h2>
-<a id="a9aa36852c3e5054ba33cb50f07681fad"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9aa36852c3e5054ba33cb50f07681fad">&#9670;&nbsp;</a></span>run_list_t</h2>
+<a id="af20e16866d0119ee600f8f4726174b92"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af20e16866d0119ee600f8f4726174b92">&#9670;&nbsp;</a></span>run_list_t</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">using <a class="el" href="classsjef_1_1_project.html#a9aa36852c3e5054ba33cb50f07681fad">sjef::Project::run_list_t</a> =  std::set&lt;int, std::greater&lt;int&gt; &gt;</td>
+          <td class="memname">using <a class="el" href="classsjef_1_1_project.html#af20e16866d0119ee600f8f4726174b92">sjef::Project::run_list_t</a> =  std::vector&lt;std::string&gt;</td>
         </tr>
       </table>
 </div><div class="memdoc">
 
-<p>Obtain the list of run numbers in reverse order, ie the most recent first. </p>
+<p>Obtain the list of run directory names. </p>
 <dl class="section return"><dt>Returns</dt><dd></dd></dl>
 
 </div>
@@ -2148,14 +2147,32 @@ Friends</h2></td></tr>
 
 </div>
 </div>
-<a id="a3310a4c833fd4963932aebf34e34bd6a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3310a4c833fd4963932aebf34e34bd6a">&#9670;&nbsp;</a></span>run_directory_new()</h2>
+<a id="a1ec9364f2e802487d35e9b244359229b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1ec9364f2e802487d35e9b244359229b">&#9670;&nbsp;</a></span>run_directory_basename()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">int sjef::Project::run_directory_new </td>
+          <td class="memname">std::string sjef::Project::run_directory_basename </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>run</em> = <code>0</code></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+</div>
+</div>
+<a id="a23371c0bd90f3b184b972e422b6cdd84"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a23371c0bd90f3b184b972e422b6cdd84">&#9670;&nbsp;</a></span>run_directory_new()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">std::filesystem::path sjef::Project::run_directory_new </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td></td>
@@ -2168,26 +2185,6 @@ Friends</h2></td></tr>
 
 </div>
 </div>
-<a id="ad06cdeea3258cc660f24eb16dca25ccb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad06cdeea3258cc660f24eb16dca25ccb">&#9670;&nbsp;</a></span>run_directory_next()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">int sjef::Project::run_directory_next </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Obtain the sequence number of the next run directory to be created. </p>
-<dl class="section return"><dt>Returns</dt><dd></dd></dl>
-
-</div>
-</div>
 <a id="a1f920554234d6103addd3b074180588f"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a1f920554234d6103addd3b074180588f">&#9670;&nbsp;</a></span>run_list()</h2>
 
@@ -2195,7 +2192,7 @@ Friends</h2></td></tr>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="classsjef_1_1_project.html#a9aa36852c3e5054ba33cb50f07681fad">run_list_t</a> sjef::Project::run_list </td>
+          <td class="memname"><a class="el" href="classsjef_1_1_project.html#af20e16866d0119ee600f8f4726174b92">run_list_t</a> sjef::Project::run_list </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td> const</td>
@@ -2721,7 +2718,7 @@ Friends</h2></td></tr>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Tue Sep 26 2023 07:59:42 for sjef by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
+Generated on Fri Sep 29 2023 12:57:01 for sjef by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1
 </small></address>
 </body>
 </html>

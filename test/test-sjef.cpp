@@ -120,7 +120,7 @@ TEST_F(test_sjef, copyMolpro) {
   std::string inp;
   std::ifstream(p.filename("inp")) >> inp;
   EXPECT_EQ(inp, input);
-  EXPECT_EQ(p.run_list().size(), nkeep) << std::system((std::string{"ls -lR "} + p.filename().string()).c_str());
+  EXPECT_EQ(p.run_list().size(), nkeep) << std::system((std::string{"ls -lR "} + p.filename().string()).c_str()) << "\nnew run_directories: "<<p.property_get("run_directories")<<std::endl;
 }
 
 TEST_F(test_sjef, erase) {
@@ -612,7 +612,7 @@ TEST_F(test_sjef, run_directory) {
   p.run_delete(3);
   EXPECT_EQ(2, p.run_verify(0));
   p.run_delete(1);
-  EXPECT_EQ(2, p.run_verify(0));
+  EXPECT_EQ(1, p.run_verify(0));
   //  system((std::string("ls -lR ")+p.filename()).c_str());
 }
 

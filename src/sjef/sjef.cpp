@@ -372,22 +372,6 @@ bool Project::copy(const std::filesystem::path& destination_filename, bool force
     auto bolt = m_locker->bolt();
     if (!copyDir(fs::path(m_filename), dest, false, !slave))
       return false;
-    for (const auto& x : fs::directory_iterator{fs::path(m_filename) / "run"})
-      if (fs::is_directory(x)) {
-        auto dir = x.path().root_directory();
-        std::cout << "root_directory " << x.path().root_directory() << std::endl;
-        std::cout << "root_name " << x.path().root_name() << std::endl;
-        std::cout << "relative_path " << x.path().relative_path() << std::endl;
-        std::cout << "parent_path " << x.path().parent_path() << std::endl;
-        std::cout << "filename " << x.path().filename() << std::endl;
-        std::cout << "stem " << x.path().stem() << std::endl;
-        std::cout << "extension " << x.path().extension() << std::endl;
-        //            auto newname =
-        //            std::regex_replace(std::string{x.path()},std::regex{"(^.*)([A-Za-z0-9/\\]+_|)([0-9]+)\\.("+m_project_suffix+"$)"},
-        //            "one:$1 three:$3 four:$4");
-        auto newname =  fs::path{x.path().parent_path()} / ( dest.stem().string()+"_"+ std::regex_replace(std::string{x.path().stem()},std::regex{".*_"},""));
-        std::cout << "run: "<<x<<", newname: "<<newname<<std::endl;
-    }
   }
   Project dp(dest.string());
   dp.force_file_names(name());
@@ -559,10 +543,10 @@ bool Project::run(int verbosity, bool force, bool wait) {
   run_command = spl.front();
   for (auto sp = spl.rbegin(); sp < spl.rend() - 1; sp++)
     optionstring = "'" + *sp + "' " + optionstring;
-  m_trace(3 - verbosity) << "run job " << run_command + " " + optionstring + rundir.string() + ".inp"
+  m_trace(3 - verbosity) << "run job " << run_command + " " + optionstring + rundir.stem().string() + ".inp"
                          << std::endl;
   m_job.reset(new util::Job(*this));
-  m_job->run(run_command + " " + optionstring + rundir.string() + ".inp", verbosity, false);
+  m_job->run(run_command + " " + optionstring + rundir.stem().string() + ".inp", verbosity, false);
   property_set("jobnumber", std::to_string(m_job->job_number()));
   //    p_status_mutex.reset(); // TODO probably not necessary
   m_trace(3 - verbosity) << "jobnumber " << m_job->job_number() << std::endl;
@@ -873,7 +857,8 @@ std::filesystem::path Project::run_directory(int run) const {
   auto sequence = run_verify(run);
   if (sequence < 1)
     return filename(); // covers the case of old projects without run directories
-  auto dir = fs::path{filename()} / "run" / (run_directory_basename(sequence) + "." + m_project_suffix);
+  auto dirlist = run_list();
+  auto dir = fs::path{filename()} / "run" / (dirlist[sequence-1] + "." + m_project_suffix);
   if (!fs::is_directory(dir))
     throw runtime_error("Cannot find directory " + dir.string());
   return dir.string();
@@ -910,10 +895,9 @@ void Project::run_delete(int run) {
   fs::remove_all(run_directory(run));
   auto dirlist = run_list();
   std::stringstream ss;
-  for (int i = 0; i < dirlist.size(); ++i)
-    if (i != run)
+  for (int i = 0; i < dirlist.size(); ++i) {
       ss << dirlist[i] << " ";
-  property_set("run_directories", ss.str());
+  }
 }
 
 int Project::run_verify(int run) const {
@@ -926,7 +910,7 @@ int Project::run_verify(int run) const {
   else if (runlist.empty())
     return 0;
   else
-    return 1;
+    return runlist.size();
 }
 
 Project::run_list_t Project::run_list() const {
@@ -940,7 +924,6 @@ Project::run_list_t Project::run_list() const {
       rundirs.push_back(value);
       new_property += value+" ";
     }
-  if (!new_property.empty()) new_property.pop_back();
   if (new_property != property) const_cast<Project*>(this)->property_set("run_directories",new_property);
   return rundirs;
 }
@@ -1248,8 +1231,8 @@ unsigned int Project::current_run() const {
 
 void Project::add_backend(const std::string& name, const mapstringstring_t& fields) {
   m_backends[name] = localhost((fields.count("host") > 0 ? fields.at("host") : "localhost"))
-                         ? Backend(Backend::local(), name)
-                         : Backend(Backend::Linux(), name);
+                     ? Backend(Backend::local(), name)
+                     : Backend(Backend::Linux(), name);
   if (fields.count("host") > 0)
     m_backends[name].host = fields.at("host");
   if (fields.count("cache") > 0)

@@ -91,18 +91,6 @@ static inline char* sjef_project_run_directory_default(const char* project) {
   return sjef_project_run_directory(project, 0);
 }
 /*!
- * @brief Obtain the list of run numbers in reverse order, ie the most recent first
- * @param project The project
- * @return zero-terminated list (note that run numbers are positive integers)
- */
-int* sjef_project_run_list(const char* project);
-/*!
- * @brief Obtain the sequence number of the next run directory to be created
- * @param project
- * @return
- */
-int sjef_project_run_directory_next(const char* project);
-/*!
  * @brief Delete a run directory
  * @param project The project
  * @param run

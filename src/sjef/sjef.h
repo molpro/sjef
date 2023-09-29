@@ -1,15 +1,12 @@
 #ifndef SJEF_SJEF_H
 #define SJEF_SJEF_H
 #ifdef __APPLE__
-#if (__DARWIN_C_LEVEL  < __DARWIN_C_FULL) && \
-    (!defined(__STDC_VERSION__) || __STDC_VERSION__ < 201112L) && \
+#if (__DARWIN_C_LEVEL < __DARWIN_C_FULL) && (!defined(__STDC_VERSION__) || __STDC_VERSION__ < 201112L) &&              \
     (!defined(__cplusplus) || __cplusplus < 201703L)
 #include <boost/align/aligned_alloc.hpp>
 using boost::alignment::aligned_alloc;
 #endif
 #endif
-#include <sjef/util/Logger.h>
-#include <atomic>
 #include <filesystem>
 #include <iostream>
 #include <map>
@@ -17,6 +14,7 @@ using boost::alignment::aligned_alloc;
 #include <mutex>
 #include <ostream>
 #include <set>
+#include <sjef/util/Logger.h>
 #include <string>
 #include <thread>
 #include <vector>
@@ -27,14 +25,14 @@ class xpath_node_set; ///< @private
 namespace sjef {
 namespace util {
 class Job;
-class Locker;  ///< @private
-}
+class Locker; ///< @private
+} // namespace util
 class Backend; ///< @private
-using util::Logger;
 using util::Locker;
+using util::Logger;
 struct pugi_xml_document; ///< @private
 static constexpr int recentMax = 128;
-enum status : int { unknown = 0, running = 1, waiting = 2, completed = 3, unevaluated = 4, killed = 5, failed=6 };
+enum status : int { unknown = 0, running = 1, waiting = 2, completed = 3, unevaluated = 4, killed = 5, failed = 6 };
 using mapstringstring_t = std::map<std::string, std::string>;
 
 class Project {
@@ -310,6 +308,7 @@ public:
    */
   std::filesystem::path filename(std::string suffix = "", const std::string& name = "", int run = -1) const;
   std::string filename_string(std::string suffix = "", const std::string& name = "", int run = -1) const;
+  std::string run_directory_basename(int run = 0) const;
   /*!
    * @brief Obtain the path of a run directory
    * @param run
@@ -326,28 +325,22 @@ public:
    */
   int run_verify(int run) const;
   /*!
-   * @brief Obtain the list of run numbers in reverse order, ie the most recent
-   * first
+   * @brief Obtain the list of run directory names
    * @return
    */
-  using run_list_t = std::set<int, std::greater<int>>;
+  using run_list_t = std::vector<std::string>;
   run_list_t run_list() const;
   /*!
    * @brief Create a new run directory. Also copy into it the input file, and
    * any of its dependencies
    * @return The sequence number of the new run directory
    */
-  int run_directory_new();
+  std::filesystem::path run_directory_new();
   /*!
    * @brief Delete a run directory
    * @param run
    */
   void run_delete(int run);
-  /*!
-   * @brief Obtain the sequence number of the next run directory to be created
-   * @return
-   */
-  int run_directory_next() const;
   /*!
    * @brief
    * @return the base name of the project, ie its file name with directory and

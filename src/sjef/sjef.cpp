@@ -1,21 +1,21 @@
 #include "sjef.h"
 #include "sjef-backend.h"
+#include "util/Job.h"
 #include "util/Locker.h"
+#include "util/util.h"
 #include <array>
 #include <chrono>
 #include <cstdlib>
-#include <stdlib.h>
 #include <fstream>
 #include <functional>
 #include <map>
 #include <pugixml.hpp>
+#include <random>
 #include <regex>
+#include <sstream>
+#include <stdlib.h>
 #include <string>
 #include <thread>
-#include "util/Job.h"
-#include "util/util.h"
-#include <sstream>
-#include <random>
 
 namespace fs = std::filesystem;
 
@@ -395,8 +395,7 @@ void Project::erase(const std::filesystem::path& filename, const std::string& de
   bool success;
   try {
     success = fs::remove_all(filename_);
-  }
-  catch(...) {
+  } catch (...) {
     success = fs::remove_all(filename_);
   }
   if (success)
@@ -542,10 +541,10 @@ bool Project::run(int verbosity, bool force, bool wait) {
   run_command = spl.front();
   for (auto sp = spl.rbegin(); sp < spl.rend() - 1; sp++)
     optionstring = "'" + *sp + "' " + optionstring;
-  m_trace(3 - verbosity) << "run job " << run_command + " " + optionstring + std::to_string(rundir) + ".inp"
+  m_trace(3 - verbosity) << "run job " << run_command + " " + optionstring + rundir.stem().string() + ".inp"
                          << std::endl;
   m_job.reset(new util::Job(*this));
-  m_job->run(run_command + " " + optionstring + std::to_string(rundir) + ".inp", verbosity, false);
+  m_job->run(run_command + " " + optionstring + rundir.stem().string() + ".inp", verbosity, false);
   property_set("jobnumber", std::to_string(m_job->job_number()));
   //    p_status_mutex.reset(); // TODO probably not necessary
   m_trace(3 - verbosity) << "jobnumber " << m_job->job_number() << std::endl;
@@ -558,7 +557,7 @@ void Project::clean(int keep_run_directories) {
   if (auto statuss = status(); statuss == running || statuss == waiting)
     keep_run_directories = std::max(keep_run_directories, 1);
   while (run_list().size() > size_t(keep_run_directories))
-    run_delete(*run_list().rbegin());
+    run_delete(1);
 }
 
 void Project::kill(int verbosity) {
@@ -845,34 +844,44 @@ std::filesystem::path Project::filename(std::string suffix, const std::string& n
 }
 std::string Project::name() const { return fs::path(m_filename).stem().string(); }
 
+std::string Project::run_directory_basename(int run) const {
+  return std::regex_replace(name(), std::regex{" "}, "_") + "_" + std::to_string(run);
+}
+
 std::filesystem::path Project::run_directory(int run) const {
   if (run < 0)
     return filename();
   auto sequence = run_verify(run);
   if (sequence < 1)
     return filename(); // covers the case of old projects without run directories
-  auto dir = fs::path{filename()} / "run" / (std::to_string(sequence) + "." + m_project_suffix);
+  auto dirlist = run_list();
+  auto dir = fs::path{filename()} / "run" / (dirlist[sequence - 1] + "." + m_project_suffix);
   if (!fs::is_directory(dir))
     throw runtime_error("Cannot find directory " + dir.string());
   return dir.string();
 }
-int Project::run_directory_new() {
+fs::path Project::run_directory_new() {
   auto dirlist = run_list();
-  auto sequence = run_directory_next();
-  dirlist.insert(sequence);
+  std::string stem;
+  for (auto seq = int(dirlist.size() + 1); true; ++seq) {
+    stem = run_directory_basename(seq);
+    if (std::find(dirlist.begin(), dirlist.end(), stem) == dirlist.end())
+      break;
+  }
+  dirlist.push_back(stem);
   std::stringstream ss;
   for (const auto& dir : dirlist)
     ss << dir << " ";
   property_set("run_directories", ss.str());
   auto rundir = fs::path{filename()} / "run";
-  auto dir = rundir / (std::to_string(sequence) + "." + m_project_suffix);
+  auto dir = rundir / (stem + "." + m_project_suffix);
   if (!fs::exists(rundir) && !fs::create_directories(rundir)) {
     throw runtime_error("Cannot create directory " + rundir.string());
   }
   property_delete("jobnumber");
   set_current_run(0);
   copy(dir.string(), false, false, true);
-  return sequence;
+  return dir;
 }
 
 void Project::run_delete(int run) {
@@ -883,48 +892,39 @@ void Project::run_delete(int run) {
     return;
   fs::remove_all(run_directory(run));
   auto dirlist = run_list();
-  dirlist.erase(run);
   std::stringstream ss;
-  for (const auto& dir : dirlist)
-    ss << dir << " ";
-  property_set("run_directories", ss.str());
+  for (int i = 0; i < dirlist.size(); ++i) {
+    ss << dirlist[i] << " ";
+  }
 }
 
 int Project::run_verify(int run) const {
   auto runlist = run_list();
   if (run > 0)
-    return (runlist.count(run) > 0) ? run : 0;
+    return (runlist.size() >= run) ? run : 0;
   const auto currentRun = current_run();
   if (currentRun > 0)
     return currentRun;
   else if (runlist.empty())
     return 0;
   else
-    return *(runlist.begin());
+    return runlist.size();
 }
 
 Project::run_list_t Project::run_list() const {
-  constexpr bool old_algorithm = false;
   run_list_t rundirs;
-  if (old_algorithm) {
-    auto ss = std::stringstream(property_get("run_directories"));
-    int value;
-    while (ss >> value && !ss.eof())
-      if (fs::exists(fs::path{m_filename} / "run" / (std::to_string(value) + "." + m_project_suffix)))
-        rundirs.insert(value);
-  } else {
-    const std::filesystem::path& rundir = fs::path{m_filename} / "run";
-    if (fs::exists(rundir))
-      for (auto& f : fs::directory_iterator(rundir))
-        if (f.path().extension() == std::string{"."} + m_project_suffix)
-          rundirs.insert(std::stoi(f.path().stem()));
-  }
+  const std::string& property = property_get("run_directories");
+  auto ss = std::stringstream(property);
+  std::string value;
+  std::string new_property;
+  while (ss >> value && !ss.eof())
+    if (fs::exists(fs::path{m_filename} / "run" / (value + "." + m_project_suffix))) {
+      rundirs.push_back(value);
+      new_property += value + " ";
+    }
+  if (new_property != property)
+    const_cast<Project*>(this)->property_set("run_directories", new_property);
   return rundirs;
-}
-
-int Project::run_directory_next() const {
-  auto dirlist = run_list();
-  return dirlist.empty() ? 1 : *(dirlist.begin()) + 1;
 }
 
 int Project::recent_find(const std::string& suffix, const std::filesystem::path& filename) {
@@ -1289,7 +1289,7 @@ const std::string Project::backend_cache() const {
 }
 
 std::string Project::filename_string(std::string suffix, const std::string& name, int run) const {
-  return filename(suffix,name,run).string();
+  return filename(suffix, name, run).string();
 }
 
 } // namespace sjef

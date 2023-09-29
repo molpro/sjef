@@ -470,34 +470,7 @@ char* sjef_project_run_directory(const char* project, int run) {
   }
   return NULL;
 }
-int* sjef_project_run_list(const char* project) {
-  try {
-    if (projects.count(project) == 0)
-      sjef_project_open(project);
-    auto list = projects.at(project)->run_list();
-    int* result = (int*)malloc((list.size() + 1) * sizeof(int*));
-    int sequence = 0;
-    for (const auto& item : list)
-      result[sequence++] = item;
-    result[sequence] = 0;
-    return result;
-  } catch (std::exception& e) {
-    error(e);
-  } catch (...) {
-  }
-  return NULL;
-}
-int sjef_project_run_directory_next(const char* project) {
-  try {
-    if (projects.count(project) == 0)
-      sjef_project_open(project);
-    return projects.at(project)->run_directory_next();
-  } catch (std::exception& e) {
-    error(e);
-  } catch (...) {
-  }
-  return 1;
-}
+
 void sjef_project_run_delete(const char* project, int run) {
   try {
     if (projects.count(project) == 0)

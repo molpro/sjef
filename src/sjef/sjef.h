@@ -8,7 +8,7 @@
 using boost::alignment::aligned_alloc;
 #endif
 #endif
-#include <sjef/util/Logger.h>
+#include <__filesystem/path.h>
 #include <atomic>
 #include <filesystem>
 #include <iostream>
@@ -17,6 +17,7 @@ using boost::alignment::aligned_alloc;
 #include <mutex>
 #include <ostream>
 #include <set>
+#include <sjef/util/Logger.h>
 #include <string>
 #include <thread>
 #include <vector>
@@ -310,6 +311,7 @@ public:
    */
   std::filesystem::path filename(std::string suffix = "", const std::string& name = "", int run = -1) const;
   std::string filename_string(std::string suffix = "", const std::string& name = "", int run = -1) const;
+  std::string run_directory_basename(int run = 0) const;
   /*!
    * @brief Obtain the path of a run directory
    * @param run
@@ -326,28 +328,22 @@ public:
    */
   int run_verify(int run) const;
   /*!
-   * @brief Obtain the list of run numbers in reverse order, ie the most recent
-   * first
+   * @brief Obtain the list of run directory names
    * @return
    */
-  using run_list_t = std::set<int, std::greater<int>>;
+  using run_list_t = std::vector<std::string>;
   run_list_t run_list() const;
   /*!
    * @brief Create a new run directory. Also copy into it the input file, and
    * any of its dependencies
    * @return The sequence number of the new run directory
    */
-  int run_directory_new();
+  std::filesystem::path run_directory_new();
   /*!
    * @brief Delete a run directory
    * @param run
    */
   void run_delete(int run);
-  /*!
-   * @brief Obtain the sequence number of the next run directory to be created
-   * @return
-   */
-  int run_directory_next() const;
   /*!
    * @brief
    * @return the base name of the project, ie its file name with directory and

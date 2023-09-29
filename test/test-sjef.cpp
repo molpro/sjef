@@ -161,10 +161,6 @@ TEST_F(test_sjef, clean) {
     x.clean(nkeep);
     ASSERT_EQ(x.run_list().size(), std::max(0, std::min(ncreate, nkeep)))
         << std::system((std::string{"ls -lR "} + x.filename().string()).c_str());
-    int i = ncreate;
-    auto runlist = x.run_list();
-    for (auto it = runlist.begin(); it != runlist.end(); ++it)
-      ASSERT_EQ(i--, *it);
   }
 }
 
@@ -603,9 +599,8 @@ TEST_F(test_sjef, run_directory) {
   for (int i = 1; i < 4; i++) {
     auto si = std::to_string(i) + "." + suffix();
     auto rundir = p.run_directory_new();
-    EXPECT_EQ(rundir, i);
-    EXPECT_EQ(rundir, p.run_verify(rundir));
-    EXPECT_EQ(rundir, p.run_verify(0));
+    EXPECT_EQ(i, p.run_verify(i));
+    EXPECT_EQ(i, p.run_verify(0));
     EXPECT_EQ(p.run_directory(), p.filename("", "", 0));
     EXPECT_EQ(p.run_directory(0), (fs::path{p.filename()} / "run" / si).string());
     EXPECT_EQ(p.filename("out", "", 0), (fs::path{p.filename()} / "run" / si / (std::to_string(i) + ".out")).string());
@@ -614,13 +609,10 @@ TEST_F(test_sjef, run_directory) {
   std::ifstream(p.filename("", "copied.inp")) >> input2;
   EXPECT_EQ(input, input2);
   int seq = p.run_list().size();
-  for (const auto& r : p.run_list())
-    EXPECT_EQ(r, seq--); // the run_list goes in reverse order
   p.run_delete(3);
   EXPECT_EQ(2, p.run_verify(0));
   p.run_delete(1);
   EXPECT_EQ(2, p.run_verify(0));
-  EXPECT_EQ(p.run_list(), sjef::Project::run_list_t{2});
   //  system((std::string("ls -lR ")+p.filename()).c_str());
 }
 

@@ -19,7 +19,7 @@ cdef extern from "sjef/sjef.h" namespace "sjef":
         Project(string, bool, string, map[string, string]) except +
         # Project(string, bool, string) except +
         string filename_string(string, string, int) except +
-        bool copy(string &, bool, bool) except +
+        bool copy(string &, bool, bool, bool, int) except +
         bool move(string &, bool) except +
         void erase(string &) except +
         bool import_file(string, bool) except +

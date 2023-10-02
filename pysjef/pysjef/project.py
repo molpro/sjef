@@ -160,7 +160,7 @@ class Project(Node):
         """
         self._project_wrapper.export_file(filename, location, overwrite)
 
-    def copy(self, name, location=None, force=False, keep_hash=False):
+    def copy(self, name, location=None, force=False, keep_hash=False, keep_run_directories=1000000):
         """
         Make a copy of the project and its directory to a new path.
 
@@ -169,10 +169,11 @@ class Project(Node):
                          by default parent directory stays the same
         :param force: whether to first remove anything already existing at the new location
         :param keep_hash: whether to clone the project_hash, or allow a fresh one to be generated
+        :param keep_run_directories: how many run directories to retain in the copy
         :return: copied project
         """
         new_project_wrapper = self._project_wrapper.copy(name, location=location, force=force,
-                                                         keep_hash=keep_hash)
+                                                         keep_hash=keep_hash, keep_run_directories=keep_run_directories)
         new_project = self.copy_node()
         new_project._project_wrapper = new_project_wrapper
         new_project._set_attributes()

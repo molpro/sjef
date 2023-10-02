@@ -136,7 +136,7 @@ cdef class ProjectWrapper:
         cdef string fname = str(location / filename).encode('utf-8')
         deref(self.c_project).export_file(fname, overwrite)
 
-    def copy(self, str name, location=None, bool force=False, bool keep_hash=False):
+    def copy(self, str name, location=None, bool force=False, bool keep_hash=False, int keep_run_directories=1000000):
         """
         Make a copy of the project and its directory to a new path.
 
@@ -145,12 +145,13 @@ cdef class ProjectWrapper:
                          by default parent directory stays the same
         :param force: whether to first remove anything already existing at the new location
         :param keep_hash: whether to clone the project_hash, or allow a fresh one to be generated
+        :param keep_run_directories: how many run directories to retain in the copy
         :return: copied project
         """
         if not location:
             location = self.location.parent
         fname = str(Path(location) / name)
-        deref(self.c_project).copy(str(fname).encode('utf-8'), force, keep_hash)
+        deref(self.c_project).copy(str(fname).encode('utf-8'), force, keep_hash, False, keep_run_directories)
         return ProjectWrapper(name, location, suffix=self.suffix)
 
     #TODO confirm what happens with project name

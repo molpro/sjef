@@ -343,6 +343,14 @@ class Project(Node):
     def recent_find(self, location):
         return self._project_wrapper.recent_find(location)
 
+    def backend_get(self, backend, key):
+        """
+        Obtain the value of a field in the backend
+        :param backend:
+        :param key:
+        :return:
+        """
+        return self._project_wrapper.backend_get(backend, key)
 
     def backend_names(self):
         """

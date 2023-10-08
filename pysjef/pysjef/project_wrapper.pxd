@@ -47,6 +47,7 @@ cdef extern from "sjef/sjef.h" namespace "sjef":
         int recent_find(string &) except +
         @staticmethod
         string recent(string&, int) except +
+        string backend_get(string&, string&) except +
         vector[string] backend_names() except +
         map[string, string] backend_parameters(string &, bool) except +
         void backend_parameter_set(string &, string &, string &) except +

@@ -512,7 +512,7 @@ mapstringstring_t Project::backend_parameters(const std::string& backend, bool d
   return result;
 }
 
-bool Project::run(int verbosity, bool force, bool wait) {
+bool Project::run(int verbosity, bool force, bool wait, const std::string& options) {
 
   using util::splitString;
 
@@ -525,7 +525,7 @@ bool Project::run(int verbosity, bool force, bool wait) {
     return false;
   //  status(unevaluated);
   std::string line;
-  std::string optionstring;
+  std::string optionstring = options+" ";
   property_set("run_input_hash", std::to_string(input_hash()));
   if (verbosity > 0 && backend.name != sjef::Backend::dummy_name)
     optionstring += "-v ";

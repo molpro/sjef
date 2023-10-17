@@ -182,14 +182,14 @@ cdef class ProjectWrapper:
         self.location = Path(self.filename())
         # self.name = deref(self.c_project).name().decode('utf-8')
 
-    def run(self, backend=None, verbosity=0, bool force=False, bool wait=False):
+    def run(self, backend=None, verbosity=0, bool force=False, bool wait=False, options=""):
         cdef int v = verbosity
         cdef string bend
         if backend is None:
-            return deref(self.c_project).run(v, force, wait)
+            return deref(self.c_project).run(v, force, wait, options.encode('utf-8'))
         else:
             bend = backend.encode('utf-8')
-            return deref(self.c_project).run(bend, v, force, wait)
+            return deref(self.c_project).run(bend, v, force, wait, options.encode('utf-8'))
 
     def run_needed(self, int verbosity = 0):
         return deref(self.c_project).run_needed(verbosity)

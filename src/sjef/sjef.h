@@ -159,8 +159,8 @@ public:
    * after launching it
    * @return
    */
-  bool run(int verbosity = 0, bool force = false, bool wait = false);
-  bool run(const std::string& name, int verbosity = 0, bool force = false, bool wait = false) {
+  bool run(int verbosity = 0, bool force = false, bool wait = false, const std::string& options="");
+  bool run(const std::string& name, int verbosity = 0, bool force = false, bool wait = false, const std::string& options="") {
     change_backend(name);
     return run(verbosity, force, wait);
   }

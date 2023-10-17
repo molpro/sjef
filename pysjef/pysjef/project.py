@@ -190,16 +190,17 @@ class Project(Node):
         """
         self._project_wrapper.move(name, location, force=force)
 
-    def run(self, backend=None, verbosity=0, force=False, wait=False):
+    def run(self, backend=None, verbosity=0, force=False, wait=False, options=""):
         """
         Start a sjef job
         :param backend: name of the backend
         :param verbosity: If >0, show underlying processing
         :param force: whether to force submission of job even if run_needed() reports that it's unnecessary
         :param wait: whether to wait until the job completes instead of returning after launchin it
+        :param options: command-line options
         """
         self.children = []
-        self._project_wrapper.run(backend, verbosity, force, wait=False)
+        self._project_wrapper.run(backend, verbosity, force, wait=False, options=options)
         if wait:
             self.wait()
 

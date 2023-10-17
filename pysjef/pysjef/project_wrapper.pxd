@@ -29,8 +29,8 @@ cdef extern from "sjef/sjef.h" namespace "sjef":
         string file_contents(string, string) except +
         string file_contents(string) except +
         string input_from_output() except +
-        bool run(int, bool, bool) except +
-        bool run(string, int, bool, bool) except +
+        bool run(int, bool, bool, string) except +
+        bool run(string, int, bool, bool, string) except +
         bool run_needed(int) except +
         void kill() except +
         void wait() except +

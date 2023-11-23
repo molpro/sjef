@@ -30,7 +30,7 @@ sjef::status sjef::Project::status_from_output() const {
   if (m_project_suffix == "molpro") {
     sjef::pugi_xml_document outxml;
     outxml.load_string(xml().c_str());
-    for (const auto& node : outxml.select_nodes("//error"))
+    if (!outxml.select_nodes("//error").empty())
       return sjef::status::failed;
   }
   return status();

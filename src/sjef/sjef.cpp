@@ -13,7 +13,6 @@
 #include <random>
 #include <regex>
 #include <sstream>
-#include <stdlib.h>
 #include <string>
 #include <thread>
 
@@ -893,7 +892,7 @@ void Project::run_delete(int run) {
   fs::remove_all(run_directory(run));
   auto dirlist = run_list();
   std::stringstream ss;
-  for (int i = 0; i < dirlist.size(); ++i) {
+  for (size_t i = 0; i < dirlist.size(); ++i) {
     ss << dirlist[i] << " ";
   }
 }
@@ -901,7 +900,7 @@ void Project::run_delete(int run) {
 int Project::run_verify(int run) const {
   auto runlist = run_list();
   if (run > 0)
-    return (runlist.size() >= run) ? run : 0;
+    return (runlist.size() >= size_t(run)) ? run : 0;
   const auto currentRun = current_run();
   if (currentRun > 0)
     return currentRun;

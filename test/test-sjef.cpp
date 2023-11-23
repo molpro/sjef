@@ -608,7 +608,6 @@ TEST_F(test_sjef, run_directory) {
   p.take_run_files(3, p.run_directory_basename(3)+".inp", "copied.inp");
   std::ifstream(p.filename("", "copied.inp")) >> input2;
   EXPECT_EQ(input, input2);
-  int seq = p.run_list().size();
   p.run_delete(3);
   EXPECT_EQ(2, p.run_verify(0));
   p.run_delete(1);
@@ -637,7 +636,7 @@ TEST_F(test_sjef, sync_backend) {
     std::ofstream(run_script) << "while [ ${1#-} != ${1} ]; do shift; done; "
                                  "echo dummy > \"${1%.*}.out\";echo '<?xml "
                                  "version=\"1.0\"?>\n<root/>' > \"${1%.*}.xml\";";
-    auto start_time = std::chrono::steady_clock::now();
+    //    auto start_time = std::chrono::steady_clock::now();
     auto p = sjef::Project(testfile(std::string{"test_sync_backend."} + suffix));
     //    std::cout
     //        << "time to end of Project() "

@@ -264,16 +264,10 @@ cdef class ProjectWrapper:
         """
         Set the value of a project property.
         """
-        print('property_set',props)
-        print(type(props))
         cdef map[string, string] cprops
         for key, val in props.items():
             ckey = str(self.__property_name_prefix + key).encode('utf-8')
             cval = str(val).encode('utf-8')
-            print('key=',key)
-            print('val=',val)
-            print('ckey=',ckey)
-            print('cval=',cval)
             cprops[ckey] = cval
         deref(self.c_project).property_set(cprops)
 

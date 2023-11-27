@@ -303,7 +303,8 @@ public:
    * suffix if that is non-blank
    * @param run If specified, look in a run directory for the file, instead of
    * the main project directory. A value of 0 is interpreted as the most recent
-   * run directory.
+   * run directory if there is one, otherwise the main project directory. A value of
+   * -1 means to use the main project directory.
    * @return the fully-qualified name of the file
    */
   std::filesystem::path filename(std::string suffix = "", const std::string& name = "", int run = -1) const;
@@ -312,7 +313,7 @@ public:
   /*!
    * @brief Obtain the path of a run directory
    * @param run
-   * - 0: the currently focussed run directory
+   * - 0: the last used run directory, or, if there is no run directory, the main project directory
    * - other: the specified run directory
    * @return the fully-qualified name of the directory
    */

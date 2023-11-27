@@ -852,7 +852,7 @@ std::filesystem::path Project::run_directory(int run) const {
     return filename();
   auto sequence = run_verify(run);
   if (sequence < 1)
-    return filename(); // covers the case of old projects without run directories
+    return filename(); // covers the case of projects without run directories
   auto dirlist = run_list();
   auto dir = fs::path{filename()} / "run" / (dirlist[sequence - 1] + "." + m_project_suffix);
   if (!fs::is_directory(dir))

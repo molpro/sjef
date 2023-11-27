@@ -1365,7 +1365,7 @@ Friends</h2></td></tr>
   <table class="params">
     <tr><td class="paramname">suffix</td><td>If present without <code>name</code>, look for a primary file with that type. If absent, the file name of the bundle is instead selected </td></tr>
     <tr><td class="paramname">name</td><td>If present, look for a file of this name, appended with .<code>suffix</code> if that is non-blank </td></tr>
-    <tr><td class="paramname">run</td><td>If specified, look in a run directory for the file, instead of the main project directory. A value of 0 is interpreted as the most recent run directory. </td></tr>
+    <tr><td class="paramname">run</td><td>If specified, look in a run directory for the file, instead of the main project directory. A value of 0 is interpreted as the most recent run directory if there is one, otherwise the main project directory. A value of -1 means to use the main project directory. </td></tr>
   </table>
   </dd>
 </dl>
@@ -2148,7 +2148,7 @@ Friends</h2></td></tr>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">run</td><td><ul>
-<li>0: the currently focussed run directory</li>
+<li>0: the last used run directory, or, if there is no run directory, the main project directory</li>
 <li>other: the specified run directory </li>
 </ul>
 </td></tr>

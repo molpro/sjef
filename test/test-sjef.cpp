@@ -894,3 +894,32 @@ TEST_F(test_sjef, kill) {
   EXPECT_EQ(p.status(), sjef::killed) << "Found status: " << p.status_message();
 #endif
 }
+
+TEST_F(test_sjef, bad_remote) {
+#ifndef WIN32
+  auto suffix = this->suffix();
+  ASSERT_TRUE(fs::is_directory(sjef::expand_path((m_dot_sjef / suffix).string())));
+  const auto cache = testfile(fs::current_path() / "test-remote-cache");
+  if (not fs::create_directories(cache))
+    throw std::runtime_error("cannot create " + cache.string());
+  const auto run_script = testfile("light.sh").string();
+  std::ofstream(sjef::expand_path((m_dot_sjef / suffix).string() + "/backends.xml"))
+      << "<?xml version=\"1.0\"?>\n<backends>\n <backend name=\"local\" run_command=\"true\"/>"
+      << "<backend name=\"test-local\" run_command=\"sh " << run_script << "\" />\n"
+      << "<backend name=\"test-remote\" run_command=\"sh " << run_script << "\" host=\"non-existent-place\" cache=\""
+      << cache.string() << "\"/>\n"
+      << "</backends>";
+  std::ofstream(run_script) << "sleep 120;";
+  auto p = sjef::Project(testfile(std::string{"bad_remote."} + suffix));
+  std::ofstream(p.filename("inp")) << "some input";
+  bool caught{false};
+  try {
+    p.run("test-remote", 0, true, false);
+  }
+  catch(const sjef::util::Shell::runtime_error& e) {
+    caught = true;
+    std::cout <<e.what()<<std::endl;
+  }
+  EXPECT_TRUE(caught);
+#endif
+}

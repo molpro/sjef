@@ -129,3 +129,17 @@ TEST(Shell, remote_asynchronous) {
     fs::remove(testdir);
   }
 }
+
+TEST(Shell, bad_command) {
+  for (const auto& command : std::vector<std::string>{"@", "no_such_command", "ssh nobody@nowhere pwd"}) {
+    sjef::util::Shell comm;
+    bool caught{false};
+    try {
+      comm(command);
+    } catch (const sjef::util::Shell::runtime_error& e) {
+      caught = true;
+      //          std::cout << e.what() << std::endl;
+    }
+    EXPECT_TRUE(caught);
+  }
+}

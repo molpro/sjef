@@ -124,8 +124,14 @@ std::string Shell::operator()(const std::string& command, bool wait, const std::
       m_last_err += line + '\n';
   }
   m_trace(3 - verbosity) << "err from command " << command << ":\n" << m_last_err << std::endl;
-  if (localhost())
+  if (localhost()) {
     m_process.wait();
+    if (m_process.exit_code()) {
+      throw runtime_error((std::string{"Shell(\""} + command +
+                           "\") has failed.\nExit code: " + std::to_string(m_process.exit_code()) + "\n\nstdout:\n" +
+                           m_last_out + "\nstderr:\n" + m_last_err).c_str());
+    }
+  }
   //  m_trace(3 - verbosity) << "last line=" << line << std::endl;
   //  auto rc = line.empty() ? -1 : std::stoi(line.substr(terminator.size() + 1));
   //  m_trace(3 - verbosity) << "rc=" << rc << std::endl;

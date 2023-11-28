@@ -1,8 +1,8 @@
 #ifndef SJEF_LIB_UTIL_SHELL_H_
 #define SJEF_LIB_UTIL_SHELL_H_
+#include "Logger.h"
 #include <boost/process/child.hpp>
 #include <boost/process/io.hpp>
-#include "Logger.h"
 namespace bp = boost::process;
 
 namespace sjef::util {
@@ -33,6 +33,18 @@ public:
    * @return
    */
   static bool local_asynchronous_supported();
+
+  class runtime_error : public std::exception {
+  public:
+    explicit runtime_error(const char* message) : m_msg(message) {}
+    runtime_error(runtime_error const&) noexcept = default;
+    runtime_error& operator=(runtime_error const&) noexcept = default;
+    ~runtime_error() override = default;
+    [[nodiscard]] const char* what() const noexcept override { return m_msg.c_str(); }
+
+  private:
+    std::string m_msg;
+  };
 
 private:
   const std::string m_host;

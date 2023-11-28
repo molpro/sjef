@@ -79,10 +79,8 @@ TEST(Shell, bad_shell) {
 
     {
       sjef::util::Shell comm("localhost", "/bin/badshell");
-      EXPECT_EQ(comm("echo hello"), ""); // TODO this should throw an exception
-      //  EXPECT_ANY_THROW(comm("echo hello"));
-      EXPECT_EQ(comm("echo hello", false, ".", 0, outfile), ""); // TODO this should throw an exception
-      //    EXPECT_ANY_THROW(comm("echo hello",false,".",0,outfile)); // TODO this should throw an exception
+      EXPECT_THROW(comm("echo hello"), sjef::util::Shell::runtime_error); // TODO this should throw an exception
+      EXPECT_THROW(comm("echo hello", false, ".", 0, outfile), sjef::util::Shell::runtime_error);
       std::ifstream t(outfile);
       comm.wait();
       std::stringstream buffer;
@@ -100,7 +98,7 @@ TEST(Shell, remote_asynchronous) {
     gethostname(hostname, HOST_NAME_MAX);
 #else
     // test is not called on Windows as cannot ssh to hostname, comment out call to gethostname to avoid linking error
-    strcpy(hostname,"localhost");
+    strcpy(hostname, "localhost");
 #endif
     sjef::util::Shell comm(hostname);
     fs::path testdir{fs::current_path() / "test directory"};

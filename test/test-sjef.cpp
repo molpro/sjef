@@ -12,6 +12,7 @@
 #include <sjef/util/Locker.h>
 #include <sjef/util/Shell.h>
 #include <stdlib.h>
+#include <sjef/util/Job.h>
 #ifndef WIN32
 #include <unistd.h>
 #endif
@@ -916,7 +917,8 @@ TEST_F(test_sjef, bad_remote) {
   try {
     p.run("test-remote", 0, true, false);
   }
-  catch(const sjef::util::Shell::runtime_error& e) {
+//  catch(const sjef::util::Shell::runtime_error& e) {
+  catch(const sjef::util::Job::sync_error& e) {
     caught = true;
     std::cout <<e.what()<<std::endl;
   }

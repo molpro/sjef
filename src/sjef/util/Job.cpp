@@ -85,7 +85,12 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verb
   auto start_time = std::chrono::steady_clock::now();
   (*m_backend_command_server)("mkdir -p '" + m_remote_cache_directory + "'");
   const Shell& shell = Shell();
-  auto rsync_out = shell(command, true, ".", verbosity);
+  try {
+    auto rsync_out = shell(command, true, ".", verbosity);
+  } catch (const sjef::util::Shell::runtime_error& e) {
+    std::cout << "caught in Job()" << std::endl;
+    throw sync_error(e.what());
+  }
   if (verbosity > 1)
     m_project.m_trace(3 - verbosity)
         << "time for push_rundir() rsync "
@@ -123,7 +128,14 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::pull_rundir(int verb
   m_project.m_trace(2 - verbosity) << "Pull rsync: " << command << std::endl;
   auto start_time = std::chrono::steady_clock::now();
   const Shell& shell = Shell();
-  auto rsync_out = shell(command, true, ".", verbosity);
+  std::string rsync_out;
+  try {
+    rsync_out = shell(command, true, ".", verbosity);
+  } catch (const sjef::util::Shell::runtime_error& e) {
+    std::cout << "caught in Job()" << std::endl;
+    throw std::runtime_error(e.what());
+    throw static_cast<std::exception>(e);
+  }
   if (verbosity > 1)
     m_project.m_trace(3 - verbosity)
         << "time for pull_rundir() rsync "

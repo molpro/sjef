@@ -1,8 +1,9 @@
 #ifndef SJEF_JOB_SERVER_H
 #define SJEF_JOB_SERVER_H
+#include "../sjef-backend.h"
 #include "../sjef.h"
 #include "Logger.h"
-#include "../sjef-backend.h"
+#include "Shell.h"
 #include <future>
 
 namespace sjef::util {
@@ -70,6 +71,19 @@ protected:
   const bool localhost() const;
   void poll_job(int verbosity = 0);
   void set_status(status stat);
+
+public:
+  class sync_error : public sjef::util::Shell::runtime_error {
+  public:
+    explicit sync_error(const char* msg) : sjef::util::Shell::runtime_error(msg){}
+  };
+
+//  private:
+//    std::string m_msg;
+//  };
+//using sync_error = sjef::util::Shell::runtime_error;
+//  using other_error = sjef::util::Shell::runtime_error;
+
 };
 } // namespace sjef::util
 

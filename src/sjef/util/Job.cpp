@@ -224,24 +224,28 @@ void Job::set_status(status stat) {
 status Job::get_status(int verbosity) {
   if (m_job_number == 0)
     return unknown;
-  auto status_string =
-      (*m_backend_command_server)(m_backend.status_command + " " + std::to_string(m_job_number), true, ".", verbosity);
-  //  std::cout << "status_string:\n" << status_string << std::endl;
-  std::stringstream ss(status_string);
+  std::string status_string;
   sjef::status result = unknown;
-  for (std::string line; std::getline(ss, line);) {
-    if ((" " + line).find(" " + std::to_string(m_job_number) + " ") != std::string::npos) {
-      std::smatch match;
-      m_trace(4 - verbosity) << "line" << line << std::endl;
-      m_trace(4 - verbosity) << "status_running " << m_backend.status_running << std::endl;
-      m_trace(4 - verbosity) << "status_waiting " << m_backend.status_waiting << std::endl;
-      if (std::regex_search(line, match, std::regex{m_backend.status_waiting})) {
-        result = waiting;
-      }
-      if (std::regex_search(line, match, std::regex{m_backend.status_running})) {
-        result = running;
+  try {
+    status_string = (*m_backend_command_server)(m_backend.status_command + " " + std::to_string(m_job_number), true,
+                                                ".", verbosity);
+    //  std::cout << "status_string:\n" << status_string << std::endl;
+    std::stringstream ss(status_string);
+    for (std::string line; std::getline(ss, line);) {
+      if ((" " + line).find(" " + std::to_string(m_job_number) + " ") != std::string::npos) {
+        std::smatch match;
+        m_trace(4 - verbosity) << "line" << line << std::endl;
+        m_trace(4 - verbosity) << "status_running " << m_backend.status_running << std::endl;
+        m_trace(4 - verbosity) << "status_waiting " << m_backend.status_waiting << std::endl;
+        if (std::regex_search(line, match, std::regex{m_backend.status_waiting})) {
+          result = waiting;
+        }
+        if (std::regex_search(line, match, std::regex{m_backend.status_running})) {
+          result = running;
+        }
       }
     }
+  } catch (...) {
   }
   //  std::cout << "running pattern: " << m_backend.status_running << std::endl;
   //  std::cout << Command()("ps -p "+std::to_string(m_job_number)) << std::endl;

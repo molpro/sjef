@@ -38,7 +38,7 @@ protected:
   void _SetUp(const std::vector<std::string>& suffixes = {}) {
     m_default_suffix = ::testing::UnitTest::GetInstance()->current_test_info()->name();
     m_suffixes = suffixes;
-    fs::path tmp="/tmp";
+    fs::path tmp = "/tmp";
     if (std::getenv("TMPDIR") != nullptr)
       tmp = std::getenv("TMPDIR");
     if (std::getenv("TEMP") != nullptr)
@@ -73,11 +73,17 @@ protected:
   //  test_sjef(const test_sjef&) = delete;
   virtual void TearDown() override {
     for (const auto& file : testfiles)
-      fs::remove_all(file);
+      try {
+        fs::remove_all(file);
+      } catch (...) {
+      }
     for (auto& l : m_lockers) {
-      const auto path = l->path();
-      l->remove_bolt();
-      l.reset(nullptr);
+      try {
+        const auto path = l->path();
+        l->remove_bolt();
+        l.reset(nullptr);
+      } catch (...) {
+      }
     }
     fs::remove_all(m_dot_sjef);
   }

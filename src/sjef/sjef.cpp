@@ -664,8 +664,9 @@ std::string Project::file_contents(const std::string& suffix, const std::string&
 
   std::ifstream s(filename(suffix, name, run));
   auto result = std::string(std::istreambuf_iterator<char>(s), std::istreambuf_iterator<char>());
-  while (result.back() == '\n')
-    result.pop_back();
+  if (!result.empty())
+    while (result.back() == '\n')
+      result.pop_back();
   return result;
 }
 

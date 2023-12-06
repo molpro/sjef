@@ -157,6 +157,7 @@ public:
    * run_needed() reports that it's unnecessary
    * @param wait Whether to wait for the job to complete instead of returning
    * after launching it
+   * @param options Additional options
    * @return
    */
   bool run(int verbosity = 0, bool force = false, bool wait = false, const std::string& options="");

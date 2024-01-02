@@ -154,7 +154,7 @@ TEST_F(test_sjef_molpro, failure) {
     { std::ofstream(p.filename("inp")) << "geometry={He};rhf"; }
     p.run(0, true, true);
     EXPECT_EQ(p.status(), sjef::status::completed);
-    { std::ofstream(p.filename("inp")) << "geometry={Ze};rhf"; }
+    { std::ofstream(p.filename("inp")) << "geometry={He};crazy_command"; }
     p.run(0, true, true);
     EXPECT_EQ(p.status(), sjef::status::failed)
         << "status: " << p.status_message() << "\nxml:\n"

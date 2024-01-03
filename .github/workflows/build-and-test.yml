@@ -59,13 +59,13 @@ jobs:
       run: cmake --build ${{github.workspace}}/build --target sjef-doc
 
   python:
-    runs-on: ubuntu
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     container:
 #      image: continuumio/miniconda3
-      image: ubuntu-latest
+      image: ubuntu
     steps:
     - uses: actions/checkout@v3
 

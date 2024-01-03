@@ -16,7 +16,7 @@ def project(tmp_path):
       <backend name="empty"/>
       <backend name="true" run_command="true"/>
       <backend name="ssh" host="127.0.0.1" run_command="echo"/>
-      <backend name="ssh_bad" host="127.0.0.128" run_command="echo"/>
+      <backend name="ssh_bad" host="bad-person@bad-place" run_command="echo"/>
     </backends>
     """)
     p = pysjef.project.Project("TestProject", suffix=suffix,
@@ -55,5 +55,5 @@ def test_run_ssh_bad(project):
         project.run(backend='ssh_bad', wait=True)
         assert False
     except Exception as e:
-        print('exception caught,', e)
+        # print('exception caught,', e)
         assert 'failed' in str(e)

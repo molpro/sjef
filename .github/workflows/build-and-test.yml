@@ -55,9 +55,25 @@ jobs:
         ssh localhost hostname || ssh -v localhost hostname
         cd ${{github.workspace}}/build && ctest -C ${{env.CMAKE_BUILD_TYPE}} || ctest -C ${{env.CMAKE_BUILD_TYPE}} -V --rerun-failed --output-on-failure
 
-    - name: Test python
-      run: |
-        cd pysjef && pytest
-
     - name: Build doxygen
       run: cmake --build ${{github.workspace}}/build --target sjef-doc
+
+  python:
+    runs-on: continuumio/miniconda3
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Check existence of build configuration file
+      id: check_configuration
+      uses: andstor/file-existence-action@v1
+      with:
+        files: "pysjef/build.sh"
+
+    - name: build and test
+      run: |
+        cd pysjef
+        conda activate base
+        conda install -y --file requirements.txt
+        bash ./build.sh
+        pytest
+

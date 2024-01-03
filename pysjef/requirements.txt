@@ -11,3 +11,4 @@ cxx-compiler
 ghostscript
 pytest >=7
 cmake >=3.27
+make >=4

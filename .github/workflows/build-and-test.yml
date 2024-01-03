@@ -78,7 +78,7 @@ jobs:
       run: |
         cd pysjef
         . /opt/conda/etc/profile.d/conda.sh
-        conda create -n pysjef -y --file requirements.txt
+        conda create -c conda-forge -n pysjef -y --file requirements.txt
         conda activate pysjef
         bash ./build.sh
         pytest

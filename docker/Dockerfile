@@ -4,7 +4,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt install -y cmake git g++ doxygen bash rsy
 
 RUN  apt update && apt install -y wget && wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda-installer.sh && bash /tmp/miniconda-installer.sh -b -p /opt/conda
 
-RUN  cd pysjef && . /opt/conda/etc/profile.d/conda.sh && conda create -c conda-forge -n pysjef -y python '>=3.10' numpy '>=1.17' boost-cpp '>=1.71' pugixml '>=1.10' cython '>=3.0' lxml '>=4.0' pip regex c-compiler cxx-compiler ghostscript pytest '>=7' cmake '>=3.27' make '>=4'&& conda activate pysjef
+RUN  . /opt/conda/etc/profile.d/conda.sh && conda create -c conda-forge -n pysjef -y python '>=3.10' numpy '>=1.17' boost-cpp '>=1.71' pugixml '>=1.10' cython '>=3.0' lxml '>=4.0' pip regex c-compiler cxx-compiler ghostscript pytest '>=7' cmake '>=3.27' make '>=4'&& conda activate pysjef
 
 RUN ( \
     echo 'LogLevel DEBUG2'; \

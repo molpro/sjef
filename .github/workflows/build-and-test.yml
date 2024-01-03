@@ -75,7 +75,7 @@ jobs:
         files: "pysjef/build.sh"
 
     - name: install ssh and rsync
-      run: apt update && apt install -y openssh-server openssh-client rsync && echo '#!/bin/sh\nexit 0' > /usr/sbin/policy-rc.d && service ssh start && mkdir -p ~/.ssh && ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa && cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys && ssh 127.0.0.1 -o StrictHostKeyChecking=accept-new pwd
+      run: apt update && apt install -y openssh-server openssh-client rsync && echo '#!/bin/sh\nexit 0' > /usr/sbin/policy-rc.d && service ssh start && mkdir -p ~/.ssh && ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa && cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys && ssh -v 127.0.0.1 -o StrictHostKeyChecking=accept-new pwd
     - name: build and test
       run: |
         cd pysjef

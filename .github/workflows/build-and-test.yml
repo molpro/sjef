@@ -76,7 +76,7 @@ jobs:
         files: "pysjef/build.sh"
 
     - name: install miniconda3
-      run: apt update && apt install -y wget && wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda-installer.sh && bash /tmp/miniconda-installer.sh -b -p /opt/conda
+      run: apt update && apt install -y wget && wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda-installer.sh && bash /tmp/miniconda-installer.sh -b -p /opt/conda
 
     - name: install ssh and rsync
       run: apt update && apt install -y openssh-server openssh-client rsync && echo '#!/bin/sh\nexit 0' > /usr/sbin/policy-rc.d && service ssh start && mkdir -p ~/.ssh && ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa && cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys && ls -l ~/.ssh && cat ~/.ssh/authorized_keys && ssh -v 127.0.0.1 -o StrictHostKeyChecking=accept-new pwd

@@ -2,7 +2,7 @@ FROM ubuntu:jammy-20220531
 RUN apt update
 RUN DEBIAN_FRONTEND=noninteractive apt install -y cmake git g++ doxygen bash rsync curl clang ccache libboost-all-dev libxml2-dev texlive-font-utils openssh-server procps
 
-RUN  apt update && apt install -y wget && wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/minioconda-installer.sh && bash /tmp/miniconda-installer.sh -b -p /opt/conda
+RUN  apt update && apt install -y wget && wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda-installer.sh && bash /tmp/miniconda-installer.sh -b -p /opt/conda
 
 RUN  cd pysjef && . /opt/conda/etc/profile.d/conda.sh && conda create -c conda-forge -n pysjef -y --file requirements.txt && conda activate pysjef
 

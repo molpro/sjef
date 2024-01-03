@@ -55,6 +55,7 @@ protected:
   const sjef::Backend& m_backend;
   const std::string
       m_remote_cache_directory; //!< The path on the remote backend that will be synchronized with run directory
+  mutable bool m_remote_cache_directory_verified = false;
   std::future<void> m_poll_task;
   mutable std::shared_ptr<Shell> m_backend_command_server;
   int m_job_number=0;
@@ -84,6 +85,7 @@ public:
 //using sync_error = sjef::util::Shell::runtime_error;
 //  using other_error = sjef::util::Shell::runtime_error;
 
+  void ensure_remote_cache_directory() const;
 };
 } // namespace sjef::util
 

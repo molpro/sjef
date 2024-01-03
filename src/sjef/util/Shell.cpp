@@ -20,8 +20,8 @@ Shell::Shell(std::string host, std::string shell) : m_host(std::move(host)), m_s
 #endif
     m_process = bp::child(bp::search_path("ssh"), m_host, std::move(shell), "-l", bp::std_in<m_in, bp::std_err> * m_err,
                           bp::std_out > *m_out);
-    if (!m_process.valid())
-      throw std::runtime_error("Spawning run process has failed");
+    if (!m_process.valid() || !m_process.running())
+      throw Shell::runtime_error("Spawning run process has failed");
   }
 }
 
@@ -91,7 +91,7 @@ std::string Shell::operator()(const std::string& command, bool wait, const std::
                           bp::std_out > *m_out, bp::std_err > *m_err);
     fs::current_path(current_path_save);
     if (!m_process.valid())
-      throw std::runtime_error("Spawning run process has failed");
+      throw Shell::runtime_error("Spawning run process has failed");
     m_process.detach();
     //      m_trace(3 - verbosity) << "jobnumber " << m_process.id() << ", running=" << m_process.running() <<
     //      std::endl; std::string line; while (std::getline(*m_out, line)) {
@@ -101,10 +101,16 @@ std::string Shell::operator()(const std::string& command, bool wait, const std::
     //      }
     //      m_trace(3 - verbosity) << "out from command " << command << ": " << m_last_out << std::endl;
   } else {
-    m_in << std::string{"cd '"} + directory + "'" << std::endl;
-    m_in << pipeline << std::endl;
-    m_in << ">&2 echo '" << terminator << "' $?" << std::endl;
-    m_in << "echo '" << terminator << "'" << std::endl;
+    try {
+      if (!m_process.valid() || !m_process.running())
+          throw Shell::runtime_error("remote server process has died");
+      m_in << std::string{"cd '"} + directory + "'" << std::endl;
+      m_in << pipeline << std::endl;
+      m_in << ">&2 echo '" << terminator << "' $?" << std::endl;
+      m_in << "echo '" << terminator << "'" << std::endl;
+    } catch (const std::exception& e) {
+      throw Shell::runtime_error((std::string{"Spawning run process has failed: "}+e.what()).c_str());
+    }
   }
   std::string line;
   m_job_number = 0;

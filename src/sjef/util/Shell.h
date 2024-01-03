@@ -60,7 +60,7 @@ private:
   mutable int m_job_number = 0;
   mutable bp::child m_process;
 
-  bool localhost() const { return (m_host.empty() || m_host == "localhost" || m_host == "127.0.0.1"); }
+  bool localhost() const { return (m_host.empty() || m_host == "localhost"); }
 };
 
 } // namespace sjef::util

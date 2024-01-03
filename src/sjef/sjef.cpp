@@ -33,7 +33,7 @@ public:
 
 ///> @private
 inline bool localhost(const std::string_view& host) {
-  return (host.empty() || host == "localhost" || host == "127.0.0.1");
+  return (host.empty() || host == "localhost");
 }
 
 ///> @private

@@ -85,8 +85,11 @@ jobs:
         . /opt/conda/etc/profile.d/conda.sh
         ls /opt/conda/envs
         service ssh status
+        echo hello1
         mkdir -p /var/run/sshd
+        echo hello2
         /usr/sbin/sshd -ddd
+        echo hello3
         service ssh restart
         ssh 127.0.0.1 pwd
         conda create -c conda-forge -n pysjef -y --file requirements.txt

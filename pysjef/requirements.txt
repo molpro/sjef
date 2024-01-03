@@ -9,3 +9,4 @@ regex
 c-compiler
 cxx-compiler
 ghostscript
+pytest

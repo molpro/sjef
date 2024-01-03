@@ -55,5 +55,9 @@ jobs:
         ssh localhost hostname || ssh -v localhost hostname
         cd ${{github.workspace}}/build && ctest -C ${{env.CMAKE_BUILD_TYPE}} || ctest -C ${{env.CMAKE_BUILD_TYPE}} -V --rerun-failed --output-on-failure
 
+    - name: Test python
+      run: |
+        cd pysjef && pytest
+
     - name: Build doxygen
       run: cmake --build ${{github.workspace}}/build --target sjef-doc

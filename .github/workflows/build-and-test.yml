@@ -88,9 +88,10 @@ jobs:
         echo hello1
         mkdir -p /var/run/sshd
         echo hello2
-        /usr/sbin/sshd -ddd
+        # /usr/sbin/sshd -ddd
         echo hello3
-        service ssh restart
+        /usr/sbin/sshd
+        # service ssh restart
         ssh 127.0.0.1 pwd
         conda create -c conda-forge -n pysjef -y --file requirements.txt
         conda activate pysjef

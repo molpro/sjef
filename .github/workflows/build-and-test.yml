@@ -83,6 +83,8 @@ jobs:
       run: |
         cd pysjef
         . /opt/conda/etc/profile.d/conda.sh
+        ls /opt/conda/envs
+        ssh 127.0.0.1 pwd
         conda create -c conda-forge -n pysjef -y --file requirements.txt
         conda activate pysjef
         bash ./build.sh

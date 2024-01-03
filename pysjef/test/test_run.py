@@ -55,5 +55,5 @@ def test_run_ssh_bad(project):
         project.run(backend='ssh_bad', wait=True)
         assert False
     except Exception as e:
-        # print('exception caught,', e)
+        print('exception caught,', e)
         assert 'failed' in str(e)

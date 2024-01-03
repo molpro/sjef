@@ -9,4 +9,5 @@ regex
 c-compiler
 cxx-compiler
 ghostscript
-pytest
+pytest >=7
+cmake >=3.27

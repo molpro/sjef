@@ -34,14 +34,21 @@ sjef::util::Job::Job(const sjef::Project& project)
       m_initial_status(static_cast<sjef::status>(std::stoi("0" + m_project.property_get("_status")))) {
   //  std::cout << "Job constructor, m_job_number=" << m_job_number << std::endl;
   if (!localhost()) {
-    m_remote_rsync = (*m_backend_command_server)("which rsync");
+    m_remote_rsync = (*m_backend_command_server)("PATH=$HOME/bin:/usr/local/bin:/opt/homebrew/bin:/opt/bin:$PATH which rsync");
     if (m_remote_rsync.empty())
       m_remote_rsync = "rsync";
+    m_remote_rsync_version = (*m_backend_command_server)(m_remote_rsync + " --version|head -1");
+    m_remote_rsync_version =
+        std::regex_replace(m_remote_rsync_version, std::regex{R"( *rsync *version *([0-9.]*) .*)"}, "$1");
+    if (std::stoi(m_remote_rsync_version.substr(0, 1)) < 3)
+      throw std::runtime_error("rsync on remote " + m_backend.host + " (" + m_remote_rsync + ") is version " +
+                               m_remote_rsync_version + ", which is too old");
     //        std::cout << "remote rsync: " << m_remote_rsync << std::endl;
     // don't allow remote cache directory name that could lead to shell expansion
     //    std::cout << m_remote_cache_directory<<std::endl;
     if (not std::regex_search(m_remote_cache_directory, std::regex("^[-A-Za-zÀ-ú0-9_=\\./]*$")))
       throw std::runtime_error("Invalid remote cache directory " + m_remote_cache_directory);
+    ensure_remote_cache_directory(); // to ensure cache is set up before any polling
   }
   m_poll_task = std::async(std::launch::async, [this]() { this->poll_job(); });
   //  std::cout << "Job constructor has launched poll task" << std::endl;
@@ -83,12 +90,12 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verb
     command += " -v";
   m_project.m_trace(2 - verbosity) << "Push rsync: " << command << std::endl;
   auto start_time = std::chrono::steady_clock::now();
-  (*m_backend_command_server)("mkdir -p '" + m_remote_cache_directory + "'");
+  ensure_remote_cache_directory();
   const Shell& shell = Shell();
   try {
     auto rsync_out = shell(command, true, ".", verbosity);
   } catch (const sjef::util::Shell::runtime_error& e) {
-    std::cout << "caught in Job()" << std::endl;
+    std::cout << "caught exception in Job::push_rundir(): " << e.what() << std::endl;
     throw sync_error(e.what());
   }
   if (verbosity > 1)
@@ -98,6 +105,16 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verb
         << "ms" << std::endl;
   return {shell.err().find("rsync error:") == std::string::npos, shell.out(),
           shell.err()}; // TODO: implement more robust error checking
+}
+
+void sjef::util::Job::ensure_remote_cache_directory() const {
+  if (m_remote_cache_directory_verified) return;
+  (*m_backend_command_server)("mkdir -p '" + m_remote_cache_directory + "'");
+  auto test_remote_cache_directory = (*m_backend_command_server)("ls -d '" + m_remote_cache_directory + "'");
+  if (test_remote_cache_directory != m_remote_cache_directory)
+    throw std::runtime_error("Error in making remote cache directory "+ m_remote_cache_directory +" on remote host "+
+                             m_backend.host);
+  m_remote_cache_directory_verified = true;
 }
 
 std::tuple<bool, std::string, std::string> sjef::util::Job::pull_rundir(int verbosity) {
@@ -132,7 +149,7 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::pull_rundir(int verb
   try {
     rsync_out = shell(command, true, ".", verbosity);
   } catch (const sjef::util::Shell::runtime_error& e) {
-    std::cout << "caught in Job()" << std::endl;
+    std::cout << "caught exception in Job::pull_rundir()" << e.what() << std::endl;
     throw std::runtime_error(e.what());
     throw static_cast<std::exception>(e);
   }

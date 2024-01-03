@@ -627,8 +627,6 @@ TEST_F(test_sjef, sync_backend) {
                                           {"test-r mote-cache", false}, {"test-r.mote-cache", true}};
   for (const auto& cache_name : cache_names) {
     const auto cache = testfile(fs::current_path() / cache_name.first);
-    if (not fs::create_directories(cache))
-      throw std::runtime_error("cannot create " + cache.string());
     const auto run_script = testfile("light.sh").string();
     std::ofstream(sjef::expand_path(std::string{m_dot_sjef / suffix / "backends.xml"}))
         << "<?xml version=\"1.0\"?>\n<backends>\n <backend name=\"local\" run_command=\"true\"/><backend "
@@ -917,8 +915,8 @@ TEST_F(test_sjef, bad_remote) {
   try {
     p.run("test-remote", 0, true, false);
   }
-//  catch(const sjef::util::Shell::runtime_error& e) {
-  catch(const sjef::util::Job::sync_error& e) {
+  catch(const sjef::util::Shell::runtime_error& e) {
+//  catch(const sjef::util::Job::sync_error& e) {
     caught = true;
     std::cout <<e.what()<<std::endl;
   }

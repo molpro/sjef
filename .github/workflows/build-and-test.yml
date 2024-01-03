@@ -59,7 +59,7 @@ jobs:
       run: cmake --build ${{github.workspace}}/build --target sjef-doc
 
   python:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu
     permissions:
       contents: read
       packages: write

@@ -2,9 +2,9 @@ name: Build and test
 
 on:
   push:
-    branches: [ "main" , "master"]
+    branches: [ "main" , "master" ]
   pull_request:
-    branches: [ "main" , "master"]
+    branches: [ "main" , "master" ]
   workflow_dispatch:
 
 env:
@@ -26,34 +26,68 @@ jobs:
     timeout-minutes: 5
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Check existence of build configuration file
-      id: check_configuration
-      uses: andstor/file-existence-action@v1
-      with:
-        files: "CMakeLists.txt"
+      - name: Check existence of build configuration file
+        id: check_configuration
+        uses: andstor/file-existence-action@v1
+        with:
+          files: "CMakeLists.txt"
 
-    - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
 
-    - name: Configure CMake
-      if: steps.check_configuration.outputs.files_exists == 'true'
-      run: |
-        git config --global --add safe.directory /__w/sjef/sjef
-        cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.CMAKE_BUILD_TYPE}} -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache  --log-level=DEBUG
+      - name: Configure CMake
+        if: steps.check_configuration.outputs.files_exists == 'true'
+        run: |
+          git config --global --add safe.directory /__w/sjef/sjef
+          cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.CMAKE_BUILD_TYPE}} -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache  --log-level=DEBUG
 
-    - name: Build
-      if: steps.check_configuration.outputs.files_exists == 'true'
-      run: cmake --build ${{github.workspace}}/build --config ${{env.CMAKE_BUILD_TYPE}}
+      - name: Build
+        if: steps.check_configuration.outputs.files_exists == 'true'
+        run: cmake --build ${{github.workspace}}/build --config ${{env.CMAKE_BUILD_TYPE}}
 
-    - name: Test
-      if: steps.check_configuration.outputs.files_exists == 'true'
-      run: |
-        service ssh restart
-        service ssh status
-        ssh localhost hostname || ssh -v localhost hostname
-        cd ${{github.workspace}}/build && ctest -C ${{env.CMAKE_BUILD_TYPE}} || ctest -C ${{env.CMAKE_BUILD_TYPE}} -V --rerun-failed --output-on-failure
+      - name: Test
+        if: steps.check_configuration.outputs.files_exists == 'true'
+        run: |
+          service ssh restart
+          service ssh status
+          ssh localhost hostname || ssh -v localhost hostname
+          cd ${{github.workspace}}/build && ctest -C ${{env.CMAKE_BUILD_TYPE}} || ctest -C ${{env.CMAKE_BUILD_TYPE}} -V --rerun-failed --output-on-failure
 
-    - name: Build doxygen
-      run: cmake --build ${{github.workspace}}/build --target sjef-doc
+      - name: Build doxygen
+        run: cmake --build ${{github.workspace}}/build --target sjef-doc
+
+  python:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    container:
+      # relies on repository name being all lower case
+      image: ghcr.io/${{ github.repository }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Check existence of build configuration file
+        id: check_configuration
+        uses: andstor/file-existence-action@v1
+        with:
+          files: "pysjef/build.sh"
+
+      - name: build and test
+        run: |
+          cd pysjef
+          . /opt/conda/etc/profile.d/conda.sh
+          mkdir -p /var/run/sshd
+          /usr/sbin/sshd
+          ssh 127.0.0.1 pwd
+          conda create -c conda-forge -n pysjef -y --file requirements.txt
+          conda activate pysjef
+          bash ./build.sh
+          pytest
+

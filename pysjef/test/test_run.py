@@ -6,7 +6,10 @@ import pytest
 @pytest.fixture
 def project(tmp_path):
     suffix = 'testing'
-    with open(os.path.expanduser('~/.sjef/' + suffix + '/backends.xml'), 'w') as f:
+    import pathlib
+    config_dir = pathlib.Path.home() / '.sjef' / suffix
+    config_dir.mkdir(parents=True, exist_ok=True)
+    with open(config_dir / 'backends.xml', 'w') as f:
         f.write("""<?xml version="1.0"?>
     <backends>
       <backend name="local"/>

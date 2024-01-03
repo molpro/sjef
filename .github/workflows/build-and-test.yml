@@ -74,6 +74,8 @@ jobs:
       with:
         files: "pysjef/build.sh"
 
+    - name: install ssh and rsync
+      run: apt update && apt install -y openssh-server openssh-client rsync && service ssh starta && ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa && cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys
     - name: build and test
       run: |
         cd pysjef

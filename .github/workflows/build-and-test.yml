@@ -86,6 +86,7 @@ jobs:
         ls /opt/conda/envs
         service ssh status
         mkdir -p /var/run/sshd
+        /usr/sbin/sshd -ddd
         service ssh restart
         ssh 127.0.0.1 pwd
         conda create -c conda-forge -n pysjef -y --file requirements.txt

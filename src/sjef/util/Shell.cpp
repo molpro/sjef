@@ -18,7 +18,7 @@ Shell::Shell(std::string host, std::string shell) : m_host(std::move(host)), m_s
 #ifdef WIN32
   _putenv_s("PATH", "C:\\msys64\\usr\\bin;C:\\Windows\\System32\\OpenSSH");
 #endif
-    m_process = bp::child(bp::search_path("ssh"), m_host, std::move(shell), "-l", bp::std_in<m_in, bp::std_err> * m_err,
+    m_process = bp::child(bp::search_path("ssh"), m_host, std::move(shell), bp::std_in<m_in, bp::std_err> * m_err,
                           bp::std_out > *m_out);
     if (!m_process.valid() || !m_process.running())
       throw Shell::runtime_error("Spawning run process has failed");

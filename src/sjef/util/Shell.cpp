@@ -114,20 +114,28 @@ std::string Shell::operator()(const std::string& command, bool wait, const std::
   }
   std::string line;
   m_job_number = 0;
-  while (std::getline(*m_out, line) && line != terminator) {
-    m_trace(4 - verbosity) << "out line from command " << line << std::endl;
-    m_last_out += line + '\n';
-  }
-  m_trace(3 - verbosity) << "out from command " << command << ":\n" << m_last_out << std::endl;
   m_last_err.clear();
-  while (std::getline(*m_err, line) && line.substr(0, terminator.size()) != terminator) {
-    m_trace(4 - verbosity) << "err line from command " << line << std::endl;
-    std::smatch match;
-    if (std::regex_search(line, match, std::regex{jobnumber_tag + "\\s*(\\d+)"})) {
-      m_trace(5 - verbosity) << "... a match was found: " << match[1] << std::endl;
-      m_job_number = std::stoi(match[1]);
-    } else
-      m_last_err += line + '\n';
+  try {
+    while (std::getline(*m_out, line) && line != terminator) {
+      m_trace(4 - verbosity) << "out line from command " << line << std::endl;
+      m_last_out += line + '\n';
+    }
+    m_trace(3 - verbosity) << "out from command " << command << ":\n" << m_last_out << std::endl;
+    while (std::getline(*m_err, line) && line.substr(0, terminator.size()) != terminator) {
+      m_trace(4 - verbosity) << "err line from command " << line << std::endl;
+      std::smatch match;
+      if (std::regex_search(line, match, std::regex{jobnumber_tag + "\\s*(\\d+)"})) {
+        m_trace(5 - verbosity) << "... a match was found: " << match[1] << std::endl;
+        m_job_number = std::stoi(match[1]);
+      } else
+        m_last_err += line + '\n';
+    }
+  } catch (const std::exception& e) {
+    throw runtime_error(
+        (std::string{"Shell(\""} + command +
+         "\") has failed whilst capturing the output.\nExit code: " + std::to_string(m_process.exit_code()) +
+         "\n\nstdout:\n" + m_last_out + "\nstderr:\n" + m_last_err + "\nException thrown:" + e.what())
+            .c_str());
   }
   m_trace(3 - verbosity) << "err from command " << command << ":\n" << m_last_err << std::endl;
   if (localhost()) {

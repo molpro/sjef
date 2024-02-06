@@ -349,10 +349,7 @@ TEST_F(test_sjef, restart) {
   if (sjef::util::Shell::local_asynchronous_supported()) {
     std::string path(getenv("PATH"));
     path = fs::current_path().string() + ":" + path;
-    //  std::cout << "PATH " << path << std::endl;
     setenv("PATH", path.c_str(), 1);
-    { std::ofstream("dummy") << "#!/bin/sh\nsleep 0;if [ $1 = '-v' ]; then shift; fi; echo dummyxml > ${1%.inp}.xml"; }
-    fs::permissions("dummy", fs::perms::owner_exec, fs::perm_options::add);
 
     const std::filesystem::path& filename = testproject("restart");
     for (int restart = 0; restart < 2; ++restart) {
@@ -364,12 +361,11 @@ TEST_F(test_sjef, restart) {
         ASSERT_TRUE(p.run(backend, 0, true, false));
         p.wait();
         //    std::cout << p.xml() <<std::endl;
-        EXPECT_EQ(p.xml(), "dummyxml") << p.file_contents("xml");
+        EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>") << p.file_contents("xml");
         EXPECT_EQ(p.status(), sjef::completed);
         EXPECT_NE(p.property_get("jobnumber"), "-1");
       }
     }
-    fs::remove("dummy");
   }
 }
 

@@ -97,6 +97,7 @@ Project::Project(const std::filesystem::path& filename, bool construct, const st
     auto lock = m_locker->bolt();
     if (fs::exists(propertyFile())) {
       load_property_file_locked();
+      property_delete("run_input_hash"); // because different hashes are obtained on Windows and linux/macos, at least if project checked out from git
     } else {
       if (!fs::exists(m_filename))
         fs::create_directories(m_filename);

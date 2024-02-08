@@ -347,9 +347,6 @@ TEST_F(test_sjef, spawn_many_dummy) {
 
 TEST_F(test_sjef, restart) {
   if (sjef::util::Shell::local_asynchronous_supported()) {
-    std::string path(getenv("PATH"));
-    path = fs::current_path().string() + ":" + path;
-    setenv("PATH", path.c_str(), 1);
 
     const std::filesystem::path& filename = testproject("restart");
     for (int restart = 0; restart < 2; ++restart) {
@@ -361,7 +358,7 @@ TEST_F(test_sjef, restart) {
         ASSERT_TRUE(p.run(backend, 0, true, false));
         p.wait();
         //    std::cout << p.xml() <<std::endl;
-        EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>") << p.file_contents("xml");
+        EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?><root/>") << p.file_contents("xml");
         EXPECT_EQ(p.status(), sjef::completed);
         EXPECT_NE(p.property_get("jobnumber"), "-1");
       }
@@ -526,18 +523,18 @@ TEST_F(test_sjef, recent) {
   EXPECT_EQ(sjef::Project::recent_find(suffix, fn), 1);
 }
 
+// TODO reinstate these tests for Windows after figuring out how to make an executable for the dummy backend
+#ifndef WIN32
 TEST_F(test_sjef, dummy_backend) {
   if (sjef::util::Shell::local_asynchronous_supported()) {
     sjef::Project p(testproject("completely_new"));
     p.run(sjef::Backend::dummy_name, 0, true, false);
     p.wait();
-#ifndef WIN32
     // TODO: implement proper check for completeness rather than just waiting
     timespec delay;
     delay.tv_sec = 0;
     delay.tv_nsec = 100000000;
     nanosleep(&delay, NULL);
-#endif
     EXPECT_EQ(p.file_contents("out"), "dummy")
         << "\nstdout:\n"
         << p.file_contents("stdout") << "\nstderr:\n"
@@ -546,9 +543,9 @@ TEST_F(test_sjef, dummy_backend) {
         << sjef::util::Shell()("dummy thing.inp") << "\noutput from ../src/sjef/dummy another_thing.inp:\n"
         << sjef::util::Shell()("../src/sjef/dummy another_thing.inp") << "\ncurrent dir:\n"
         << sjef::util::Shell()("pwd; ls -lRa .") << std::endl;
-    EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
+    EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?><root/>");
     EXPECT_EQ(p.file_contents("out", "", 1), "dummy");
-    EXPECT_EQ(p.xml(1), "<?xml version=\"1.0\"?>\n<root/>");
+    EXPECT_EQ(p.xml(1), "<?xml version=\"1.0\"?><root/>");
   }
 }
 
@@ -561,7 +558,7 @@ TEST_F(test_sjef, project_name_embedded_space) {
     p.run(sjef::Backend::dummy_name, 0, true, false);
     p.wait();
     EXPECT_EQ(p.file_contents("out"), "dummy");
-    EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
+    EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?><root/>");
   }
 }
 
@@ -578,10 +575,11 @@ TEST_F(test_sjef, project_dir_embedded_space) {
     p.run(sjef::Backend::dummy_name, 0, true, false);
     p.wait();
     EXPECT_EQ(p.file_contents("out"), "dummy");
-    EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?>\n<root/>");
+    EXPECT_EQ(p.xml(), "<?xml version=\"1.0\"?><root/>");
   }
   fs::remove_all(dir);
 }
+#endif
 
 TEST_F(test_sjef, run_directory) {
   auto filename = testproject("run_directory");

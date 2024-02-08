@@ -61,20 +61,25 @@ TEST_F(test_sjef_molpro, molpro_workflow) {
 #ifdef WIN32
     // TODO get remote launch working for Windows
     constexpr bool test_remote = false;
+    constexpr bool test_really_remote = false; // this can be used to test in a bespoke environment
 #else
     constexpr bool test_remote = true;
+    constexpr bool test_really_remote = false;
 #endif
     constexpr bool timing = false;
     const auto cache = testfile(fs::current_path() / "molpro_workflow-cache");
     std::ofstream(sjef::expand_path((m_dot_sjef / "molpro" / "backends.xml").string()))
-        << "<?xml version=\"1.0\"?>\n<backends>\n <backend name=\"test-remote\" run_command=\""
-        << boost::process::search_path("molpro").string() << "\" host=\"127.0.0.1\" cache=\"" << cache.string()
-        << "\"/>\n</backends>";
+        << "<?xml version=\"1.0\"?>\n<backends>\n"
+        << "<backend name=\"test-remote\" run_command=\"" << boost::process::search_path("molpro").string() << "\" host=\"127.0.0.1\" cache=\"" << cache.string() << "\"/>\n"
+        << "<backend name=\"test-really-remote\" run_command=\"/usr/local/bin/molpro\" host=\"peterk@pjk2022.local\" />\n"
+        << "</backends>";
     std::map<std::string, double> energies;
     for (int repeat = 0; repeat < 1; ++repeat) {
       auto remotes = std::vector<std::string>{"local"};
       if (test_remote)
         remotes.emplace_back("test-remote");
+      if (test_really_remote)
+        remotes.emplace_back("test-really-remote");
       for (const auto& backend : remotes) {
         std::map<std::string, std::unique_ptr<sjef::Project>> projects;
         fs::remove_all(cache);

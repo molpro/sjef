@@ -84,7 +84,7 @@ void sjef::Project::custom_run_preface() {
 sjef::Backend sjef::Project::default_backend() {
   if (m_project_suffix == "molpro") {
 #ifdef WIN32
-    auto command = std::string{"'C:/Program\\ Files/Molpro/bin/program_molpro'"};
+    auto command = std::string{"'C:/Program Files/Molpro/bin/program_molpro'"};
 #else
     auto command = std::string{"molpro"};
 #endif

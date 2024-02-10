@@ -1,6 +1,7 @@
 #ifndef SJEF_LIB_UTIL_UTIL_H_
 #define SJEF_LIB_UTIL_UTIL_H_
 #include <ostream>
+#include <regex>
 
 namespace sjef::util {
 
@@ -18,6 +19,7 @@ inline std::vector<std::string> splitString(const std::string& input, char c = '
       result.emplace_back(begin + 1, str - 1);
     else
       result.emplace_back(begin, str);
+    result.back() = std::regex_replace(result.back(),std::regex{" "},"\\ ");
     if (result.back().empty())
       result.pop_back();
   } while (0 != *str++);

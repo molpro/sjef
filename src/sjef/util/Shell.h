@@ -18,7 +18,7 @@ namespace sjef::util {
 class Shell {
 
 public:
-  Shell(std::string host, std::string shell = "/bin/sh");
+  Shell(std::string host, std::string shell = "bash");
   Shell() : Shell("localhost") {}
   std::string operator()(const std::string& command, bool wait = true, const std::string& directory = ".",
                          int verbosity = 0, const std::string& out = "/dev/null",

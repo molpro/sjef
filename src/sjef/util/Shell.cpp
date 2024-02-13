@@ -86,7 +86,7 @@ std::string Shell::operator()(const std::string& command, bool wait, const std::
 
     m_out.reset(new bp::ipstream);
     m_err.reset(new bp::ipstream);
-    m_trace(2 - verbosity) << "launching local process" << std::endl;
+    m_trace(2 - verbosity) << "launching local process: " <<executable("nohup") <<" "<<m_shell<<" -c "<<pipeline << std::endl;
     m_process = bp::child(executable("nohup"), m_shell, "-c", pipeline,
                           bp::std_out > *m_out, bp::std_err > *m_err);
     fs::current_path(current_path_save);

@@ -85,7 +85,7 @@ sjef::Backend sjef::Project::default_backend() {
   if (m_project_suffix == "molpro") {
 #ifdef WIN32
 //    auto command = std::string{"'C:/Program Files/Molpro/bin/program_molpro'"};
-    auto command = std::string{"mpiexec {-n %n:1!MPI size} {-M %M!Total memory} {-m %m!Process memory} {-G %G!GA memory} program_molpro"};
+    auto command = std::string{"mpiexec {-n %n:1!MPI size} program_molpro {-M %M!Total memory} {-m %m!Process memory} {-G %G!GA memory}"};
 #else
     auto command = std::string{"molpro"};
 #endif

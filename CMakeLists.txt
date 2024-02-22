@@ -43,16 +43,26 @@ if (DOXYGEN_FOUND)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
     add_custom_target(${PROJECT_NAME}-doc ALL
             DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/html/index.html
-            )
+    )
     file(GLOB_RECURSE headers src/*.h */*.md *.md src/*.cpp)
     add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/html/index.html
             COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
             DEPENDS ${headers} ${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
             COMMENT "Generating API documentation with Doxygen" VERBATIM
-            )
+    )
 endif (DOXYGEN_FOUND)
 
 add_custom_target(_version.py
-COMMAND echo "__version__ = \"${CMAKE_PROJECT_VERSION}\"" > _version.py
+        COMMAND echo "__version__ = \"${CMAKE_PROJECT_VERSION}\"" > _version.py
 )
+
+if (WIN32)
+    FetchContent_Declare(cwrsync
+            GIT_REPOSITORY https://github.com/molpro/cwrsync
+            GIT_TAG 6.2.11
+    )
+    FetchContent_MakeAvailable(cwrsync)
+    file(GLOB cwrsync_files ${cwrsync_SOURCE_DIR}/bin/*)
+    install(FILES ${cwrsync_files} DESTINATION bin)
+endif ()

@@ -136,7 +136,7 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::pull_rundir(int verb
   std::string fwin = m_project.filename("", "", 0).string();
   std::replace(fwin.begin(), fwin.end(), '\\', '/');
   std::replace(fwin.begin(), fwin.end(), ':', '/');
-  command += " '/" + fwin + "'";
+  command += " '/cygdrive/" + fwin + "'";
 #else
   command += " '" + m_project.filename("", "", 0).string() + "'";
 #endif

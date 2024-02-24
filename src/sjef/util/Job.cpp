@@ -62,6 +62,12 @@ sjef::util::Job::Job(const sjef::Project& project)
         if (oldpath.substr(0,needed_path.length()) != needed_path)
             setenv("PATH", (needed_path + oldpath).c_str(), 1);
 #endif
+#ifdef WIN32
+        auto conda_prefix = getenv("CONDA_PREFIX");
+        if (conda_prefix != NULL) {
+          setenv("PATH", (std::string(conda_prefix) + "\\bin;" + getenv("PATH"));
+        }
+#endif
 }
 
 std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verbosity) {

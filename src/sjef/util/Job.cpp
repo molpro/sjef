@@ -65,7 +65,7 @@ sjef::util::Job::Job(const sjef::Project& project)
 #ifdef WIN32
         auto conda_prefix = getenv("CONDA_PREFIX");
         if (conda_prefix != NULL) {
-          setenv("PATH", (std::string(conda_prefix) + "\\bin;" + getenv("PATH")).c_str());
+          _putenv_s("PATH", (std::string(conda_prefix) + "\\bin;" + getenv("PATH")).c_str());
         }
 #endif
 }

@@ -46,8 +46,8 @@ import platform
 if platform.system() == "Darwin":
     extra_args = ['-std=c++17', "-mmacosx-version-min=13"]
 elif platform.system() == "Windows":
-    LIB_DIRS = [PREFIX + "\Library\lib"]
-    INCL_DIRS = [PREFIX + "\include"]
+    LIB_DIRS = [PREFIX + r"\Library\lib", PREFIX+r"\Lib"]
+    INCL_DIRS = [PREFIX + r"\include"]
     extra_args = ['/std:c++17']
     libs.append('Shell32')
 else:

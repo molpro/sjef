@@ -1,4 +1,4 @@
-REM conda install -y -c conda-forge --file requirements.txt
+conda install -y -c conda-forge --file requirements.txt m2-bash
 rmdir /S /Q cmake-build
 mkdir cmake-build
 cd cmake-build

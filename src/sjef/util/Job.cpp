@@ -132,9 +132,7 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::pull_rundir(int verb
   command += " --rsync-path=" + m_remote_rsync;
   command += " --exclude=backup --exclude=*.d";
   command += " --exclude=Info.plist --exclude=.Info.plist.writing_object";
-#ifdef WIN32
-  command += " --rsh '/usr/bin/ssh'";
-#else
+#ifndef WIN32
   command += " --rsh 'ssh -o ControlPath=~/.ssh/sjef-control-%h-%p-%r -o ControlMaster=auto -o ControlPersist=300'";
 #endif
   command += " " + m_backend.host + ":'" + m_remote_cache_directory + "/'";

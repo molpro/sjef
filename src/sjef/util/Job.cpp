@@ -82,7 +82,6 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verb
   //   in cwrsync the C: drive is mounted as /cygdrive/c/
   //   convert c:\A\B -> c/a/b and pre-prepend /cygdrive/
   // also ControlPath socket special files do not work on Windows
-//  command += " --rsh '/usr/bin/ssh'";
   std::string fwin = m_project.filename("", "", 0).string();
   std::replace(fwin.begin(), fwin.end(), '\\', '/');
   std::replace(fwin.begin(), fwin.end(), ':', '/');

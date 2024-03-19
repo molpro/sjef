@@ -58,12 +58,10 @@ add_custom_target(_version.py
 )
 
 if (WIN32)
-    FetchContent_Declare(cwrsync
-            GIT_REPOSITORY https://github.com/molpro/cwrsync
-            GIT_TAG 6.2.11
+    FetchContent_Declare(rsync
+            GIT_REPOSITORY https://github.com/molpro/windows-rsync
+            GIT_TAG main
     )
-    FetchContent_MakeAvailable(cwrsync)
-    install(DIRECTORY ${cwrsync_SOURCE_DIR}/ DESTINATION etc/cwrsync PATTERN .git EXCLUDE)
-    file(WRITE rsync "mkdir -p /tmp\ndir=$(dirname \"\${BASH_SOURCE[0]}\")\nexport PATH=\"$dir\"/../etc/cwrsync/bin:\"$dir\"/etc/cwrsync/bin:\"$PATH\"\nexport MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL=\"*\"\nexec rsync.exe --rsh=\"ssh -o UserKnownHostsFile=$HOMEPATH/.ssh/known_hosts -F $HOMEPATH/.ssh/config -i $HOMEPATH/.ssh/id_rsa -i $HOMEPATH/.ssh/id_dsa -i $HOMEPATH/.ssh/id_ed25519 -i $HOMEPATH/.ssh/id_ed25519_sk -i $HOMEPATH/.ssh/id_ecdsa -i $HOMEPATH/.ssh/id_ecdsa_sk\" \"$@\"")
-    install(FILES rsync DESTINATION .)
+    FetchContent_MakeAvailable(rsync)
+    install(DIRECTORY ${rsync_SOURCE_DIR}/ DESTINATION . PATTERN .git EXCLUDE)
 endif ()

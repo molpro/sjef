@@ -1,4 +1,4 @@
-call conda install -y -c conda-forge --file requirements.txt m2-base
+call conda install -y -c conda-forge --file requirements.txt
 set PREFIX=%CONDA_PREFIX%
 rmdir /S /Q cmake-build
 mkdir cmake-build

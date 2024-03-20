@@ -63,5 +63,5 @@ if (WIN32)
             GIT_TAG main
     )
     FetchContent_MakeAvailable(rsync)
-    install(DIRECTORY ${rsync_SOURCE_DIR}/ DESTINATION . PATTERN .git EXCLUDE)
+    install(DIRECTORY ${rsync_SOURCE_DIR}/ DESTINATION ./rsync PATTERN .git EXCLUDE)
 endif ()

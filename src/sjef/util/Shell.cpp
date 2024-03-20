@@ -16,11 +16,13 @@ Shell::Shell(std::string host, std::string shell) : m_host(std::move(host)), m_s
     m_out.reset(new bp::ipstream);
     m_err.reset(new bp::ipstream);
 #ifdef WIN32
-//  _putenv_s("PATH", "C:\\msys64\\usr\\bin;C:\\Windows\\System32\\OpenSSH");
-// TODO reconsider this when implementing remote backend for Windows
+    auto ssh="C:\\Windows\\System32\\OpenSSH\\ssh.exe";
+#else
+    auto ssh=bp::search_path("ssh");
 #endif
-    m_process = bp::child(bp::search_path("ssh"), m_host, std::move(shell), "-l", bp::std_in<m_in, bp::std_err> * m_err,
+    m_process = bp::child(ssh, m_host, std::move(shell), "-l", bp::std_in<m_in, bp::std_err> * m_err,
                           bp::std_out > *m_out);
+//    std::cout << "ssh is"<<ssh<<", "<<m_process.valid()<<", "<<m_process.running()<<std::endl;
     if (!m_process.valid() || !m_process.running())
       throw Shell::runtime_error("Spawning run process has failed");
   }

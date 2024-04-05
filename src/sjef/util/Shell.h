@@ -18,6 +18,11 @@ namespace sjef::util {
 class Shell {
 
 public:
+  /*!
+   * @brief Construct a shell instance
+   * @param host hostname passed to ssh. If "localhost", ssh will not be used.
+   * @param shell Shell command. If empty, then operator() will run commands directly and synchronously rather than in a shell.
+   */
   Shell(std::string host, std::string shell = "bash");
   Shell() : Shell("localhost") {}
   std::string operator()(const std::string& command, bool wait = true, const std::string& directory = ".",
@@ -62,6 +67,8 @@ private:
 
   bool localhost() const { return (m_host.empty() || m_host == "localhost"); }
 };
+
+std::vector<std::string> tokenise(const std::string& command);
 
 } // namespace sjef::util
 

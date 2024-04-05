@@ -59,7 +59,7 @@ add_custom_target(_version.py
 
 if (WIN32)
     FetchContent_Declare(rsync
-            GIT_REPOSITORY https://github.com/molpro/windows-rsync
+            GIT_REPOSITORY https://github.com/molpro/cwrsync
             GIT_TAG main
     )
     FetchContent_MakeAvailable(rsync)

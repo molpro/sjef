@@ -67,7 +67,7 @@ sjef::util::Job::Job(const sjef::Project& project)
         std::cout << "getenv(PATH) "<<getenv("PATH")<<std::endl;
         std::cout << "conda_prefix "<<conda_prefix<<std::endl;
         if (conda_prefix != NULL) {
-          _putenv_s("PATH", (std::string(conda_prefix) + "\\rsync;" + getenv("PATH")).c_str());
+          _putenv_s("PATH", (std::string(conda_prefix) + "\\rsync\\bin;" + getenv("PATH")).c_str());
         }
         std::cout << "getenv(PATH) "<<getenv("PATH")<<std::endl;
 #endif

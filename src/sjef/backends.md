@@ -29,7 +29,7 @@ The key/value pairs are normally specified through the library call to run the j
 Example:
 
 <!--- @cond DoNotRaiseWarning
---->
+-->
 ```xml
 <backends>
   <!-- there is a default template backend always added to the configuration file by the library
@@ -58,6 +58,6 @@ Example:
     />
 </backends>
 ```
-<!--- @endcond --->
+<!--- @endcond -->
 
 [//]: # ( @page backends sjef-project backends)

@@ -99,7 +99,7 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verb
   m_project.m_trace(2 - verbosity) << "Push rsync: " << command << std::endl;
   auto start_time = std::chrono::steady_clock::now();
   ensure_remote_cache_directory();
-  const Shell& shell = Shell();
+  const Shell& shell = Shell("localhost","");
   try {
     auto rsync_out = shell(command, true, ".", verbosity);
   } catch (const sjef::util::Shell::runtime_error& e) {
@@ -150,7 +150,7 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::pull_rundir(int verb
     command += " -v";
   m_project.m_trace(2 - verbosity) << "Pull rsync: " << command << std::endl;
   auto start_time = std::chrono::steady_clock::now();
-  const Shell& shell = Shell();
+  const Shell& shell = Shell("localhost","");
   std::string rsync_out;
   try {
     rsync_out = shell(command, true, ".", verbosity);

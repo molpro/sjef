@@ -141,3 +141,29 @@ TEST(Shell, bad_command) {
     EXPECT_TRUE(caught);
   }
 }
+
+TEST(Shell, no_shell) {
+  sjef::util::Shell comm("localhost", "");
+  comm("ls '-d' .", true, ".", 0);
+  EXPECT_EQ(comm.out(), ".");
+//  std::cout << comm.out() << std::endl;
+  comm("touch 'one two three'", true, ".", 0);
+  EXPECT_EQ(comm.out(), "");
+  comm("ls 'one two three'", true, ".", 0);
+  EXPECT_EQ(comm.out(), "one two three");
+  comm("rm -f 'one two three'", true, ".", 0);
+}
+
+TEST(Shell, tokenise) {
+  std::map<std::string, std::vector<std::string>> tests;
+  tests["a b c"] = {"a", "b", "c"};
+  tests["'a b' c"] = {"a b", "c"};
+  tests["\"a b\" c"] = {"a b", "c"};
+  tests["\"ab\" c"] = {"ab", "c"};
+  tests["\"ab\"c"] = {"abc"};
+  tests["\"ab\"cd"] = {"abcd"};
+  tests["a\"b\"cd"] = {"abcd"};
+  for (const auto& [str, tokens] : tests) {
+    EXPECT_EQ(sjef::util::tokenise(str), tokens);
+  }
+}

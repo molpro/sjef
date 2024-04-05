@@ -143,6 +143,7 @@ TEST(Shell, bad_command) {
 }
 
 TEST(Shell, no_shell) {
+#ifndef WIN32
   sjef::util::Shell comm("localhost", "");
   comm("ls '-d' .", true, ".", 0);
   EXPECT_EQ(comm.out(), ".");
@@ -152,6 +153,7 @@ TEST(Shell, no_shell) {
   comm("ls 'one two three'", true, ".", 0);
   EXPECT_EQ(comm.out(), "one two three");
   comm("rm -f 'one two three'", true, ".", 0);
+#endif
 }
 
 TEST(Shell, tokenise) {

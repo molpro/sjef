@@ -6,16 +6,16 @@
 #include <future>
 #include <regex>
 #include <set>
-#include <sstream>
-#include <string>
 #include <signal.h>
+#include <sstream>
 #include <stdlib.h>
+#include <string>
 #if defined(WIN32) || defined(__WIN64)
 #ifdef _M_AMD64
 #define _AMD64_
 #endif
-#include<processthreadsapi.h>
-#include<handleapi.h>
+#include <handleapi.h>
+#include <processthreadsapi.h>
 #endif
 namespace fs = std::filesystem;
 
@@ -34,7 +34,8 @@ sjef::util::Job::Job(const sjef::Project& project)
       m_initial_status(static_cast<sjef::status>(std::stoi("0" + m_project.property_get("_status")))) {
   //  std::cout << "Job constructor, m_job_number=" << m_job_number << std::endl;
   if (!localhost()) {
-    m_remote_rsync = (*m_backend_command_server)("PATH=$HOME/bin:/usr/local/bin:/opt/homebrew/bin:/opt/bin:$PATH which rsync");
+    m_remote_rsync =
+        (*m_backend_command_server)("PATH=$HOME/bin:/usr/local/bin:/opt/homebrew/bin:/opt/bin:$PATH which rsync");
     if (m_remote_rsync.empty())
       m_remote_rsync = "rsync";
     m_remote_rsync_version = (*m_backend_command_server)(m_remote_rsync + " --version|head -1");
@@ -54,23 +55,39 @@ sjef::util::Job::Job(const sjef::Project& project)
   //  std::cout << "Job constructor has launched poll task" << std::endl;
 }
 
-    void setup_rsync_path() {
+void setup_rsync_path() {
 #ifdef __APPLE__
-        // don't want to end up with /usr/bin/rsync which (2023) is too old
-        auto oldpath = std::string{std::getenv("PATH")};
-        auto needed_path = std::string{"/opt/homebrew/bin:/usr/local/bin:/opt/local/bin:"};
-        if (oldpath.substr(0,needed_path.length()) != needed_path)
-            setenv("PATH", (needed_path + oldpath).c_str(), 1);
+  // don't want to end up with /usr/bin/rsync which (2023) is too old
+  auto oldpath = std::string{std::getenv("PATH")};
+  auto needed_path = std::string{"/opt/homebrew/bin:/usr/local/bin:/opt/local/bin:"};
+  if (oldpath.substr(0, needed_path.length()) != needed_path)
+    setenv("PATH", (needed_path + oldpath).c_str(), 1);
 #endif
 #ifdef WIN32
-        auto conda_prefix = getenv("CONDA_PREFIX");
-        std::cout << "getenv(PATH) "<<getenv("PATH")<<std::endl;
-        std::cout << "conda_prefix "<<conda_prefix<<std::endl;
-        if (conda_prefix != NULL) {
-          _putenv_s("PATH", (std::string(conda_prefix) + "\\rsync\\bin;" + getenv("PATH")).c_str());
-        }
-        std::cout << "getenv(PATH) "<<getenv("PATH")<<std::endl;
+  auto conda_prefix = getenv("CONDA_PREFIX");
+  std::cout << "getenv(PATH) " << getenv("PATH") << std::endl;
+  std::cout << "conda_prefix " << conda_prefix << std::endl;
+  if (conda_prefix != NULL) {
+    _putenv_s("PATH", (std::string(conda_prefix) + "\\rsync\\bin;" + getenv("PATH")).c_str());
+  }
+  std::cout << "getenv(PATH) " << getenv("PATH") << std::endl;
 #endif
+}
+
+static std::string system_specific_ssh_options() {
+  std::string result;
+#ifdef WIN32
+  // ControlPath socket special files do not work on Windows
+  auto user_profile = getenv("USERPROFILE");
+  result = std::string{"--rsh='ssh -o UserKnownHostsFile="} + user_profile + "\\.ssh\\known_hosts";
+  //  result += " -F $HOMEPATH/.ssh/config";
+  result += "'";
+//                     " -i $HOMEPATH/.ssh/id_rsa -i $HOMEPATH/.ssh/id_dsa -i $HOMEPATH/.ssh/id_ed25519 -i
+//                     $HOMEPATH/.ssh/id_ed25519_sk -i $HOMEPATH/.ssh/id_ecdsa -i $HOMEPATH/.ssh/id_ecdsa_sk'";
+#else
+  result = "--rsh 'ssh -o ControlPath=~/.ssh/sjef-control-%h-%p-%r -o ControlMaster=auto -o ControlPersist=300'";
+#endif
+  return result;
 }
 
 std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verbosity) {
@@ -80,17 +97,16 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verb
   std::string command = "rsync --archive --copy-links --timeout=5 -s -v";
   command += " --rsync-path=" + m_remote_rsync;
   command += " --exclude=Info.plist --exclude=.Info.plist.writing_object";
+  command += " " + system_specific_ssh_options();
 #ifdef WIN32
   // rsync interprets c:\a\b as a remote filename so windows filenames cause it to fail
   //   in cwrsync the C: drive is mounted as /cygdrive/c/
   //   convert c:\A\B -> c/a/b and pre-prepend /cygdrive/
-  // also ControlPath socket special files do not work on Windows
   std::string fwin = m_project.filename("", "", 0).string();
   std::replace(fwin.begin(), fwin.end(), '\\', '/');
   std::replace(fwin.begin(), fwin.end(), ':', '/');
   command += " '/cygdrive/" + fwin + "/'";
 #else
-  command += " --rsh 'ssh -o ControlPath=~/.ssh/sjef-control-%h-%p-%r -o ControlMaster=auto -o ControlPersist=300'";
   command += " '" + m_project.filename("", "", 0).string() + "/'";
 #endif
   command += " " + m_backend.host + ":'" + m_remote_cache_directory + "'";
@@ -99,7 +115,7 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verb
   m_project.m_trace(2 - verbosity) << "Push rsync: " << command << std::endl;
   auto start_time = std::chrono::steady_clock::now();
   ensure_remote_cache_directory();
-  const Shell& shell = Shell("localhost","");
+  const Shell& shell = Shell("localhost", "");
   try {
     auto rsync_out = shell(command, true, ".", verbosity);
   } catch (const sjef::util::Shell::runtime_error& e) {
@@ -116,11 +132,12 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verb
 }
 
 void sjef::util::Job::ensure_remote_cache_directory() const {
-  if (m_remote_cache_directory_verified) return;
+  if (m_remote_cache_directory_verified)
+    return;
   (*m_backend_command_server)("mkdir -p '" + m_remote_cache_directory + "'");
   auto test_remote_cache_directory = (*m_backend_command_server)("ls -d '" + m_remote_cache_directory + "'");
   if (test_remote_cache_directory != m_remote_cache_directory)
-    throw std::runtime_error("Error in making remote cache directory "+ m_remote_cache_directory +" on remote host "+
+    throw std::runtime_error("Error in making remote cache directory " + m_remote_cache_directory + " on remote host " +
                              m_backend.host);
   m_remote_cache_directory_verified = true;
 }
@@ -134,9 +151,7 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::pull_rundir(int verb
   command += " --rsync-path=" + m_remote_rsync;
   command += " --exclude=backup --exclude=*.d";
   command += " --exclude=Info.plist --exclude=.Info.plist.writing_object";
-#ifndef WIN32
-  command += " --rsh 'ssh -o ControlPath=~/.ssh/sjef-control-%h-%p-%r -o ControlMaster=auto -o ControlPersist=300'";
-#endif
+  command += " " + system_specific_ssh_options();
   command += " " + m_backend.host + ":'" + m_remote_cache_directory + "/'";
 #ifdef WIN32
   std::string fwin = m_project.filename("", "", 0).string();
@@ -150,7 +165,7 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::pull_rundir(int verb
     command += " -v";
   m_project.m_trace(2 - verbosity) << "Pull rsync: " << command << std::endl;
   auto start_time = std::chrono::steady_clock::now();
-  const Shell& shell = Shell("localhost","");
+  const Shell& shell = Shell("localhost", "");
   std::string rsync_out;
   try {
     rsync_out = shell(command, true, ".", verbosity);
@@ -294,23 +309,22 @@ void Job::kill(int verbosity) {
         CloseHandle(handle);
       }
 #endif
-    // wait a second for main script to cleanup and exit before trying to kill
-    using namespace std::literals::chrono_literals;
-    std::this_thread::sleep_for(1000ms);
+      // wait a second for main script to cleanup and exit before trying to kill
+      using namespace std::literals::chrono_literals;
+      std::this_thread::sleep_for(1000ms);
     }
   }
   {
     auto l = std::lock_guard(kill_mutex);
     //    std::cout << "Job::kill() gets mutex"<<std::endl;
-    if(m_backend_command_server!=nullptr){
-    auto status_string =
-        (*m_backend_command_server)(m_backend.kill_command + " " + std::to_string(m_job_number), true, ".", verbosity);
-    //    std::cout << "Job::kill() finished killing"<<std::endl;
+    if (m_backend_command_server != nullptr) {
+      auto status_string = (*m_backend_command_server)(m_backend.kill_command + " " + std::to_string(m_job_number),
+                                                       true, ".", verbosity);
+      //    std::cout << "Job::kill() finished killing"<<std::endl;
     }
     set_status(killed);
     //    std::cout << "Job::kill() finished set_status()"<<std::endl;
   }
-
 
   m_killed = true;
   //  std::cout << "Job::kill() set sentinel"<<std::endl;

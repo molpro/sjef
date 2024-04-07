@@ -65,12 +65,12 @@ void setup_rsync_path() {
 #endif
 #ifdef WIN32
   auto conda_prefix = getenv("CONDA_PREFIX");
-  std::cout << "getenv(PATH) " << getenv("PATH") << std::endl;
-  std::cout << "conda_prefix " << conda_prefix << std::endl;
+//  std::cout << "getenv(PATH) " << getenv("PATH") << std::endl;
+//  std::cout << "conda_prefix " << conda_prefix << std::endl;
   if (conda_prefix != NULL) {
     _putenv_s("PATH", (std::string(conda_prefix) + "\\rsync\\bin;" + getenv("PATH")).c_str());
   }
-  std::cout << "getenv(PATH) " << getenv("PATH") << std::endl;
+//  std::cout << "getenv(PATH) " << getenv("PATH") << std::endl;
 #endif
 }
 

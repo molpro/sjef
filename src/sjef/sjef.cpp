@@ -614,13 +614,16 @@ bool Project::run_needed(int verbosity) const {
       << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
       << std::endl;
   if (run_input_hash.empty()) { // if there's no input hash, look at the xml file instead
+    const auto input_file_contents = std::regex_replace(
+        std::regex_replace(std::regex_replace(std::regex_replace(file_contents("inp"), std::regex{"\r"}, ""),
+                                              std::regex{" *\n\n*"}, "\n"),
+                           std::regex{"\n$"}, ""),
+        std::regex{"^\n*"}, "");
     m_trace(3 - verbosity) << "There's no run_input_hash, so compare output and input: "
-                           << (std::regex_replace(std::regex_replace(file_contents("inp"), std::regex{"\r"}, ""),
-                                                  std::regex{" *\n\n*"}, "\n") != input_from_output())
-                           << std::endl;
-    return (std::regex_replace(std::regex_replace(std::regex_replace(file_contents("inp"), std::regex{"\r"}, ""),
-                                                  std::regex{" *\n\n*"}, "\n"),
-                               std::regex{"\n$"}, "") != input_from_output());
+                           << (input_file_contents != input_from_output()) << "\ninput_file:\n"
+                           << input_file_contents << "@\ninput_from_output:\n"
+                           << input_from_output() << "@" << std::endl;
+    return (input_file_contents != input_from_output());
   }
   {
     m_trace(3 - verbosity) << "sjef::Project::run_needed, input_hash =" << input_hash() << std::endl;

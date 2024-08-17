@@ -94,18 +94,24 @@ public:
    * @param slave if set, (a) omit copying the run directory (b) do not register
    * the project in recent projects list
    * @param keep_run_directories  Keep up to this number of run directories unless slave is set
+   * @param history whether to register the project in recent projects list
    * @return true if the copy was successful
    */
   bool copy(const std::filesystem::path& destination_filename, bool force = false, bool keep_hash = false,
-            bool slave = false, int keep_run_directories = std::numeric_limits<int>::max());
+            bool slave = false, int keep_run_directories = std::numeric_limits<int>::max(), bool history = true);
   /*!
    * @brief Move the project to another location
    * @param destination_filename
    * @param force whether to first remove anything already existing at the new
    * location
+   * @param history whether to register the project in recent projects list
    * @return true if the move was successful
    */
-  bool move(const std::filesystem::path& destination_filename, bool force = false);
+  bool move(const std::filesystem::path& destination_filename, bool force = false, bool history = true);
+  /*!
+   * @brief Move the project to the trash folder
+   */
+  bool trash();
   /*!
    * @brief Erase a project from the file system, and remove it from the recent
    * projects file

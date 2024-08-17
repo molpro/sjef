@@ -334,7 +334,7 @@ void Project::force_file_names(const std::string& oldname) {
 
 fs::path Project::propertyFile() const { return (fs::path{m_filename} / fs::path{s_propertyFile}).string(); }
 
-bool Project::move(const std::filesystem::path& destination_filename, bool force) {
+bool Project::move(const std::filesystem::path& destination_filename, bool force, bool history) {
   if (auto stat = status(); stat == running || stat == waiting)
     return false;
   auto dest = fs::absolute(expand_path(destination_filename, fs::path{m_filename}.extension().string().substr(1)));
@@ -347,7 +347,7 @@ bool Project::move(const std::filesystem::path& destination_filename, bool force
       throw runtime_error("Failed to copy current project directory");
     m_filename = dest.string();
     force_file_names(namesave);
-    recent_edit(m_filename, filenamesave);
+    recent_edit(history ? m_filename : "", filenamesave);
     if (!fs::remove_all(filenamesave))
       throw runtime_error("failed to delete current project directory");
     return true;
@@ -358,8 +358,18 @@ bool Project::move(const std::filesystem::path& destination_filename, bool force
   return false;
 }
 
+bool Project::trash() {
+  std::string s = std::getenv("SJEF_TRASH");
+  if (s.empty())
+    s= expand_path("~/.sjef/trash");
+  fs::create_directories(s);
+  auto path = fs::path(s)/ (name()+"."+m_project_suffix);
+  while (fs::exists(path)) path = path.string()+"_";
+  return move(path.string(), true, false);
+}
+
 bool Project::copy(const std::filesystem::path& destination_filename, bool force, bool keep_hash, bool slave,
-                   int keep_run_directories) {
+                   int keep_run_directories, bool history) {
   auto dest = fs::absolute(expand_path(destination_filename, fs::path{m_filename}.extension().string().substr(1)));
   if (slave)
     keep_run_directories = 0;
@@ -374,7 +384,7 @@ bool Project::copy(const std::filesystem::path& destination_filename, bool force
   }
   Project dp(dest.string());
   dp.force_file_names(name());
-  if (!slave)
+  if (!slave && history)
     recent_edit(dp.m_filename);
   dp.property_delete("jobnumber");
   if (slave)

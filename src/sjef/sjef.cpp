@@ -359,13 +359,21 @@ bool Project::move(const std::filesystem::path& destination_filename, bool force
 }
 
 bool Project::trash() {
-  std::string s = std::getenv("SJEF_TRASH");
-  if (s.empty())
-    s= expand_path("~/.sjef/trash");
+  std::string s = std::getenv("SJEF_TRASH") != NULL ? std::getenv("SJEF_TRASH") : expand_path("~/.sjef/trash");
   fs::create_directories(s);
-  auto path = fs::path(s)/ (name()+"."+m_project_suffix);
-  while (fs::exists(path)) path = path.string()+"_";
-  return move(path.string(), true, false);
+  auto path = fs::path(s) / (name() + "." + m_project_suffix);
+  std::cout << "trash " << filename() << " to " << path << std::endl;
+  auto new_name = name();
+  while (fs::exists(path)) {
+    new_name += "_";
+    path = fs::path(s) / (new_name + "." + m_project_suffix);
+  }
+  std::cout << "trash " << filename() << " to " << path << std::endl;
+      for (const auto& dirEntry : fs::directory_iterator(s)) {
+    auto point = dirEntry.last_write_time();
+    std::cout << dirEntry << " last written " << point.time_since_epoch() << std::endl;
+  }
+      return move(path.string(), true, false);
 }
 
 bool Project::copy(const std::filesystem::path& destination_filename, bool force, bool keep_hash, bool slave,

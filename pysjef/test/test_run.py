@@ -23,7 +23,7 @@ def project(tmp_path):
                                      location=tmp_path)
     p.write_input('hello')
     yield p
-    p.erase()
+    p.trash()
     os.remove(os.path.expanduser('~/.sjef/' + suffix + '/backends.xml'))
 
 

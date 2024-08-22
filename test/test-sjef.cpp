@@ -249,6 +249,14 @@ TEST_F(test_sjef, recent_files) {
       sjef::Project::erase(pp);
     for (const auto& pp : p)
       ASSERT_EQ(prober.recent_find(pp), 0);
+
+    auto pn = std::string{"for trash."}+ suffix;
+    sjef::Project pp(pn);
+    auto old_file_name = pp.filename();
+    std::cout << old_file_name<<std::endl;
+    pp.trash();
+    ASSERT_NE(old_file_name,pp.filename()) << pp.filename()<<std::endl;
+
     if (oldfile)
       fs::rename(rf_, rf);
   }

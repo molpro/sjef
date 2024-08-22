@@ -362,18 +362,25 @@ bool Project::trash() {
   std::string s = std::getenv("SJEF_TRASH") != NULL ? std::getenv("SJEF_TRASH") : expand_path("~/.sjef/trash");
   fs::create_directories(s);
   auto path = fs::path(s) / (name() + "." + m_project_suffix);
-  std::cout << "trash " << filename() << " to " << path << std::endl;
+  //  std::cout << "trash " << filename() << " to " << path << std::endl;
   auto new_name = name();
   while (fs::exists(path)) {
     new_name += "_";
     path = fs::path(s) / (new_name + "." + m_project_suffix);
   }
-  std::cout << "trash " << filename() << " to " << path << std::endl;
-      for (const auto& dirEntry : fs::directory_iterator(s)) {
+  //  std::cout << "trash " << filename() << " to " << path << std::endl;
+  for (const auto& dirEntry : fs::directory_iterator(s)) {
     auto point = dirEntry.last_write_time();
-    std::cout << dirEntry << " last written " << point.time_since_epoch() << std::endl;
+    auto now = fs::file_time_type::clock::now();
+    auto expiry = point + std::chrono::hours(48);
+    if (expiry < now) {
+      //      std::cout << "remove old " << dirEntry << std::endl;
+      fs::remove_all(dirEntry);
+      //    } else {
+      //      std::cout << "keep old " << dirEntry << std::endl;
+    }
   }
-      return move(path.string(), true, false);
+  return move(path.string(), true, false);
 }
 
 bool Project::copy(const std::filesystem::path& destination_filename, bool force, bool keep_hash, bool slave,

@@ -190,6 +190,13 @@ class Project(Node):
         """
         self._project_wrapper.move(name, location, force=force)
 
+    def trash(self):
+        """
+        Move the project bundle to the trash
+
+        """
+        self._project_wrapper.trash()
+
     def run(self, backend=None, verbosity=0, force=False, wait=False, options=""):
         """
         Start a sjef job

@@ -252,8 +252,10 @@ TEST_F(test_sjef, recent_files) {
 
     auto pn = std::string{"for trash."}+ suffix;
     sjef::Project pp(pn);
+    auto old_file_name = pp.filename();
+    std::cout << old_file_name<<std::endl;
     pp.trash();
-    std::cout << pp.filename()<<std::endl;
+    ASSERT_NE(old_file_name,pp.filename()) << pp.filename()<<std::endl;
 
     if (oldfile)
       fs::rename(rf_, rf);

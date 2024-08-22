@@ -182,6 +182,13 @@ cdef class ProjectWrapper:
         self.location = Path(self.filename())
         # self.name = deref(self.c_project).name().decode('utf-8')
 
+    def trash(self):
+        """
+        Move the bundle to the trash
+
+        """
+        deref(self.c_project).trash()
+
     def run(self, backend=None, verbosity=0, bool force=False, bool wait=False, options=""):
         cdef int v = verbosity
         cdef string bend

@@ -359,7 +359,7 @@ bool Project::move(const std::filesystem::path& destination_filename, bool force
 }
 
 bool Project::trash() {
-  std::string s = std::getenv("SJEF_TRASH") != NULL ? std::getenv("SJEF_TRASH") : expand_path("~/.sjef/trash");
+  std::string s = std::getenv("SJEF_TRASH") != NULL ? std::getenv("SJEF_TRASH") : expand_path("~/.sjef/trash").string();
   fs::create_directories(s);
   auto path = fs::path(s) / (name() + "." + m_project_suffix);
   //  std::cout << "trash " << filename() << " to " << path << std::endl;

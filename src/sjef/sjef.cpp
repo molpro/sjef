@@ -603,7 +603,7 @@ bool Project::run_needed(int verbosity) const {
     return true;
   if (auto statuss = status(); statuss == running || statuss == waiting)
     return false;
-  auto inpfile = filename("inp");
+  auto inpfile = filename("inp", "", -1);
   auto xmlfile = filename("xml", "", 0);
   m_trace(3 - verbosity) << "inpfile " << inpfile << std::endl;
   m_trace(3 - verbosity) << "xmlfile " << xmlfile << std::endl;

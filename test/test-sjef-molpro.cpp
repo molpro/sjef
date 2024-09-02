@@ -151,6 +151,13 @@ TEST_F(test_sjef_molpro, input_from_output) {
 TEST_F(test_sjef_molpro, run_needed) {
   sjef::Project He("He.molpro");
   EXPECT_FALSE(He.run_needed());
+  auto copy = testfile("Hecopy.molpro");
+  He.copy(copy,false,false,false,999);
+  sjef::Project Hecopy(copy);
+  EXPECT_FALSE(Hecopy.run_needed());
+  { std::ofstream(Hecopy.filename("inp")) << "geometry={He};crazy_command"; }
+  EXPECT_TRUE(Hecopy.run_needed());
+
 }
 
 TEST_F(test_sjef_molpro, failure) {

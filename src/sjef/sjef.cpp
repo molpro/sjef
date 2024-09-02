@@ -640,7 +640,7 @@ bool Project::run_needed(int verbosity) const {
       << std::endl;
   if (run_input_hash.empty()) { // if there's no input hash, look at the xml file instead
     const auto input_file_contents = std::regex_replace(
-        std::regex_replace(std::regex_replace(std::regex_replace(file_contents("inp"), std::regex{"\r"}, ""),
+        std::regex_replace(std::regex_replace(std::regex_replace(file_contents("inp", "", -1), std::regex{"\r"}, ""),
                                               std::regex{" *\n\n*"}, "\n"),
                            std::regex{"\n$"}, ""),
         std::regex{"^\n*"}, "");

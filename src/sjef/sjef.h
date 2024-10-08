@@ -221,6 +221,10 @@ public:
    */
   int local_pid_from_output() const;
   /*!
+   * @brief Reload the backends from the configuration file
+   */
+  void refresh_backends();
+  /*!
    * @brief Obtain the job status, if possible, by examining the output
    * @return The status. If nothing can be found, returns status()
    */

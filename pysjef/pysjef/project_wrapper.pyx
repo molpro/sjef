@@ -346,6 +346,10 @@ cdef class ProjectWrapper:
         cdef string cresult = deref(self.c_project).backend_get(str(backend).encode('utf8'), str(key).encode('utf8'))
         return cresult.decode('utf-8')
 
+    def refresh_backends(self):
+        deref(self.c_project).refresh_backends()
+
+
     def backend_names(self):
         cdef vector[string] cresult = deref(self.c_project).backend_names()
         return [n.decode('utf-8') for n in cresult]

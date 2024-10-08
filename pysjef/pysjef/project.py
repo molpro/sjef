@@ -351,6 +351,13 @@ class Project(Node):
     def recent_find(self, location):
         return self._project_wrapper.recent_find(location)
 
+    def refresh_backends(self):
+        """
+        Reload the backends from the configuration file
+        :return:
+        """
+        return self._project_wrapper.refresh_backends()
+
     def backend_get(self, backend, key):
         """
         Obtain the value of a field in the backend

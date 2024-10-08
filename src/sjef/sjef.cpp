@@ -140,94 +140,7 @@ Project::Project(const std::filesystem::path& filename, bool construct, const st
                     "Info.plist")) // If this is a run-directory project, do not add to recent list
       recent_edit(m_filename);
 
-    m_backends.try_emplace(Backend::dummy_name, Backend::local());
-    if (!check_backends(m_project_suffix)) {
-      auto config_file = expand_path(sjef_config_directory() / m_project_suffix / "backends.xml");
-      m_warn.error() << "contents of " << config_file << ":" << std::endl;
-      m_warn.error() << std::ifstream(config_file).rdbuf() << std::endl;
-      throw runtime_error("sjef backend files are invalid");
-    }
-    for (const auto& config_dir : std::vector<std::filesystem::path>{"/usr/local/etc/sjef", sjef_config_directory()}) {
-      const auto config_file = expand_path(config_dir / m_project_suffix / "backends.xml");
-      if (fs::exists(config_file)) {
-        m_backend_doc->load_file(config_file.c_str());
-        auto backends = m_backend_doc->select_nodes("/backends/backend");
-        for (const auto& be : backends) {
-          auto kName = getattribute(be, "name");
-          if (auto kHost = getattribute(be, "host"); localhost(kHost))
-            m_backends.try_emplace(kName, Backend::local(), kName);
-          else
-            m_backends.try_emplace(kName, Backend::Linux(), kName);
-          if (const auto kVal = getattribute(be, "template"); kVal != "") {
-            m_backends[kName].host = m_backends[kVal].host;
-            m_backends[kName].cache = m_backends[kVal].cache;
-            m_backends[kName].run_command = m_backends[kVal].run_command;
-            m_backends[kName].run_jobnumber = m_backends[kVal].run_jobnumber;
-            m_backends[kName].status_command = m_backends[kVal].status_command;
-            m_backends[kName].status_running = m_backends[kVal].status_running;
-            m_backends[kName].status_waiting = m_backends[kVal].status_waiting;
-            m_backends[kName].kill_command = m_backends[kVal].kill_command;
-          }
-          if (const auto kVal = getattribute(be, "host"); kVal != "")
-            m_backends[kName].host = kVal;
-          if (const auto kVal = getattribute(be, "cache"); kVal != "")
-            m_backends[kName].cache = kVal;
-          if (const auto kVal = getattribute(be, "run_command"); kVal != "")
-            m_backends[kName].run_command = kVal;
-          if (const auto kVal = getattribute(be, "run_jobnumber"); kVal != "")
-            m_backends[kName].run_jobnumber = kVal;
-          if (const auto kVal = getattribute(be, "status_command"); kVal != "")
-            m_backends[kName].status_command = kVal;
-          if (const auto kVal = getattribute(be, "status_running"); kVal != "")
-            m_backends[kName].status_running = kVal;
-          if (const auto kVal = getattribute(be, "status_waiting"); kVal != "")
-            m_backends[kName].status_waiting = kVal;
-          if (const auto kVal = getattribute(be, "kill_command"); kVal != "")
-            m_backends[kName].kill_command = kVal;
-          if (!check_backend(kName))
-            throw runtime_error(std::string{"sjef backend "} + kName + " is invalid");
-        }
-      }
-    }
-    if (m_backends.count(sjef::Backend::default_name) == 0) {
-      m_backends[sjef::Backend::default_name] = default_backend();
-      const auto config_file = expand_path(sjef_config_directory() / m_project_suffix / "backends.xml");
-      auto config_file_ = config_file;
-      config_file_ += "-";
-      if (!fs::exists(config_file))
-        std::ofstream(config_file) << "<?xml version=\"1.0\"?>\n<backends>\n</backends>" << std::endl;
-      {
-        util::Locker locker{fs::path{config_file}.parent_path()};
-        auto locki = locker.bolt();
-        fs::copy_file(config_file, config_file_);
-        auto in = std::ifstream(config_file_.string());
-        auto out = std::ofstream(config_file);
-        std::string line;
-        auto be_defaults = Backend(Backend::local());
-        while (std::getline(in, line)) {
-          out << line << std::endl;
-          if (line.find("<backends>") != std::string::npos) {
-            out << "  <backend name=\"" + sjef::Backend::default_name + "\" ";
-            if (be_defaults.host != m_backends[sjef::Backend::default_name].host)
-              out << "\n           host=\"" + m_backends[sjef::Backend::default_name].host + "\" ";
-            if (be_defaults.run_command != m_backends[sjef::Backend::default_name].run_command)
-              out << "\n           run_command=\"" + m_backends[sjef::Backend::default_name].run_command + "\" ";
-            if (be_defaults.run_jobnumber != m_backends[sjef::Backend::default_name].run_jobnumber)
-              out << "\n           run_jobnumber=\"" + m_backends[sjef::Backend::default_name].run_jobnumber + "\" ";
-            if (be_defaults.status_command != m_backends[sjef::Backend::default_name].status_command)
-              out << "\n           status_command=\"" + m_backends[sjef::Backend::default_name].status_command + "\" ";
-            if (be_defaults.status_waiting != m_backends[sjef::Backend::default_name].status_waiting)
-              out << "\n           status_waiting=\"" + m_backends[sjef::Backend::default_name].status_waiting + "\" ";
-            if (be_defaults.status_running != m_backends[sjef::Backend::default_name].status_running)
-              out << "\n           status_running=\"" + m_backends[sjef::Backend::default_name].status_running + "\" ";
-            if (be_defaults.kill_command != m_backends[sjef::Backend::default_name].kill_command)
-              out << "\n           kill_command=\"" + m_backends[sjef::Backend::default_name].kill_command + "\" ";
-            out << "\n  />" << std::endl;
-          }
-        }
-      }
-      fs::remove(config_file_);
-    }
+    refresh_backends();
   }
   if (!name().empty() && name().front() != '.') {
     auto be = property_get("backend");
@@ -258,6 +171,100 @@ std::string Project::get_project_suffix(const std::filesystem::path& filename,
     throw runtime_error("Cannot deduce project suffix for \"" + filename.string() + "\" with default suffix \"" +
                         default_suffix + "\"");
   return suffix.substr(1);
+}
+void Project::refresh_backends(){
+  m_backends.try_emplace(Backend::dummy_name, Backend::local());
+  if (!check_backends(m_project_suffix)) {
+    auto config_file = expand_path(sjef_config_directory() / m_project_suffix / "backends.xml");
+    m_warn.error() << "contents of " << config_file << ":" << std::endl;
+    m_warn.error() << std::ifstream(config_file).rdbuf() << std::endl;
+    throw runtime_error("sjef backend files are invalid");
+  }
+  for (const auto& config_dir :
+       std::vector<std::filesystem::path>{"/usr/local/etc/sjef", sjef_config_directory()}) {
+    const auto config_file = expand_path(config_dir / m_project_suffix / "backends.xml");
+    if (fs::exists(config_file)) {
+      m_backend_doc->load_file(config_file.c_str());
+      auto backends = m_backend_doc->select_nodes("/backends/backend");
+      for (const auto& be : backends) {
+        auto kName = getattribute(be, "name");
+        if (auto kHost = getattribute(be, "host"); localhost(kHost))
+          m_backends.try_emplace(kName, Backend::local(), kName);
+        else
+          m_backends.try_emplace(kName, Backend::Linux(), kName);
+        if (const auto kVal = getattribute(be, "template"); kVal != "") {
+          m_backends[kName].host = m_backends[kVal].host;
+          m_backends[kName].cache = m_backends[kVal].cache;
+          m_backends[kName].run_command = m_backends[kVal].run_command;
+          m_backends[kName].run_jobnumber = m_backends[kVal].run_jobnumber;
+          m_backends[kName].status_command = m_backends[kVal].status_command;
+          m_backends[kName].status_running = m_backends[kVal].status_running;
+          m_backends[kName].status_waiting = m_backends[kVal].status_waiting;
+          m_backends[kName].kill_command = m_backends[kVal].kill_command;
+        }
+        if (const auto kVal = getattribute(be, "host"); kVal != "")
+          m_backends[kName].host = kVal;
+        if (const auto kVal = getattribute(be, "cache"); kVal != "")
+          m_backends[kName].cache = kVal;
+        if (const auto kVal = getattribute(be, "run_command"); kVal != "")
+          m_backends[kName].run_command = kVal;
+        if (const auto kVal = getattribute(be, "run_jobnumber"); kVal != "")
+          m_backends[kName].run_jobnumber = kVal;
+        if (const auto kVal = getattribute(be, "status_command"); kVal != "")
+          m_backends[kName].status_command = kVal;
+        if (const auto kVal = getattribute(be, "status_running"); kVal != "")
+          m_backends[kName].status_running = kVal;
+        if (const auto kVal = getattribute(be, "status_waiting"); kVal != "")
+          m_backends[kName].status_waiting = kVal;
+        if (const auto kVal = getattribute(be, "kill_command"); kVal != "")
+          m_backends[kName].kill_command = kVal;
+        if (!check_backend(kName))
+          throw runtime_error(std::string{"sjef backend "} + kName + " is invalid");
+      }
+    }
+  }
+  if (m_backends.count(sjef::Backend::default_name) == 0) {
+    m_backends[sjef::Backend::default_name] = default_backend();
+    const auto config_file = expand_path(sjef_config_directory() / m_project_suffix / "backends.xml");
+    auto config_file_ = config_file;
+    config_file_ += "-";
+    if (!fs::exists(config_file))
+      std::ofstream(config_file) << "<?xml version=\"1.0\"?>\n<backends>\n</backends>" << std::endl;
+    {
+      util::Locker locker{fs::path{config_file}.parent_path()};
+      auto locki = locker.bolt();
+      fs::copy_file(config_file, config_file_);
+      auto in = std::ifstream(config_file_.string());
+      auto out = std::ofstream(config_file);
+      std::string line;
+      auto be_defaults = Backend(Backend::local());
+      while (std::getline(in, line)) {
+        out << line << std::endl;
+        if (line.find("<backends>") != std::string::npos) {
+          out << "  <backend name=\"" + sjef::Backend::default_name + "\" ";
+          if (be_defaults.host != m_backends[sjef::Backend::default_name].host)
+            out << "\n           host=\"" + m_backends[sjef::Backend::default_name].host + "\" ";
+          if (be_defaults.run_command != m_backends[sjef::Backend::default_name].run_command)
+            out << "\n           run_command=\"" + m_backends[sjef::Backend::default_name].run_command + "\" ";
+          if (be_defaults.run_jobnumber != m_backends[sjef::Backend::default_name].run_jobnumber)
+            out << "\n           run_jobnumber=\"" + m_backends[sjef::Backend::default_name].run_jobnumber + "\" ";
+          if (be_defaults.status_command != m_backends[sjef::Backend::default_name].status_command)
+            out << "\n           status_command=\"" + m_backends[sjef::Backend::default_name].status_command +
+                       "\" ";
+          if (be_defaults.status_waiting != m_backends[sjef::Backend::default_name].status_waiting)
+            out << "\n           status_waiting=\"" + m_backends[sjef::Backend::default_name].status_waiting +
+                       "\" ";
+          if (be_defaults.status_running != m_backends[sjef::Backend::default_name].status_running)
+            out << "\n           status_running=\"" + m_backends[sjef::Backend::default_name].status_running +
+                       "\" ";
+          if (be_defaults.kill_command != m_backends[sjef::Backend::default_name].kill_command)
+            out << "\n           kill_command=\"" + m_backends[sjef::Backend::default_name].kill_command + "\" ";
+          out << "\n  />" << std::endl;
+        }
+      }
+    }
+    fs::remove(config_file_);
+  }
 }
 
 bool Project::import_file(const std::filesystem::path& file, bool overwrite) {

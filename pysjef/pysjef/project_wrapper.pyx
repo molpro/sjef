@@ -201,6 +201,9 @@ cdef class ProjectWrapper:
     def run_needed(self, int verbosity = 0):
         return deref(self.c_project).run_needed(verbosity)
 
+    def run_directory_new(self):
+        deref(self.c_project).run_directory_new()
+
     def status(self):
         """
         Checks job status

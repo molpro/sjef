@@ -33,6 +33,7 @@ cdef extern from "sjef/sjef.h" namespace "sjef":
         bool run(int, bool, bool, string) except +
         bool run(string, int, bool, bool, string) except +
         bool run_needed(int) except +
+        void run_directory_new() except +
         void kill() except +
         void wait() except +
         void wait(unsigned int) except +

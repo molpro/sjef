@@ -218,6 +218,13 @@ class Project(Node):
         """
         return self._project_wrapper.run_needed(verbosity)
 
+    def run_directory_new(self):
+        """
+        Check weather the job has changed since the previous run and needs to be rerun
+        :return: True/False
+        """
+        self._project_wrapper.run_directory_new()
+
     def wait(self, max_epoch=.005):
         """
         Wait unconditionally for status() to return neither 'waiting' nor 'running'

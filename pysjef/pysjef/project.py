@@ -479,6 +479,7 @@ def xpath(element, query):
     """
     default_ns_name = '__default__'
     ns = {k if k is not None else default_ns_name: v for k, v in element.getroottree().getroot().nsmap.items()}
+    ns['xlink']='http://www.w3.org/1999/xlink'
     # print("ns:",ns)
     import re
     queryns = re.sub(r'(::|/|^)([_a-zA-Z][-._a-zA-Z0-9]*)(?=/|$|\[)', r'\1' + default_ns_name + r':\2', query)

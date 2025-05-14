@@ -15,6 +15,7 @@ PREFIX=${PREFIX:-${CONDA_PREFIX}}
 BUILD=cmake-build
 echo PREFIX=${PREFIX}
 echo CONDA_PREFIX=${CONDA_PREFIX}
+conda list
 
 if [ -x "$(command -v $CONDA_PREFIX/bin/cc)" ]
 then
@@ -44,4 +45,4 @@ grep CMAKE_PROJECT_VERSION: $BUILD/CMakeCache.txt | sed -e 's/.*=/__version__ = 
 
 #PREFIX=$PREFIX python setup.py build_ext --inplace
 #PREFIX=$PREFIX python -m pip install --no-deps --force-reinstall --verbose . 
-PREFIX=$PREFIX python -m pip install -e . 
+PREFIX=$PREFIX python -m pip install .

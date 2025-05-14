@@ -1,6 +1,11 @@
 #include "Shell.h"
+#if __has_include(<boost/process/child.hpp>)
 #include <boost/process/search_path.hpp>
 #include <boost/process/spawn.hpp>
+#else
+#include <boost/process/v1/search_path.hpp>
+#include <boost/process/v1/spawn.hpp>
+#endif
 #include <chrono>
 #include <filesystem>
 #include <regex>

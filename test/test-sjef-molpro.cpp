@@ -2,7 +2,11 @@
 #include <gtest/gtest.h>
 #include <signal.h>
 
+#if __has_include(<boost/process/search_path.hpp>)
 #include <boost/process/search_path.hpp>
+#else
+#include <boost/process/v1/search_path.hpp>
+#endif
 #include <chrono>
 #include <fstream>
 #ifndef WIN32

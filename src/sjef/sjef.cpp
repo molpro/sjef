@@ -88,7 +88,7 @@ inline fs::path sjef_config_directory() {
 
 const std::vector<std::string> Project::suffix_keys{"inp", "out", "xml"};
 Project::Project(const std::filesystem::path& filename, bool construct, const std::string& default_suffix,
-                 const mapstringstring_t& suffixes)
+                 const mapstringstring_t& suffixes, bool record_as_recent)
     : m_project_suffix(get_project_suffix(filename, default_suffix)),
       m_filename(expand_path(filename, m_project_suffix)), m_properties(std::make_unique<pugi_xml_document>()),
       m_suffixes(suffixes), m_backend_doc(std::make_unique<pugi_xml_document>()), m_locker(make_locker(m_filename)),
@@ -135,7 +135,7 @@ Project::Project(const std::filesystem::path& filename, bool construct, const st
     for (int i = 0; i < nimport; i++) {
       m_reserved_files.push_back(property_get(std::string{"IMPORT"} + std::to_string(i)));
     }
-    if (fs::path{m_filename}.parent_path().filename().string() != "run" &&
+    if (record_as_recent && fs::path{m_filename}.parent_path().filename().string() != "run" &&
         !fs::exists(fs::path{m_filename}.parent_path().parent_path() /
                     "Info.plist")) // If this is a run-directory project, do not add to recent list
       recent_edit(m_filename);

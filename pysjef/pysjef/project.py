@@ -46,11 +46,11 @@ class Project(Node):
 
     def __init__(self, name="", location=None, construct=True, parent=None, suffix="",
                  # file_suffixes={"inp":"inp","out":"out","xml":"xml"},
-                 file_suffixes=None):
+                 file_suffixes=None, record_as_recent=True):
         Node.__init__(self)
         self._project_wrapper = \
             ProjectWrapper(name=name, location=location, construct=construct, suffix=suffix,
-                           file_suffixes=file_suffixes)
+                           file_suffixes=file_suffixes, record_as_recent=record_as_recent)
         self.nodename = "project"
         self.parent = parent
         self.suffix = suffix

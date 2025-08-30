@@ -42,7 +42,7 @@ cdef class ProjectWrapper:
     cdef public object __property_name_prefix
 
     def __init__(self, str name="", location=None, bool construct=True, suffix='',
-                 file_suffixes=None):
+                 file_suffixes=None, record_as_recent=True):
         """
         Create a new Project bundle called *name* at the specified *location*.
 
@@ -55,9 +55,9 @@ cdef class ProjectWrapper:
         if file_suffixes is None:
             file_suffixes = {}
         if name:
-            self._create(name, location, construct, suffix, file_suffixes)
+            self._create(name, location, construct, suffix, file_suffixes, record_as_recent)
 
-    def _create(self, str name, location, bool construct, suffix, file_suffixes):
+    def _create(self, str name, location, bool construct, suffix, file_suffixes, bool record_as_recent):
         self.__property_name_prefix = ""
         self.name = name
         self.construct = construct
@@ -84,9 +84,9 @@ cdef class ProjectWrapper:
         location = location / name
         cdef string fname = str(location).encode('utf-8')
         if file_suffixes:
-            self.c_project = make_unique[Project](fname, construct, csuffix, cfile_suffixes)
+            self.c_project = make_unique[Project](fname, construct, csuffix, cfile_suffixes, record_as_recent)
         else:
-            self.c_project = make_unique[Project](fname, construct, csuffix, cfile_suffixes)
+            self.c_project = make_unique[Project](fname, construct, csuffix, cfile_suffixes, record_as_recent)
         self.location = Path(self.filename())
         self.suffix = self.location.suffix
 
@@ -152,7 +152,7 @@ cdef class ProjectWrapper:
             location = self.location.parent
         fname = str(Path(location) / name)
         deref(self.c_project).copy(str(fname).encode('utf-8'), force, keep_hash, False, keep_run_directories)
-        return ProjectWrapper(name, location, suffix=self.suffix)
+        return ProjectWrapper(name, location, suffix=self.suffix, True)
 
     #TODO confirm what happens with project name
     def move(self, name=None, location=None, force=False):

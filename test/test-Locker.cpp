@@ -1,4 +1,6 @@
-#include <boost/process.hpp>
+#define BOOST_PROCESS_VERSION 1
+// #include <boost/process.hpp>
+#include <boost/process/v1/child.hpp>
 #include <filesystem>
 #include <fstream>
 #include <gmock/gmock.h>

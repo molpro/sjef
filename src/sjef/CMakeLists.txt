@@ -34,7 +34,7 @@ if (NOT TARGET pugixml)
         include(FetchContent)
         FetchContent_Declare(pugixml
                 GIT_REPOSITORY https://github.com/zeux/pugixml
-                GIT_TAG v1.10)
+                GIT_TAG v1.15)
         FetchContent_MakeAvailable(pugixml)
     endif ()
     set_target_properties(pugixml PROPERTIES COMPILE_FLAGS "-fPIC")

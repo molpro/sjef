@@ -4,6 +4,9 @@ RUN DEBIAN_FRONTEND=noninteractive apt install -y cmake git g++ doxygen bash rsy
 
 RUN  apt update && apt install -y wget && wget -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda-installer.sh && bash /tmp/miniconda-installer.sh -b -p /opt/conda
 
+RUN . /opt/conda/etc/profile.d/conda.sh && conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main \
+ && conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+
 RUN  . /opt/conda/etc/profile.d/conda.sh && conda create -c conda-forge -n pysjef -y python numpy boost-cpp pugixml cython lxml pip regex c-compiler cxx-compiler ghostscript pytest cmake make && conda activate pysjef
 
 RUN ( \

@@ -16,7 +16,7 @@ cdef extern from "sjef/sjef.h" namespace "sjef":
 
     cdef cppclass Project:
         # constructor function
-        Project(string, bool, string, map[string, string]) except +
+        Project(string, bool, string, map[string, string], bool) except +
         # Project(string, bool, string) except +
         string filename_string(string, string, int) except +
         bool copy(string &, bool, bool, bool, int) except +

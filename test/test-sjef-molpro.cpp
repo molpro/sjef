@@ -3,6 +3,7 @@
 #include <signal.h>
 
 #if __has_include(<boost/process/v1/search_path.hpp>)
+#define BOOST_PROCESS_VERSION 1
 #include <boost/process/v1/search_path.hpp>
 #else
 #include <boost/process/search_path.hpp>

@@ -77,7 +77,7 @@ public:
    * the project
    */
   explicit Project(const std::filesystem::path& filename, bool construct = true, const std::string& default_suffix = "",
-                   const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}});
+                   const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}}, bool record_as_recent=true);
   //  explicit Project(const std::string& filename, bool construct = true, const std::string& default_suffix = "",
   //                   const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}}) :
   //                   Project(std::filesystem::path(filename),construct,default_suffix,suffixes) {}

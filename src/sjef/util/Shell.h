@@ -2,6 +2,7 @@
 #define SJEF_LIB_UTIL_SHELL_H_
 #include "Logger.h"
 #if __has_include(<boost/process/v1/child.hpp>)
+#define BOOST_PROCESS_VERSION 1
 #include <boost/process/v1/child.hpp>
 #include <boost/process/v1/io.hpp>
 #else

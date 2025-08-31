@@ -6,8 +6,7 @@ FetchContent_Declare(
 )
 FetchContent_GetProperties(googletest)
 if (NOT googletest_POPULATED)
-    FetchContent_Populate(googletest)
-    add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR} EXCLUDE_FROM_ALL)
+    FetchContent_MakeAvailable(googletest)
 endif ()
 
 file(COPY He.molpro DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")

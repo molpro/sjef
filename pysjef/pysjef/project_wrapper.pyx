@@ -152,7 +152,7 @@ cdef class ProjectWrapper:
             location = self.location.parent
         fname = str(Path(location) / name)
         deref(self.c_project).copy(str(fname).encode('utf-8'), force, keep_hash, False, keep_run_directories)
-        return ProjectWrapper(name, location, suffix=self.suffix, True)
+        return ProjectWrapper(name, location, suffix=self.suffix, record_as_recent=True)
 
     #TODO confirm what happens with project name
     def move(self, name=None, location=None, force=False):

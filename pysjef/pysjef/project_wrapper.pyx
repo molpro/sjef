@@ -80,7 +80,7 @@ cdef class ProjectWrapper:
         if not location.is_dir():
             # this isn't a directory!
             raise ValueError(f"The chosen location doesn't seem to be a directory ({location})")
-        self._input_variables = [name, location, construct, suffix, file_suffixes]
+        self._input_variables = [name, location, construct, suffix, file_suffixes, record_as_recent]
         location = location / name
         cdef string fname = str(location).encode('utf-8')
         if file_suffixes:

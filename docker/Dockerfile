@@ -7,7 +7,7 @@ RUN  . /opt/conda/etc/profile.d/conda.sh && conda install -c conda-forge -y pyth
 
 RUN apt-get update
 
-RUN DEBIAN_FRONTEND=noninteractive apt install -y bash rsync curl openssh-server procps
+RUN DEBIAN_FRONTEND=noninteractive apt install -y bash rsync curl openssh-server procps doxygen
 
 RUN ( \
     echo 'LogLevel DEBUG2'; \

@@ -2,6 +2,7 @@
 from .node import Node
 from .settings import INTERACTIVE
 from .node_xml import RootXml
+from .project_wrapper import ProjectWrapper
 
 import os
 import shutil

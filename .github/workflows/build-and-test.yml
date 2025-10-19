@@ -21,12 +21,12 @@ jobs:
 #    permissions:
 #      contents: read
 #      packages: write
-#    container:
-#      # relies on repository name being all lower case
-#      image: ghcr.io/${{ github.repository }}
-#      credentials:
-#        username: ${{ github.actor }}
-#        password: ${{ secrets.GITHUB_TOKEN }}
+    container:
+      # relies on repository name being all lower case
+      image: ghcr.io/${{ github.repository }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 10
 
     steps:
@@ -121,7 +121,7 @@ jobs:
           # /usr/sbin/sshd
           cd pysjef
           conda install -c conda-forge -y --file requirements.txt
-          export CXXFLAGS='-fPIC'
+          # export CXXFLAGS='-fPIC'
           cmake -S .. -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF
           cmake --build cmake-build -t install
           #export CXXFLAGS='-std=c++17' CPATH=${CONDA_PREFIX}/include

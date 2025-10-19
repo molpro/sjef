@@ -102,6 +102,7 @@ jobs:
           #ssh 127.0.0.1 pwd
           conda install -c conda-forge -y --file requirements.txt
           BUILD=cmake-build-$(uname)-$(uname -m)
+          export CXXFLAGS='-fPIC'
           cmake -S .. -B $BUILD -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF || { echo 'cmake configuration failed' ; exit 1; }
           cmake --build $BUILD -t install || { echo 'cmake install failed' ; exit 1; }
           # ls -lR /opt/conda/include/sjef

@@ -126,16 +126,13 @@ jobs:
           conda install -q -c conda-forge -y --file pysjef/requirements.txt
           conda list
           cd $Env:CONDA_PREFIX
-          Get-ChildItem -Recurse -Filter 'sjef.h'
-          Get-ChildItem -Recurse -Filter '*sjef*'
-      - name: Build
-        shell: cmd
-        run: |
           echo 'after conda'
           conda info
           conda list
-          cmake -LAH -S . -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF -DCMAKE_INSTALL_PREFIX=%PREFIX% -DCMAKE_INSTALL_INCLUDEDIR=%PREFIX%\include  -DCMAKE_INSTALL_LIBDIR=%PREFIX%\Library\lib -DCMAKE_BUILD_TYPE=Release
+          cmake -LAH -S . -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF "-DCMAKE_INSTALL_PREFIX=" + $Env:CONDA_PREFIX "-DCMAKE_INSTALL_INCLUDEDIR=" + $Env:CONDA_PREFIX + "\include"  "-DCMAKE_INSTALL_LIBDIR=" + $Env:CONDA_PREFIX + "\Library\lib" -DCMAKE_BUILD_TYPE=Release
           cmake --build cmake-build -t install
+          Get-ChildItem -Recurse -Filter 'sjef.h' $Env:CONDA_PREFIX
+          Get-ChildItem -Recurse -Filter '*sjef*' $Env:CONDA_PREFIX
           echo 'before pip'
           python -m pip install ./pysjef
           echo 'after pip'

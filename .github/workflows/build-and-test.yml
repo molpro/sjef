@@ -122,7 +122,7 @@ jobs:
           cd pysjef
           conda install -c conda-forge -y --file requirements.txt
           # export CXXFLAGS='-fPIC'
-          cmake -S .. -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF
+          cmake -S .. -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF -DCMAKE_INSTALL_PREFIX=%CONDA_PREFIX% -DCMAKE_BUILD_TYPE=Release
           cmake --build cmake-build -t install
           #export CXXFLAGS='-std=c++17' CPATH=${CONDA_PREFIX}/include
           python -m pip install .

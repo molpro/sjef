@@ -115,12 +115,12 @@ jobs:
           auto-update-conda: true
 
       - name: Conda install
-        shell: cmd
+        shell: pwsh
         run: |
-          echo %cd%
-          echo CONDA_PREFIX=%CONDA_PREFIX%
+          gci env:* | sort-object name
+          pwd
           conda activate test
-          echo %cd%
+          gci env:* | sort-object name
           conda info
           conda list
           conda install -q -c conda-forge -y --file pysjef/requirements.txt
@@ -131,7 +131,6 @@ jobs:
           echo 'after conda'
           conda info
           conda list
-          echo %cd%
           cmake -LAH -S . -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF -DCMAKE_INSTALL_PREFIX=%PREFIX% -DCMAKE_INSTALL_INCLUDEDIR=%PREFIX%\include  -DCMAKE_INSTALL_LIBDIR=%PREFIX%\Library\lib -DCMAKE_BUILD_TYPE=Release
           cmake --build cmake-build -t install
           echo 'before pip'

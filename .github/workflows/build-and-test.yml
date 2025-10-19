@@ -128,8 +128,8 @@ jobs:
           echo 'after conda'
           conda info
           conda list
-          echo cmake -LAH -S . -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF "-DCMAKE_INSTALL_PREFIX=" + $Env:CONDA_PREFIX "-DCMAKE_INSTALL_INCLUDEDIR=" + $Env:CONDA_PREFIX + "\include"  "-DCMAKE_INSTALL_LIBDIR=" + $Env:CONDA_PREFIX + "\Library\lib" -DCMAKE_BUILD_TYPE=Release
-          cmake -LAH -S . -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF "-DCMAKE_INSTALL_PREFIX=" + $Env:CONDA_PREFIX "-DCMAKE_INSTALL_INCLUDEDIR=" + $Env:CONDA_PREFIX + "\include"  "-DCMAKE_INSTALL_LIBDIR=" + $Env:CONDA_PREFIX + "\Library\lib" -DCMAKE_BUILD_TYPE=Release
+          echo cmake -LAH -S . -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF "-DCMAKE_INSTALL_PREFIX=" + $Env:CONDA_PREFIX "-DCMAKE_INSTALL_INCLUDEDIR="+$Env:CONDA_PREFIX+"\include"  "-DCMAKE_INSTALL_LIBDIR="+$Env:CONDA_PREFIX+"\Library\lib" -DCMAKE_BUILD_TYPE=Release
+          cmake -LAH -S . -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF "-DCMAKE_INSTALL_PREFIX="+$Env:CONDA_PREFIX "-DCMAKE_INSTALL_INCLUDEDIR="+$Env:CONDA_PREFIX+"\include"  "-DCMAKE_INSTALL_LIBDIR="+$Env:CONDA_PREFIX+"\Library\lib" -DCMAKE_BUILD_TYPE=Release
           cmake --build cmake-build -t install
           echo 'before pip'
           python -m pip install ./pysjef

@@ -99,7 +99,7 @@ jobs:
           . /opt/conda/etc/profile.d/conda.sh
           mkdir -p /var/run/sshd
           /usr/sbin/sshd
-#          ssh 127.0.0.1 pwd
+          #ssh 127.0.0.1 pwd
           conda install -c conda-forge -y --file requirements.txt
           BUILD=cmake-build-$(uname)-$(uname -m)
           cmake -S .. -B $BUILD -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF || { echo 'cmake configuration failed' ; exit 1; }

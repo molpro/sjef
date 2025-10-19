@@ -41,6 +41,9 @@ jobs:
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
 
+      - name: report environment
+        run:  uname -a && cmake --version && ccache -s
+
       - name: Configure CMake
         if: steps.check_configuration.outputs.files_exists == 'true'
         run: |
@@ -63,7 +66,11 @@ jobs:
         run: cmake --build ${{github.workspace}}/build --target sjef-doc
 
   python:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
       packages: write
@@ -82,6 +89,9 @@ jobs:
         uses: andstor/file-existence-action@v1
         with:
           files: "pysjef/build.sh"
+
+      - name: report environment
+        run:  uname -a && cmake --version && ccache -s
 
       - name: build and test
         run: |

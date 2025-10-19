@@ -120,16 +120,19 @@ jobs:
           echo %cd%
           echo CONDA_PREFIX=%CONDA_PREFIX%
           conda activate test
-          echo CONDA_PREFIX=%CONDA_PREFIX%
           echo %cd%
+          conda info
+          conda list
           conda install -q -c conda-forge -y --file pysjef/requirements.txt
+          conda list
       - name: Build
         shell: cmd
         run: |
           echo 'after conda'
-          echo CONDA_PREFIX=%CONDA_PREFIX%
+          conda info
+          conda list
           echo %cd%
-          cmake -LAH -S .. -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF -DCMAKE_INSTALL_PREFIX=%PREFIX% -DCMAKE_INSTALL_INCLUDEDIR=%PREFIX%\include  -DCMAKE_INSTALL_LIBDIR=%PREFIX%\Library\lib -DCMAKE_BUILD_TYPE=Release
+          cmake -LAH -S . -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF -DCMAKE_INSTALL_PREFIX=%PREFIX% -DCMAKE_INSTALL_INCLUDEDIR=%PREFIX%\include  -DCMAKE_INSTALL_LIBDIR=%PREFIX%\Library\lib -DCMAKE_BUILD_TYPE=Release
           cmake --build cmake-build -t install
           echo 'before pip'
           python -m pip install ./pysjef

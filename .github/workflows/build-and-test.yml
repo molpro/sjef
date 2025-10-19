@@ -100,8 +100,7 @@ jobs:
           mkdir -p /var/run/sshd
           /usr/sbin/sshd
           #ssh 127.0.0.1 pwd
-          conda create -n pysjef-build -c conda-forge -y --file requirements.txt
-          conda activate pysjef-build
+          conda install -c conda-forge -y --file requirements.txt
           BUILD=cmake-build-$(uname)-$(uname -m)
           cmake -S .. -B $BUILD -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF || { echo 'cmake configuration failed' ; exit 1; }
           cmake --build $BUILD -t install || { echo 'cmake install failed' ; exit 1; }

@@ -5,6 +5,8 @@ RUN . /opt/conda/etc/profile.d/conda.sh && conda tos accept --override-channels 
 
 RUN  . /opt/conda/etc/profile.d/conda.sh && conda install -c conda-forge -y python 'numpy>=1.17' 'boost-cpp>=1.71' 'pugixml>=1.10' 'cython>=3.0' 'lxml>=4.0' pip regex c-compiler cxx-compiler ghostscript 'pytest>=7' 'cmake>=3.27' 'make>=4' scipy
 
+ENV CONDA_PREFIX=/opt/conda
+
 RUN apt-get update
 
 RUN DEBIAN_FRONTEND=noninteractive apt install -y bash rsync curl openssh-server procps doxygen

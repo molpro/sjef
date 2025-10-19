@@ -91,7 +91,7 @@ jobs:
           files: "pysjef/build.sh"
 
       - name: report environment
-        run:  uname -a && cmake --version && ccache -s
+        run:  uname -a && cmake --version
 
       - name: build and test
         run: |

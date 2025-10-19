@@ -41,9 +41,6 @@ jobs:
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
 
-      - name: Report environment
-        run:  uname -a && cmake --version && ccache -s
-
       - name: Configure CMake
         if: steps.check_configuration.outputs.files_exists == 'true'
         run: |
@@ -90,23 +87,17 @@ jobs:
         with:
           files: "pysjef/build.sh"
 
-      - name: Report environment
-        run:  uname -a && cmake --version && echo CONDA_PREFIX=$CONDA_PREFIX
-
       - name: Build
         run: |
-          cd pysjef
           . /opt/conda/etc/profile.d/conda.sh
           mkdir -p /var/run/sshd
           /usr/sbin/sshd
-          #ssh 127.0.0.1 pwd
+          cd pysjef
           conda install -c conda-forge -y --file requirements.txt
           BUILD=cmake-build-$(uname)-$(uname -m)
           export CXXFLAGS='-fPIC'
           cmake -S .. -B $BUILD -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF || { echo 'cmake configuration failed' ; exit 1; }
           cmake --build $BUILD -t install || { echo 'cmake install failed' ; exit 1; }
-          # ls -lR /opt/conda/include/sjef
-          # find /opt/conda -name 'sjef.h'
           export CXXFLAGS='-std=c++17' CPATH=${CONDA_PREFIX}/include
           uname | grep -q Darwin && export CXXFLAGS="$CXXFLAGS -mmacosx-version-min=13"
           env

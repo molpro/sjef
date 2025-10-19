@@ -128,5 +128,5 @@ jobs:
           #export CXXFLAGS='-std=c++17' CPATH=$Env:CONDA_PREFIX/include
           python -m pip install .
       - name: Test
-        run: python -c 'import sjef; p=sjef.Project('test.molpro'); print(p); print(sjef.__version__)'
+        run: python -c 'import sjef; p=sjef.Project("test.molpro"); print(p); print(sjef.__version__)'
 

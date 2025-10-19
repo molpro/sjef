@@ -13,7 +13,11 @@ env:
 jobs:
 
   cmake-build:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
       packages: write

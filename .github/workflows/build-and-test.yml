@@ -114,21 +114,27 @@ jobs:
         with:
           auto-update-conda: true
 
+      - name: Conda install
+        shell: cmd
+        run: |
+          echo %cd%
+          cd pysjef
+          echo %cd%
+          conda install -q -c conda-forge -y --file requirements.txt
       - name: Build
         shell: cmd
         run: |
-          cd pysjef
-          conda install -q -c conda-forge -y --file requirements.txt
           echo 'after conda'
+          echo %cd%
           cmake -LAH -S .. -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF -DCMAKE_INSTALL_PREFIX=%PREFIX% -DCMAKE_INSTALL_INCLUDEDIR=%PREFIX%\include  -DCMAKE_INSTALL_LIBDIR=%PREFIX%\Library\lib -DCMAKE_BUILD_TYPE=Release
           cmake --build cmake-build -t install
           echo 'before pip'
           python -m pip install .
           echo 'after pip'
           cd ../..
-          python -c 'import pysjef; p=pysjef.Project("test.molpro"); print(p); print(pysjef.__version__);print(p.filename())'
       - name: Test
         shell: cmd
         run: |
+          python -c 'import pysjef; p=pysjef.Project("test.molpro"); print(p); print(pysjef.__version__);print(p.filename())'
           cd ../..
 

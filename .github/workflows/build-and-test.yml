@@ -104,9 +104,9 @@ jobs:
           BUILD=cmake-build-$(uname)-$(uname -m)
           cmake -S .. -B $BUILD -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF || { echo 'cmake configuration failed' ; exit 1; }
           cmake --build $BUILD -t install || { echo 'cmake install failed' ; exit 1; }
-          ls -lR /opt/conda/include/sjef
-          find /opt/conda -name 'sjef.h'
-          export CXXFLAGS='-std=c++17'
+#          ls -lR /opt/conda/include/sjef
+#          find /opt/conda -name 'sjef.h'
+          export CXXFLAGS='-std=c++17' CPATH=${CONDA_PREFIX}/include
           uname | grep -q Darwin && export CXXFLAGS="$CXXFLAGS -mmacosx-version-min=13"
           env
           python -m pip install .

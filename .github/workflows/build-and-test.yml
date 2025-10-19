@@ -118,23 +118,24 @@ jobs:
         shell: cmd
         run: |
           echo %cd%
-          cd pysjef
+          echo CONDA_PREFIX=%CONDA_PREFIX%
+          conda activate test
+          echo CONDA_PREFIX=%CONDA_PREFIX%
           echo %cd%
-          conda install -q -c conda-forge -y --file requirements.txt
+          conda install -q -c conda-forge -y --file pysjef/requirements.txt
       - name: Build
         shell: cmd
         run: |
           echo 'after conda'
+          echo CONDA_PREFIX=%CONDA_PREFIX%
           echo %cd%
           cmake -LAH -S .. -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF -DCMAKE_INSTALL_PREFIX=%PREFIX% -DCMAKE_INSTALL_INCLUDEDIR=%PREFIX%\include  -DCMAKE_INSTALL_LIBDIR=%PREFIX%\Library\lib -DCMAKE_BUILD_TYPE=Release
           cmake --build cmake-build -t install
           echo 'before pip'
-          python -m pip install .
+          python -m pip install ./pysjef
           echo 'after pip'
-          cd ../..
       - name: Test
         shell: cmd
         run: |
           python -c 'import pysjef; p=pysjef.Project("test.molpro"); print(p); print(pysjef.__version__);print(p.filename())'
-          cd ../..
 

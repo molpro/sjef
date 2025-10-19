@@ -108,7 +108,8 @@ jobs:
           find /opt/conda -name 'sjef.h'
           export CXXFLAGS='-std=c++17'
           uname | grep -q Darwin && export CXXFLAGS="$CXXFLAGS -mmacosx-version-min=13"
-          PREFIX=$CONDA_PREFIX python -m pip install .
+          env
+          python -m pip install .
       - name: Test
         run: pytest
 

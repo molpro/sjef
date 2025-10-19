@@ -117,16 +117,13 @@ jobs:
       - name: Build
         shell: cmd
         run: |
-          # . /opt/conda/etc/profile.d/conda.sh
-          # mkdir -p /var/run/sshd
-          # /usr/sbin/sshd
           cd pysjef
           conda install -q -c conda-forge -y --file requirements.txt
-          # export CXXFLAGS='-fPIC'
           cmake -LAH -S .. -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF -DCMAKE_INSTALL_PREFIX=%PREFIX% -DCMAKE_INSTALL_INCLUDEDIR=%PREFIX%\include  -DCMAKE_INSTALL_LIBDIR=%PREFIX%\Library\lib -DCMAKE_BUILD_TYPE=Release
           cmake --build cmake-build -t install
-          #export CXXFLAGS='-std=c++17' CPATH=$Env:CONDA_PREFIX/include
+          echo 'before pip'
           python -m pip install .
+          echo 'after pip'
           cd ../..
           python -c 'import pysjef; p=pysjef.Project("test.molpro"); print(p); print(pysjef.__version__);print(p.filename())'
       - name: Test

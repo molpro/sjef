@@ -1,5 +1,5 @@
 #distutils: language = c++
-#distutils: extra_compile_args = /std=c++17
+# distutils: extra_compile_args =  /std:c++17
 from cython.operator cimport dereference as deref
 from libcpp cimport nullptr, bool
 from libcpp.string cimport string

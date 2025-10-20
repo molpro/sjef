@@ -101,7 +101,6 @@ jobs:
           #export CXXFLAGS='-std=c++17' CPATH=${CONDA_PREFIX}/include
           uname | grep -q Darwin && export CXXFLAGS="$CXXFLAGS -mmacosx-version-min=13"
           env
-          cat pyproject.toml
           python -m pip install .
       - name: Test
         run: pytest
@@ -131,7 +130,7 @@ jobs:
           conda list
           $CONDA_PREFIX_UNIX = $Env:CONDA_PREFIX -replace '\\','/'
           echo CONDA_PREFIX_UNIX=$CONDA_PREFIX_UNIX
-          cmake -LAH -S . -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF ("-DCMAKE_INSTALL_PREFIX={0}" -f $CONDA_PREFIX_UNIX)  -DCMAKE_BUILD_TYPE=Release
+          cmake -LAH -S . -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF ("-DCMAKE_INSTALL_PREFIX={0}" -f $CONDA_PREFIX_UNIX) ("-DCMAKE_INSTALL_LIBDIR={0}/lib" -f $CONDA_PREFIX_UNIX) -DCMAKE_BUILD_TYPE=Release
           cmake --build cmake-build -t install
           echo 'before pip'
           python -m pip install ./pysjef
@@ -139,8 +138,6 @@ jobs:
           cd $Env:CONDA_PREFIX
           Get-ChildItem -Recurse -Filter 'sjef.h' $Env:CONDA_PREFIX
           Get-ChildItem -Recurse -Filter '*sjef*' $Env:CONDA_PREFIX
-          Get-ChildItem -Recurse -Filter 'sjef.lib' $Env:CONDA_PREFIX
-          Get-ChildItem -Recurse -Filter '*pugixml*' $Env:CONDA_PREFIX
       - name: Test
         shell: cmd
         run: |

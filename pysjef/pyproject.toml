@@ -11,7 +11,7 @@ license = "MIT"
 [tool.setuptools]
 packages = ["pysjef"]
 ext-modules = [
-    {name = "pysjef.project_wrapper", sources = ["pysjef/project_wrapper.pyx"], libraries = ["sjef","pugixml","boost_system", "boost_filesystem" ], extra_compile_args = ["-std=c++17"]},
+    {name = "pysjef.project_wrapper", sources = ["pysjef/project_wrapper.pyx"], libraries = ["sjef","pugixml","boost_system", "boost_filesystem" ] },
 ]
 [tool.setuptools_scm]
 version_file = "pysjef/_version.py"

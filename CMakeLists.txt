@@ -60,6 +60,9 @@ add_custom_target(_version.py
         COMMAND echo "__version__ = \"${CMAKE_PROJECT_VERSION}\"" > _version.py
 )
 
+add_subdirectory(pysjef)
+
+
 if (WIN32)
     FetchContent_Declare(rsync
             GIT_REPOSITORY https://github.com/molpro/cwrsync

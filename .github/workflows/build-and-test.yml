@@ -98,7 +98,7 @@ jobs:
           export CXXFLAGS='-fPIC'
           cmake -S .. -B $BUILD -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF || { echo 'cmake configuration failed' ; exit 1; }
           cmake --build $BUILD -t install || { echo 'cmake install failed' ; exit 1; }
-          export CXXFLAGS='-std=c++17' CPATH=${CONDA_PREFIX}/include
+          #export CXXFLAGS='-std=c++17' CPATH=${CONDA_PREFIX}/include
           uname | grep -q Darwin && export CXXFLAGS="$CXXFLAGS -mmacosx-version-min=13"
           env
           python -m pip install .
@@ -133,7 +133,6 @@ jobs:
           echo cmake -LAH -S . -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF ("-DCMAKE_INSTALL_PREFIX={0}" -f $CONDA_PREFIX_UNIX) ("-DCMAKE_INSTALL_LIBDIR={0}/Library/lib" -f $CONDA_PREFIX_UNIX) -DCMAKE_BUILD_TYPE=Release
           cmake -LAH -S . -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF ("-DCMAKE_INSTALL_PREFIX={0}" -f $CONDA_PREFIX_UNIX) ("-DCMAKE_INSTALL_LIBDIR={0}/Library/lib" -f $CONDA_PREFIX_UNIX) -DCMAKE_BUILD_TYPE=Release
           cmake --build cmake-build -t install
-          $Env:CFLAGS = '/std:c++17'
           echo 'before pip'
           python -m pip install ./pysjef
           echo 'after pip'

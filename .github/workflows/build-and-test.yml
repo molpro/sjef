@@ -136,8 +136,10 @@ jobs:
           python -m pip install ./pysjef
           echo 'after pip'
           cd $Env:CONDA_PREFIX
-          Get-ChildItem -Recurse -Filter 'sjef.h' $Env:CONDA_PREFIX
-          Get-ChildItem -Recurse -Filter '*sjef*' $Env:CONDA_PREFIX
+          Get-ChildItem -Recurse -Filter 'sjef.lib' $Env:CONDA_PREFIX
+          Get-ChildItem -Recurse -Filter 'pugixml.lib' $Env:CONDA_PREFIX
+          Get-ChildItem -Recurse -Filter 'boost_system.lib' $Env:CONDA_PREFIX
+          Get-ChildItem -Recurse -Filter 'boost_filesystem.lib' $Env:CONDA_PREFIX
       - name: Test
         shell: cmd
         run: |

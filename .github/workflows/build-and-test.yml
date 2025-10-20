@@ -128,7 +128,7 @@ jobs:
           echo 'after conda'
           conda info
           conda list
-          string(REPLACE "\\" "/" CONDA_PREFIX_UNIX $Env:CONDA_PREFIX)
+          $CONDA_PREFIX_UNIX = $Env:CONDA_PREFIX -replace '\\','/'
           echo CONDA_PREFIX_UNIX=$CONDA_PREFIX_UNIX
           echo cmake -LAH -S . -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF ("-DCMAKE_INSTALL_PREFIX={0}" -f $CONDA_PREFIX_UNIX) ("-DCMAKE_INSTALL_LIBDIR={0}\Library\lib" -f $CONDA_PREFIX_UNIX) -DCMAKE_BUILD_TYPE=Release
           cmake -LAH -S . -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF ("-DCMAKE_INSTALL_PREFIX={0}" -f $CONDA_PREFIX_UNIX) ("-DCMAKE_INSTALL_LIBDIR={0}\Library\lib" -f $CONDA_PREFIX_UNIX) -DCMAKE_BUILD_TYPE=Release

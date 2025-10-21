@@ -130,7 +130,7 @@ jobs:
           conda list
           $CONDA_PREFIX_UNIX = $Env:CONDA_PREFIX -replace '\\','/'
           echo CONDA_PREFIX_UNIX=$CONDA_PREFIX_UNIX
-          cmake -LAH -S . -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF ("-DCMAKE_INSTALL_PREFIX={0}" -f $CONDA_PREFIX_UNIX) ("-DCMAKE_INSTALL_LIBDIR={0}/lib" -f $CONDA_PREFIX_UNIX)
+          cmake -LAH -S . -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF ("-DCMAKE_INSTALL_PREFIX={0}" -f $CONDA_PREFIX_UNIX)
           cmake --build cmake-build -t install --config Release
           echo 'before pip'
           python -m pip install ./pysjef

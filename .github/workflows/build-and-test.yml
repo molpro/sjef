@@ -132,5 +132,5 @@ jobs:
         shell: pwsh
         run: |
           conda activate test
-          python -c "import pysjef; p=pysjef.Project('test.molpro'); print(p); print(pysjef.__version__);print(p.filename())"
+          python -c "import pysjef; p=pysjef.Project('test'); print(p); print(pysjef.__version__);print(p.filename())"
 

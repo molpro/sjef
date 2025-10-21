@@ -120,6 +120,7 @@ jobs:
       - name: Environment
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
+          conda activate test
           echo "CMAKE_INSTALL_PREFIX=${CONDA_PREFIX}" >> "$GITHUB_ENV"
           echo "CMAKE_INSTALL_PREFIX=$CMAKE_INSTALL_PREFIX"
           echo "CXXFLAGS=-fPIC" >> "$GITHUB_ENV"
@@ -127,6 +128,7 @@ jobs:
         if: ${{ matrix.os == 'windows-latest' }}
         shell: pwsh
         run: |
+          conda activate test
           $CMAKE_INSTALL_PREFIX = $Env:CONDA_PREFIX -replace '\\','/'
           echo "CMAKE_INSTALL_PREFIX=$CMAKE_INSTALL_PREFIX"
           echo ("CMAKE_INSTALL_PREFIX={0}" -f $CMAKE_INSTALL_PREFIX) >> "$GITHUB_ENV"

@@ -18,11 +18,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, ubuntu-24.04-arm]
     runs-on: ${{ matrix.os }}
-#    permissions:
-#      contents: read
-#      packages: write
     container:
-      # relies on repository name being all lower case
       image: ghcr.io/${{ github.repository }}
       credentials:
         username: ${{ github.actor }}
@@ -74,8 +70,6 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 5
-    env:
-      CXXFLAGS: -fPIC
     steps:
       - uses: actions/checkout@v3
       - name: Build
@@ -112,7 +106,7 @@ jobs:
           conda activate test
           $CMAKE_INSTALL_PREFIX = $Env:CONDA_PREFIX -replace '\\','/'
           echo ('CMAKE_INSTALL_PREFIX={0}' -f $CMAKE_INSTALL_PREFIX) | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-      - name: Conda install
+      - name: Build
         shell: pwsh
         run: |
           conda activate test

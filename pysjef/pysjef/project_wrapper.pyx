@@ -1,5 +1,4 @@
 #distutils: language = c++
-# distutils: extra_compile_args =  /std:c++17
 from cython.operator cimport dereference as deref
 from libcpp cimport nullptr, bool
 from libcpp.string cimport string
@@ -42,8 +41,8 @@ cdef class ProjectWrapper:
     cdef public object _input_variables
     cdef public object __property_name_prefix
 
-
-    def __init__(self, str name="", location=None, bool construct=True, suffix='', file_suffixes=None, record_as_recent=True):
+    def __init__(self, str name="", location=None, bool construct=True, suffix='',
+                 file_suffixes=None, record_as_recent=True):
         """
         Create a new Project bundle called *name* at the specified *location*.
 

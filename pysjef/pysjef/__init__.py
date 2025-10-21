@@ -1,4 +1,4 @@
-from ._version import __version__
+from ._version import __version__, __version_tuple__, __commit_id__
 from .node_xml import RootXml
 from .select import select
 from .tree_view import tree_view
@@ -6,6 +6,7 @@ from .node import Node
 from .container import DirectoryNode
 from .settings import Settings
 from .project import xpath
+from .project_wrapper import ProjectWrapper
 
 import logging
 

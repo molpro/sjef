@@ -1,0 +1,19 @@
+[build-system]
+requires = [ "Cython", "setuptools>=64", "setuptools_scm>=8.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pysjef"
+dynamic = ["version", "dependencies"]
+readme = "README.rst"
+license = "MIT"
+
+[tool.setuptools]
+packages = ["pysjef"]
+ext-modules = [
+    {name = "pysjef.project_wrapper", sources = ["pysjef/project_wrapper.pyx"], libraries = ["sjef","pugixml","boost_system", "boost_filesystem",@EXTRA_LIBRARIES@ ], extra-compile-args = [@EXTRA_COMPILE_ARGS@], library-dirs = ['@CMAKE_INSTALL_PREFIX@/lib',@EXTRA_LIBRARY_DIRS@], include-dirs = ['@CMAKE_INSTALL_PREFIX@/include']},
+
+]
+[tool.setuptools_scm]
+version_file = "pysjef/_version.py"
+root = ".."

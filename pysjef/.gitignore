@@ -9,3 +9,4 @@ docs/_*
 pysjef.egg-info/
 pysjef/_version.py
 pysjef/project_wrapper.cpp
+pyproject.toml

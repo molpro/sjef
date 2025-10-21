@@ -13,12 +13,12 @@ env:
 jobs:
 
   cmake-build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
     container:
-      # relies on repository name being all lower case
       image: ghcr.io/${{ github.repository }}
       credentials:
         username: ${{ github.actor }}
@@ -58,36 +58,70 @@ jobs:
       - name: Build doxygen
         run: cmake --build ${{github.workspace}}/build --target sjef-doc
 
-  python:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+  unix-python:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
     container:
-      # relies on repository name being all lower case
       image: ghcr.io/${{ github.repository }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 5
+    env:
+      CXXFLAGS: -fPIC
     steps:
       - uses: actions/checkout@v3
-
-      - name: Check existence of build configuration file
-        id: check_configuration
-        uses: andstor/file-existence-action@v1
-        with:
-          files: "pysjef/build.sh"
-
-      - name: build and test
+      - name: Build
         run: |
-          cd pysjef
           . /opt/conda/etc/profile.d/conda.sh
           mkdir -p /var/run/sshd
           /usr/sbin/sshd
-          ssh 127.0.0.1 pwd
-          conda create -c conda-forge -n pysjef -y --file requirements.txt
-          conda activate pysjef
-          bash ./build.sh
-          pytest
+          cd pysjef
+          conda install -c conda-forge -y --file requirements.txt
+          BUILD=cmake-build-$(uname)-$(uname -m)
+          cmake -S .. -B $BUILD -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF || { echo 'cmake configuration failed' ; exit 1; }
+          cmake --build $BUILD -t install || { echo 'cmake install failed' ; exit 1; }
+          cat pyproject.toml
+          python -m pip install .
+      - name: Test
+        run: pytest
+  windows-python:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ windows-latest ] #, windows-11-arm ]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+
+      - name: Environment
+        shell: pwsh
+        run: |
+          conda activate test
+          $CMAKE_INSTALL_PREFIX = $Env:CONDA_PREFIX -replace '\\','/'
+          echo ('CMAKE_INSTALL_PREFIX={0}' -f $CMAKE_INSTALL_PREFIX) | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Build
+        shell: pwsh
+        run: |
+          conda activate test
+          conda install -q -c conda-forge -y --file pysjef/requirements.txt
+          conda info
+          conda list
+          cmake -LAH -S . -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF
+          cmake --build cmake-build -t install --config Release
+          cat pysjef/pyproject.toml
+          python -m pip install ./pysjef
+      - name: Minimal test
+        shell: pwsh
+        run: |
+          conda activate test
+          python -c "import pysjef; p=pysjef.Project('test'); print(p); print(pysjef.__version__);print(p.filename())"
 

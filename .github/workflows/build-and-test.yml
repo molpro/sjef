@@ -2,7 +2,7 @@ name: Build and test
 
 on:
   push:
-    branches: [ "main" , "master", "new-build" ]
+    branches: [ "main" , "master" ]
   pull_request:
     branches: [ "main" , "master" ]
   workflow_dispatch:
@@ -88,7 +88,7 @@ jobs:
           BUILD=cmake-build-$(uname)-$(uname -m)
           cmake -S .. -B $BUILD -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF || { echo 'cmake configuration failed' ; exit 1; }
           cmake --build $BUILD -t install || { echo 'cmake install failed' ; exit 1; }
-          cat pysjef/pyproject.toml
+          cat pyproject.toml
           python -m pip install .
       - name: Test
         run: pytest

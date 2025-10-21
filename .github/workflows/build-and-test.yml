@@ -95,7 +95,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ windows-latest ]
+        os: [ windows-latest, windows-11-arm ]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     steps:
@@ -110,12 +110,7 @@ jobs:
         run: |
           conda activate test
           $CMAKE_INSTALL_PREFIX = $Env:CONDA_PREFIX -replace '\\','/'
-          echo "CMAKE_INSTALL_PREFIX=$CMAKE_INSTALL_PREFIX"
           echo ('CMAKE_INSTALL_PREFIX={0}' -f $CMAKE_INSTALL_PREFIX) | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-          echo env.CMAKE_INSTALL_PREFIX ${{ env.CMAKE_INSTALL_PREFIX }}
-          echo $Env:GITHUB_PATH
-          echo $Env:GITHUB_ENV
-          cat $Env:GITHUB_ENV
       - name: Conda install
         shell: pwsh
         run: |
@@ -123,8 +118,6 @@ jobs:
           conda install -q -c conda-forge -y --file pysjef/requirements.txt
           conda info
           conda list
-          echo CMAKE_INSTALL_PREFIX=$CMAKE_INSTALL_PREFIX
-          echo CMAKE_INSTALL_PREFIX=$Env:CMAKE_INSTALL_PREFIX
           cmake -LAH -S . -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF
           cmake --build cmake-build -t install --config Release
           python -m pip install ./pysjef

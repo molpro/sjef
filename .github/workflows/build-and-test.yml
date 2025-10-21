@@ -62,7 +62,8 @@ jobs:
       - name: Build doxygen
         run: cmake --build ${{github.workspace}}/build --target sjef-doc
 
-  python:
+  old-python:
+    if: ${{ false }}
     strategy:
       fail-fast: false
       matrix:
@@ -102,7 +103,7 @@ jobs:
           python -m pip install .
       - name: Test
         run: pytest
-  windows-python:
+  python:
     strategy:
       fail-fast: false
       matrix:
@@ -119,6 +120,7 @@ jobs:
       - name: Environment
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
+          echo "CMAKE_INSTALL_PREFIX=${CONDA_PREFIX}" >> "$GITHUB_ENV"
           echo "CXXFLAGS=-fPIC" >> "$GITHUB_ENV"
       - name: Environment
         if: ${{ matrix.os == 'windows-latest' }}

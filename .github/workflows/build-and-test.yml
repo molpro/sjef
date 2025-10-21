@@ -88,6 +88,7 @@ jobs:
           BUILD=cmake-build-$(uname)-$(uname -m)
           cmake -S .. -B $BUILD -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF || { echo 'cmake configuration failed' ; exit 1; }
           cmake --build $BUILD -t install || { echo 'cmake install failed' ; exit 1; }
+          cat pysjef/pyproject.toml
           python -m pip install .
       - name: Test
         run: pytest
@@ -120,6 +121,7 @@ jobs:
           conda list
           cmake -LAH -S . -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF
           cmake --build cmake-build -t install --config Release
+          cat pysjef/pyproject.toml
           python -m pip install ./pysjef
       - name: Minimal test
         shell: pwsh

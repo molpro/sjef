@@ -62,18 +62,13 @@ jobs:
       - name: Build doxygen
         run: cmake --build ${{github.workspace}}/build --target sjef-doc
 
-  old-python:
-    if: ${{ false }}
+  unix-python:
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, ubuntu-24.04-arm]
     runs-on: ${{ matrix.os }}
-#    permissions:
-#      contents: read
-#      packages: write
     container:
-      # relies on repository name being all lower case
       image: ghcr.io/${{ github.repository }}
       credentials:
         username: ${{ github.actor }}
@@ -83,13 +78,6 @@ jobs:
       CXXFLAGS: -fPIC
     steps:
       - uses: actions/checkout@v3
-
-#      - name: Check existence of build configuration file
-#        id: check_configuration
-#        uses: andstor/file-existence-action@v1
-#        with:
-#          files: "pysjef/build.sh"
-
       - name: Build
         run: |
           . /opt/conda/etc/profile.d/conda.sh
@@ -103,11 +91,11 @@ jobs:
           python -m pip install .
       - name: Test
         run: pytest
-  python:
+  windows-python:
     strategy:
       fail-fast: false
       matrix:
-        os: [ windows-latest, ubuntu-latest, ubuntu-24.04-arm ]
+        os: [ windows-latest ]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     steps:
@@ -118,17 +106,6 @@ jobs:
           auto-update-conda: true
 
       - name: Environment
-        shell: bash -l {0}
-        if: ${{ matrix.os != 'windows-latest' }}
-        run: |
-          service ssh restart
-          service ssh status
-          conda activate test
-          echo "CMAKE_INSTALL_PREFIX=${CONDA_PREFIX}" >> "$GITHUB_ENV"
-          echo "CMAKE_INSTALL_PREFIX=${CONDA_PREFIX}"
-          echo "CXXFLAGS=-fPIC" >> "$GITHUB_ENV"
-      - name: Environment
-        if: ${{ matrix.os == 'windows-latest' }}
         shell: pwsh
         run: |
           conda activate test
@@ -152,15 +129,8 @@ jobs:
           cmake --build cmake-build -t install --config Release
           python -m pip install ./pysjef
       - name: Minimal test
-        if: ${{ matrix.os == 'windows-latest' }}
         shell: pwsh
         run: |
           conda activate test
           python -c "import pysjef; p=pysjef.Project('test.molpro'); print(p); print(pysjef.__version__);print(p.filename())"
-      - name: Pytest
-        if: ${{ matrix.os != 'windows-latest' }}
-        shell: bash -l {0}
-        run: |
-          conda activate test
-          pytest
 

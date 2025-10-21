@@ -1,6 +1,7 @@
 if(WIN32)
     set(CXX_STANDARD_OPTION "/std:c++17")
     set(EXTRA_LIBRARY_DIRS "'${CMAKE_INSTALL_PREFIX}/Library/lib','${CMAKE_INSTALL_PREFIX}/bin'")
+    set(EXTRA_LIBRARIES "'shell32'")
 else()
     set(CXX_STANDARD_OPTION "-std=c++17")
 endif()

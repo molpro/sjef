@@ -11,7 +11,7 @@ license = "MIT"
 [tool.setuptools]
 packages = ["pysjef"]
 ext-modules = [
-    {name = "pysjef.project_wrapper", sources = ["pysjef/project_wrapper.pyx"], libraries = ["sjef","pugixml","boost_system", "boost_filesystem" ], extra-compile-args = ['@CXX_STANDARD_OPTION@'], library-dirs = ['@CMAKE_INSTALL_PREFIX@/lib',@EXTRA_LIBRARY_DIRS@], include-dirs = ['@CMAKE_INSTALL_PREFIX@/include']},
+    {name = "pysjef.project_wrapper", sources = ["pysjef/project_wrapper.pyx"], libraries = ["sjef","pugixml","boost_system", "boost_filesystem",@EXTRA_LIBRARIES ], extra-compile-args = ['@CXX_STANDARD_OPTION@'], library-dirs = ['@CMAKE_INSTALL_PREFIX@/lib',@EXTRA_LIBRARY_DIRS@], include-dirs = ['@CMAKE_INSTALL_PREFIX@/include']},
 
 ]
 [tool.setuptools_scm]

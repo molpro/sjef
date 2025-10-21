@@ -121,9 +121,11 @@ jobs:
         shell: bash -l {0}
         if: ${{ matrix.os != 'windows-latest' }}
         run: |
+          mkdir -p /var/run/sshd
+          /usr/sbin/sshd
           conda activate test
           echo "CMAKE_INSTALL_PREFIX=${CONDA_PREFIX}" >> "$GITHUB_ENV"
-          echo "CMAKE_INSTALL_PREFIX=$CMAKE_INSTALL_PREFIX"
+          echo "CMAKE_INSTALL_PREFIX=${CONDA_PREFIX}"
           echo "CXXFLAGS=-fPIC" >> "$GITHUB_ENV"
       - name: Environment
         if: ${{ matrix.os == 'windows-latest' }}
@@ -134,6 +136,10 @@ jobs:
           echo "CMAKE_INSTALL_PREFIX=$CMAKE_INSTALL_PREFIX"
           echo ('$Env:CMAKE_INSTALL_PREFIX = {0}' -f $CMAKE_INSTALL_PREFIX) | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 #          echo "{name}={value}" | Out-File -FilePath $Env:GITHUB_PATH -Encoding utf8 -Append
+          echo env.CMAKE_INSTALL_PREFIX ${{ env.CMAKE_INSTALL_PREFIX }}
+          echo $Env:GITHUB_PATH
+          echo $Env:GITHUB_ENV
+          cat $Env:GITHUB_ENV
       - name: Conda install
         shell: pwsh
         run: |
@@ -157,7 +163,5 @@ jobs:
         shell: bash -l {0}
         run: |
           conda activate test
-          mkdir -p /var/run/sshd
-          /usr/sbin/sshd
           pytest
 

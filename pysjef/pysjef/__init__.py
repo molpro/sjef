@@ -1,4 +1,4 @@
-from ._version import __version__, __version_tuple__, __commit_id__
+from ._version import __version__
 from .node_xml import RootXml
 from .select import select
 from .tree_view import tree_view

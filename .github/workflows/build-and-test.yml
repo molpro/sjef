@@ -78,6 +78,8 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 5
+    env:
+      CXXFLAGS: -fPIC
     steps:
       - uses: actions/checkout@v3
 
@@ -95,17 +97,17 @@ jobs:
           cd pysjef
           conda install -c conda-forge -y --file requirements.txt
           BUILD=cmake-build-$(uname)-$(uname -m)
-          export CXXFLAGS='-fPIC'
           cmake -S .. -B $BUILD -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF || { echo 'cmake configuration failed' ; exit 1; }
           cmake --build $BUILD -t install || { echo 'cmake install failed' ; exit 1; }
-          #export CXXFLAGS='-std=c++17' CPATH=${CONDA_PREFIX}/include
-          uname | grep -q Darwin && export CXXFLAGS="$CXXFLAGS -mmacosx-version-min=13"
-          env
           python -m pip install .
       - name: Test
         run: pytest
   windows-python:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ windows-latest, ubuntu-latest, ubuntu-24.04-arm ]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v3
@@ -114,34 +116,32 @@ jobs:
         with:
           auto-update-conda: true
 
+      - name: Environment
+        if: ${{ matrix.os != 'windows-latest' }}
+        run: |
+          echo "CXXFLAGS=-fPIC" >> "$GITHUB_ENV"
+      - name: Environment
+        if: ${{ matrix.os == 'windows-latest' }}
+        shell: pwsh
+        run: |
+          $CMAKE_INSTALL_PREFIX = $Env:CONDA_PREFIX -replace '\\','/'
+          echo ("CMAKE_INSTALL_PREFIX={0}" -f $CMAKE_INSTALL_PREFIX) >> "$GITHUB_ENV"
       - name: Conda install
         shell: pwsh
         run: |
-          gci env:* | sort-object name
-          pwd
           conda activate test
-          gci env:* | sort-object name
-          conda info
-          conda list
           conda install -q -c conda-forge -y --file pysjef/requirements.txt
-          conda list
-          echo 'after conda'
           conda info
           conda list
-          $CONDA_PREFIX_UNIX = $Env:CONDA_PREFIX -replace '\\','/'
-          echo CONDA_PREFIX_UNIX=$CONDA_PREFIX_UNIX
-          cmake -LAH -S . -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF ("-DCMAKE_INSTALL_PREFIX={0}" -f $CONDA_PREFIX_UNIX)
+          echo CMAKE_INSTALL_PREFIX=$CMAKE_INSTALL_PREFIX
+          cmake -LAH -S . -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF
           cmake --build cmake-build -t install --config Release
-          echo 'before pip'
           python -m pip install ./pysjef
-          echo 'after pip'
-          cd $Env:CONDA_PREFIX
-          Get-ChildItem -Recurse -Filter 'sjef.lib' $Env:CONDA_PREFIX | Select-Object -Property FullName
-          Get-ChildItem -Recurse -Filter 'pugixml.lib' $Env:CONDA_PREFIX | Select-Object -Property FullName
-          Get-ChildItem -Recurse -Filter 'boost_system.lib' $Env:CONDA_PREFIX | Select-Object -Property FullName
-          Get-ChildItem -Recurse -Filter 'boost_filesystem.lib' $Env:CONDA_PREFIX | Select-Object -Property FullName
-      - name: Test
+      - name: Minimal test
         shell: cmd
         run: |
           python -c "import pysjef; p=pysjef.Project('test.molpro'); print(p); print(pysjef.__version__);print(p.filename())"
+      - name: Pytest
+        if: ${{ matrix.os != 'windows-latest' }}
+        run: pytest
 

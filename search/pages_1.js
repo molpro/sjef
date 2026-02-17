@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['simple_20job_20execution_20framework_0',['Simple Job Execution Framework',['../index.html',1,'']]],
-  ['sjef_1',['sjef',['../md____w_sjef_sjef_sjef_program.html',1,'']]]
+  ['configuration_20of_20backends_0',['Configuration of backends',['../md__2____w_2sjef_2sjef_2src_2sjef_2backends.html',1,'']]]
 ];

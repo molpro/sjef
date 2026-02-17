@@ -1,20 +1,12 @@
 var searchData=
 [
-  ['readme_2emd_0',['README.md',['../_r_e_a_d_m_e_8md.html',1,'']]],
-  ['recent_1',['recent',['../classsjef_1_1_project.html#ab65b7951469c6577dbc8bd2cf3fc39d2',1,'sjef::Project::recent(const std::string &amp;suffix, int number=1)'],['../classsjef_1_1_project.html#ab5ba270e17341db97f553c487ddcf85d',1,'sjef::Project::recent(int number=1) const']]],
-  ['recent_5ffind_2',['recent_find',['../classsjef_1_1_project.html#a9d4509397e590f48041f827a34ff59cf',1,'sjef::Project::recent_find(const std::string &amp;suffix, const std::filesystem::path &amp;filename)'],['../classsjef_1_1_project.html#a29679ad322287f9297d0ff8c7ce89bca',1,'sjef::Project::recent_find(const std::filesystem::path &amp;filename) const']]],
-  ['refresh_5fbackends_3',['refresh_backends',['../classsjef_1_1_project.html#adf260da3f2325a26fb0378790a6d5b1e',1,'sjef::Project']]],
-  ['remove_5fbolt_4',['remove_bolt',['../classsjef_1_1util_1_1_locker.html#a81b05082ca19a80a7491353b5d141ecc',1,'sjef::util::Locker']]],
-  ['rewrite_5finput_5ffile_5',['rewrite_input_file',['../classsjef_1_1_project.html#a169a6424534f4b202a941ed0edf3df4e',1,'sjef::Project']]],
-  ['run_6',['run',['../classsjef_1_1_project.html#a251a99e76b8805f4c3149289f949c586',1,'sjef::Project::run(const std::string &amp;name, int verbosity=0, bool force=false, bool wait=false, const std::string &amp;options=&quot;&quot;)'],['../classsjef_1_1_project.html#ab39570a4400e3918ef71369dc652edda',1,'sjef::Project::run(int verbosity=0, bool force=false, bool wait=false, const std::string &amp;options=&quot;&quot;)']]],
-  ['run_5fdelete_7',['run_delete',['../classsjef_1_1_project.html#ab364eb17dd0a1913d1843ea91e630116',1,'sjef::Project']]],
-  ['run_5fdirectory_8',['run_directory',['../classsjef_1_1_project.html#ae8cdb7a5e5a3dc0f928e403c1e514e0b',1,'sjef::Project']]],
-  ['run_5fdirectory_5fbasename_9',['run_directory_basename',['../classsjef_1_1_project.html#a1ec9364f2e802487d35e9b244359229b',1,'sjef::Project']]],
-  ['run_5fdirectory_5fnew_10',['run_directory_new',['../classsjef_1_1_project.html#a23371c0bd90f3b184b972e422b6cdd84',1,'sjef::Project']]],
-  ['run_5flist_11',['run_list',['../classsjef_1_1_project.html#a1f920554234d6103addd3b074180588f',1,'sjef::Project']]],
-  ['run_5flist_5ft_12',['run_list_t',['../classsjef_1_1_project.html#af20e16866d0119ee600f8f4726174b92',1,'sjef::Project']]],
-  ['run_5fneeded_13',['run_needed',['../classsjef_1_1_project.html#ac811acc07a89f5246da1f16f4de48ee1',1,'sjef::Project']]],
-  ['run_5fverify_14',['run_verify',['../classsjef_1_1_project.html#a8495fd2cfa273c25002940a4f1adc0d0',1,'sjef::Project']]],
-  ['running_15',['running',['../namespacesjef.html#a36c95c05a49948d8f97e2c80d80ec787a874b668d2d2db32ffd146f4f59549883',1,'sjef']]],
-  ['runtime_5ferror_16',['runtime_error',['../classsjef_1_1runtime__error.html',1,'sjef']]]
+  ['path_0',['path',['../classsjef_1_1util_1_1_locker.html#a29e2b17ddbfb76dda99d76b6a2a3792e',1,'sjef::util::Locker']]],
+  ['project_1',['project',['../classsjef_1_1_project.html',1,'sjef::Project'],['../classsjef_1_1_project.html#ac84ab5131e9af08456c517763f0c5bfc',1,'sjef::Project::Project(const std::filesystem::path &amp;filename, bool construct=true, const std::string &amp;default_suffix=&quot;&quot;, const mapstringstring_t &amp;suffixes={{&quot;inp&quot;, &quot;inp&quot;}, {&quot;out&quot;, &quot;out&quot;}, {&quot;xml&quot;, &quot;xml&quot;}}, bool record_as_recent=true)'],['../classsjef_1_1_project.html#a6148562981dd6a4788412372f49094b3',1,'sjef::Project::Project(const Project &amp;source)=delete'],['../classsjef_1_1_project.html#aab6dd024c4029131ab2b96838b276693',1,'sjef::Project::Project(const Project &amp;&amp;source)=delete']]],
+  ['project_5fhash_2',['project_hash',['../classsjef_1_1_project.html#af100637476ccc92403c1bfef5e8bf704',1,'sjef::Project']]],
+  ['property_5fdelete_3',['property_delete',['../classsjef_1_1_project.html#a5e5726d65a6ae04aa2d0370f033d3809',1,'sjef::Project::property_delete(const std::string &amp;property)'],['../classsjef_1_1_project.html#a00583d6d4c34fed52034497b1a269df5',1,'sjef::Project::property_delete(const std::vector&lt; std::string &gt; &amp;properties)']]],
+  ['property_5fget_4',['property_get',['../classsjef_1_1_project.html#a866f00cf8d7ee0a1fbd1859bf7ec2c08',1,'sjef::Project::property_get(const std::string &amp;property) const'],['../classsjef_1_1_project.html#a6bf3e34aed0b32f5d845970f6350f440',1,'sjef::Project::property_get(const std::vector&lt; std::string &gt; &amp;properties) const']]],
+  ['property_5fnames_5',['property_names',['../classsjef_1_1_project.html#a65c8b89e50ca2a40d6660f6809c3c32d',1,'sjef::Project']]],
+  ['property_5fset_6',['property_set',['../classsjef_1_1_project.html#ab3d2a8b311499e4faacc78972fd357d6',1,'sjef::Project::property_set(const std::string &amp;property, const std::string &amp;value)'],['../classsjef_1_1_project.html#ac378b72e409045b8cb56adc53707949d',1,'sjef::Project::property_set(const mapstringstring_t &amp;properties)']]],
+  ['propertyfile_7',['propertyFile',['../classsjef_1_1_project.html#a5dc54ba18b0b4d7ea616941254a5c8c4',1,'sjef::Project']]],
+  ['pugi_8',['pugi',['../namespacepugi.html',1,'']]]
 ];

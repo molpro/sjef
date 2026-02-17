@@ -1,4 +1,4 @@
-FROM continuumio/miniconda3
+FROM continuumio/miniconda3:v25.11.1
 
 RUN . /opt/conda/etc/profile.d/conda.sh && conda --version
 

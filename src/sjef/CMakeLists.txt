@@ -19,7 +19,7 @@ endif ()
 target_include_directories(${PROJECT_NAME} PRIVATE ${tclap_SOURCE_DIR}/include)
 
 
-find_package(Boost 1.90.0 COMPONENTS filesystem REQUIRED CONFIG)
+find_package(Boost 1.85 COMPONENTS filesystem REQUIRED CONFIG)
 target_link_libraries(${PROJECT_NAME} PUBLIC Boost::headers)
 target_link_libraries(${PROJECT_NAME} PRIVATE Boost::filesystem)
 if (NOT MSVC)

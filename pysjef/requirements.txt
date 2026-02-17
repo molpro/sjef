@@ -1,6 +1,6 @@
 python >=3.10
 numpy >=1.17
-boost-cpp >=1.71
+boost-cpp >=1.85
 pugixml >=1.10
 cython >=3.0
 lxml >=4.0

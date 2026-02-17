@@ -11,15 +11,15 @@ set_target_properties(${PROJECT_NAME} PROPERTIES CXX_EXTENSIONS OFF)
 target_compile_definitions(${PROJECT_NAME} PRIVATE SJEF_VERSION=\"${SJEF_VERSION}\")
 
 include(FetchContent)
-FetchContent_Declare(tclap GIT_REPOSITORY https://github.com/molpro/tclap.git GIT_TAG v1.2.5)
+FetchContent_Declare(tclap GIT_REPOSITORY https://github.com/molpro/tclap.git GIT_TAG 1.4.0-rc1)
 FetchContent_GetProperties(tclap)
 if (NOT tclap_POPULATED)
-    FetchContent_Populate(tclap)
+    FetchContent_MakeAvailable(tclap)
 endif ()
 target_include_directories(${PROJECT_NAME} PRIVATE ${tclap_SOURCE_DIR}/include)
 
 
-find_package(Boost 1.71.0 COMPONENTS filesystem REQUIRED)
+find_package(Boost 1.90.0 COMPONENTS filesystem REQUIRED CONFIG)
 target_link_libraries(${PROJECT_NAME} PUBLIC Boost::headers)
 target_link_libraries(${PROJECT_NAME} PRIVATE Boost::filesystem)
 if (NOT MSVC)

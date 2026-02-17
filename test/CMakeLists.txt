@@ -40,7 +40,7 @@ foreach (t test-c-sjef-backend)
 endforeach ()
 
 if (NOT TARGET Boost::headers)
-    find_package(Boost 1.71.0 REQUIRED)
+    find_package(Boost 1.90.0 REQUIRED CONFIG)
 endif ()
 target_link_libraries(test-Locker PRIVATE Boost::headers)
 if (NOT MOLPRO STREQUAL MOLPRO-NOTFOUND)

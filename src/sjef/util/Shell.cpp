@@ -36,18 +36,18 @@ Shell::Shell(std::string host, std::string shell) : m_host(std::move(host)), m_s
 }
 
 ///> @private
-static std::string executable(const fs::path& command) {
-  if (command.is_absolute())
-    return command.string();
+static std::string executable(const std::string& command) {
+  if (fs::path(command).is_absolute())
+    return command;
   else {
     constexpr bool use_boost_search_path = true;
     if (use_boost_search_path) {
-      return bp::search_path(command.string()).string();
+      return bp::search_path(command).string();
     } else {
       std::stringstream path{std::string{getenv("PATH")}};
       std::string elem;
       while (std::getline(path, elem, ':')) {
-        auto resolved = elem / command;
+        auto resolved = elem / fs::path{command};
         if (fs::is_regular_file(resolved))
           return resolved.string();
       }

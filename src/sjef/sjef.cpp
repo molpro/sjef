@@ -1289,26 +1289,44 @@ void Project::add_backend(const std::string& name, const mapstringstring_t& fiel
 std::string version() noexcept { return SJEF_VERSION; }
 
 pugi::xpath_node_set Project::select_nodes(const std::string& xpath_query, int run) const {
+  // std::cout << "select_nodes " << xpath_query << std::endl;
   auto xml = pugi::xml_document();
   xml.load_string(this->xml(run).c_str());
+  // auto result = xml.select_nodes(xpath_query.c_str());
+  // for (const auto& node : result) {
+    // std::cout << "node " << node.node().name() <<", value: "<<node.node().value()<< std::endl;
+    // std::cout << "node " << node.node().name() <<", child_value: "<<node.node().child_value()<< std::endl;
+    // std::cout << "node " << node.node().name() <<", text: "<<node.node().text()<< std::endl;
+  // }
+  // return result;
   return xml.select_nodes(xpath_query.c_str());
 }
 
 std::vector<std::string> Project::xpath_search(const std::string& xpath_query, const std::string& attribute,
                                                int run) const {
-  auto node_set = select_nodes(xpath_query, run);
+  // auto node_set = select_nodes(xpath_query, run);
+  auto xml = pugi::xml_document();
+  xml.load_string(this->xml(run).c_str());
+  auto node_set = xml.select_nodes(xpath_query.c_str());
   std::vector<std::string> result;
   result.reserve(node_set.size());
+  // std::cout << "xpath_search " << xpath_query << ", " << attribute << ", size "<<node_set.size()<< std::endl;
   for (const auto& node : node_set) {
-    if (attribute.empty())
+    if (attribute.empty()) {
+      // std::cout <<"no attribute case, value() "<< node.node().value() << std::endl;
+      // std::cout <<"no attribute case, child_value() "<< node.node().child_value() << std::endl;
       result.emplace_back(node.node().child_value());
+    }
     else
       result.emplace_back(node.node().attribute(attribute.c_str()).value());
   }
   return result;
 }
 std::vector<std::string> Project::xpath_xml(const std::string& xpath_query, int run) const {
-  auto node_set = select_nodes(xpath_query, run);
+  // auto node_set = select_nodes(xpath_query, run);
+  auto xml = pugi::xml_document();
+  xml.load_string(this->xml(run).c_str());
+  auto node_set = xml.select_nodes(xpath_query.c_str());
   std::vector<std::string> result;
   result.reserve(node_set.size());
   for (const auto& node : node_set) {

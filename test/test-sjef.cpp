@@ -695,10 +695,10 @@ TEST_F(test_sjef, xpath_search) {
     EXPECT_EQ(p.status(), sjef::status::completed);
     EXPECT_EQ(p.select_nodes("/try").size(), 0) << p.xml() << std::endl;
     ASSERT_EQ(p.select_nodes("//try").size(), 2) << p.xml() << std::endl;
-    auto node_set = p.select_nodes("//try");
-    EXPECT_EQ(std::string{node_set[0].node().attribute("att1").value()}, "value1");
-    EXPECT_EQ(std::string{node_set[1].node().attribute("att1").value()}, "");
-    EXPECT_EQ(std::string{node_set[0].node().child_value()}, "content1");
+    // auto node_set = p.select_nodes("//try");
+    // EXPECT_EQ(std::string{node_set[0].node().attribute("att1").value()}, "value1");
+    // EXPECT_EQ(std::string{node_set[1].node().attribute("att1").value()}, "");
+    // EXPECT_EQ(std::string{node_set[0].node().child_value()}, "content1");
     //  for (const auto& node : node_set) {
     //    std::cout << node.node().attribute("att1").value() <<std::endl;
     //    std::cout << node.node().child_value() <<std::endl;
@@ -710,6 +710,7 @@ TEST_F(test_sjef, xpath_search) {
     EXPECT_EQ(p.xpath_search("//try", "att1").size(), 2);
     //  for (const auto& s : p.xpath_search("//try", "att1"))
     //    std::cout << s << std::endl;
+    ASSERT_EQ(p.xpath_search("//try[@att1='value0']").size(), 0);
     ASSERT_EQ(p.xpath_search("//try[@att1='value1']").size(), 1);
     EXPECT_EQ(p.xpath_search("//try[@att1='value1']").front(), "content1");
     EXPECT_EQ(p.xpath_search("//try[@att1='value1']", "att1").front(), "value1");

@@ -33,7 +33,7 @@ namespace sjef {
         return fs::path(expand_path(getenv("SJEF_CONFIG") == nullptr ? "~/.sjef" : getenv("SJEF_CONFIG")));
     }
 
-    fs::path backend_config_file_path(const std::string &project_suffix, std::string config_file_suffix = "") {
+    fs::path backend_config_file_path(const std::string &project_suffix, std::string config_file_suffix) {
         if (config_file_suffix == "") config_file_suffix = backend_config_file_suffix();
         return sjef_config_directory() / project_suffix / ("backends." + config_file_suffix);
     }
@@ -45,10 +45,19 @@ namespace sjef {
         util::Locker locker{fs::path{config_file}.parent_path()};
         auto locki = locker.bolt();
         auto stream = std::ofstream(config_file);
+        auto backends_ = backends;
+        if ( backends_.find(Backend::default_name) == backends_.end()) {
+            // std::cout << "writing default backend " << Backend::default_name << std::endl;
+            backends_.emplace(Backend::default_name, Backend::local());
+        }
+        // std::cout << "backends to be written for suffix "<<config_file_suffix<<":";
+        // for (const auto &[name, backend]: backends_) std::cout << " " << name;
+        // std::cout << std::endl;
         if (config_file_suffix == "xml") {
             stream << R"(<?xml version="1.0" encoding="UTF-8"?>)" << std::endl;
             stream << "<backends>" << std::endl;
-            for (const auto &[name, backend]: backends) {
+            for (const auto &[name, backend]: backends_) {
+                // std::cout << "writing backend " << name << std::endl;
                 stream << "  <backend name=\"" + name + "\" ";
                 if (backend.host != "")
                     stream << "\n           host=\"" + backend.host + "\" ";
@@ -71,7 +80,7 @@ namespace sjef {
             }
             stream << "</backends>" << std::endl;
         } else if (config_file_suffix == "yaml") {
-            for (const auto &[name, backend]: backends) {
+            for (const auto &[name, backend]: backends_) {
                 stream << name << ":" << std::endl;
                 if (backend.host != "") stream << "  host: " << backend.host << std::endl;
                 if (backend.run_command != "")
@@ -103,6 +112,7 @@ namespace sjef {
     std::map<std::string, Backend> read_backend_config_file(const std::string &project_suffix,
                                                             std::string config_file_suffix) {
         if (config_file_suffix == "") config_file_suffix = backend_config_file_suffix();
+        // std::cout << "read_backend_config_file suffix "<<config_file_suffix<<std::endl;
         std::map<std::string, Backend> result;
         if (config_file_suffix == "xml") {
             pugi_xml_document backend_doc;
@@ -209,34 +219,10 @@ namespace sjef {
             throw std::invalid_argument("Invalid suffix");
         if (result.find(sjef::Backend::default_name) == result.end()) {
             result.emplace(sjef::Backend::default_name, Backend::local());
-            write_backend_config_file(result, project_suffix);
+            // std::cout << "read_backend_config_file adds default "<<sjef::Backend::default_name<<std::endl;
+            // write_backend_config_file(result, project_suffix);
         }
         return result;
-    }
-
-    // Source - https://stackoverflow.com/a/37575457
-    // Posted by mtrw, modified by community. See post 'Timeline' for change history
-    // Retrieved 2026-02-19, License - CC BY-SA 3.0
-
-
-    bool inline compareFiles(const std::string &p1, const std::string &p2) {
-        std::ifstream f1(p1, std::ifstream::binary | std::ifstream::ate);
-        std::ifstream f2(p2, std::ifstream::binary | std::ifstream::ate);
-
-        if (f1.fail() || f2.fail()) {
-            return false; //file problem
-        }
-
-        if (f1.tellg() != f2.tellg()) {
-            return false; //size mismatch
-        }
-
-        //seek back to beginning and use std::equal to compare contents
-        f1.seekg(0, std::ifstream::beg);
-        f2.seekg(0, std::ifstream::beg);
-        return std::equal(std::istreambuf_iterator<char>(f1.rdbuf()),
-                          std::istreambuf_iterator<char>(),
-                          std::istreambuf_iterator<char>(f2.rdbuf()));
     }
 
     std::string sync_backend_config_file(const std::string &project_suffix) {
@@ -253,8 +239,7 @@ namespace sjef {
             config_files[config_file_suffix] = backend_config_file_path(project_suffix, config_file_suffix);
         }
 
-        if (compareFiles(config_files[preferred_config_file_suffix],
-                         config_files[unpreferred_config_file_suffix]))
+            if (read_backend_config_file(project_suffix, preferred_config_file_suffix) ==read_backend_config_file(project_suffix, unpreferred_config_file_suffix))
             return "";
 
         if (!fs::exists(config_files[unpreferred_config_file_suffix]) ||
@@ -264,6 +249,7 @@ namespace sjef {
                 fs::last_write_time(config_files[unpreferred_config_file_suffix]) < fs::last_write_time(
                     config_files[preferred_config_file_suffix])
             )) {
+            // std::cout << "taking preferred_config_file_suffix "<<preferred_config_file_suffix<<", unpreferred existence"<<fs::exists(config_files[unpreferred_config_file_suffix])<<std::endl;
             write_backend_config_file(read_backend_config_file(project_suffix, preferred_config_file_suffix),
                                       project_suffix, unpreferred_config_file_suffix);
             return unpreferred_config_file_suffix;

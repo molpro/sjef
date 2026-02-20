@@ -60,6 +60,8 @@ public:
   static const std::vector<std::string>& keys();
 };
 
+    bool operator==(const Backend& lhs, const Backend& rhs);
+
 } // namespace sjef
 
 #endif // SJEF_BACKEND_H

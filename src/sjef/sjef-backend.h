@@ -1,9 +1,6 @@
 #ifndef SJEF_BACKEND_H
 #define SJEF_BACKEND_H
 
-#include <pugixml.hpp>
-#include <stddef.h>
-#include <string.h>
 #include <string>
 #include <vector>
 namespace sjef {

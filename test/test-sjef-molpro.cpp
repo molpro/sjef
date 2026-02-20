@@ -19,6 +19,7 @@
 #include <regex>
 #include <sjef/sjef-backend.h>
 #include <sjef/sjef.h>
+#include <pugixml.hpp>
 #ifndef WIN32
 #include <unistd.h>
 #endif

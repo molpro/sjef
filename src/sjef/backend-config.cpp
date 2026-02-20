@@ -257,11 +257,6 @@ namespace sjef {
                          config_files[unpreferred_config_file_suffix]))
             return "";
 
-        std::cout << "preferred " << preferred_config_file_suffix << ", exists " << fs::exists(
-            config_files[preferred_config_file_suffix]) << std::endl;
-        std::cout << "unpreferred " << unpreferred_config_file_suffix << ", exists " << fs::exists(
-            config_files[preferred_config_file_suffix]) << std::endl;
-        std::cout << "test" << std::endl;
         if (!fs::exists(config_files[unpreferred_config_file_suffix]) ||
             (
                 fs::exists(config_files[unpreferred_config_file_suffix]) &&
@@ -269,12 +264,10 @@ namespace sjef {
                 fs::last_write_time(config_files[unpreferred_config_file_suffix]) < fs::last_write_time(
                     config_files[preferred_config_file_suffix])
             )) {
-            std::cout << "succeeded" << std::endl;
             write_backend_config_file(read_backend_config_file(project_suffix, preferred_config_file_suffix),
                                       project_suffix, unpreferred_config_file_suffix);
             return unpreferred_config_file_suffix;
         }
-        std::cout << "failed" << std::endl;
         write_backend_config_file(read_backend_config_file(project_suffix, unpreferred_config_file_suffix),
                                   project_suffix, preferred_config_file_suffix);
         return preferred_config_file_suffix;

@@ -25,23 +25,13 @@ TEST_F(test_sjef, default_file_suffix) {
     ASSERT_EQ(sjef::backend_config_file_suffix(), "xml");
 }
 
-TEST_F(test_sjef, explore_config) {
-    std::cout << "suffix " << suffix() << std::endl;
-    sjef::set_backend_config_file_suffix("xml");
-    sjef::write_backend_config_file({}, suffix());
-    auto backends = sjef::read_backend_config_file(suffix());
-    sjef::write_backend_config_file(backends, suffix());
-    for (const auto &b: backends) {
-        std::cout << b.first << std::endl;
-        std::cout << b.second.str() << std::endl;
-    }
-    std::cout << "switch to yaml" << std::endl;
-    sjef::set_backend_config_file_suffix("yaml");
-    sjef::write_backend_config_file(backends, suffix());
-    backends = sjef::read_backend_config_file(suffix());
-    for (const auto &b: backends) {
-        std::cout << b.first << std::endl;
-        std::cout << b.second.str() << std::endl;
+TEST_F(test_sjef, default_backend_config) {
+    for (const auto &create_type: {"xml", "yaml"}) {
+        auto backends = sjef::read_backend_config_file(suffix(), create_type);
+        ASSERT_EQ(backends.size(), 1);
+        EXPECT_EQ(backends.begin()->first, "local");
+        EXPECT_EQ(backends.begin()->second.name, "local");
+        EXPECT_EQ(backends.begin()->second.host, "localhost");
     }
 }
 
@@ -49,8 +39,8 @@ TEST_F(test_sjef, sync_backend_config_file) {
     for (const auto pre_existing_read_type: {true, false})
         for (const auto &create_type: {"xml", "yaml"})
             for (const auto &read_type: {"xml", "yaml"}) {
-                sjef::Backend be_local{sjef::Backend::local()}; //,"local","localhost",".sjef/cache","thingy"};
-                std::cout << "create type " << create_type << " read type " << read_type << std::endl;
+                sjef::Backend be_local{sjef::Backend::local()};
+                // std::cout << "create type " << create_type << " read type " << read_type << std::endl;
                 be_local.run_command = "echo hello";
                 be_local.name = "made";
                 sjef::Backend be_bespoke{sjef::Backend::Linux()};
@@ -60,7 +50,6 @@ TEST_F(test_sjef, sync_backend_config_file) {
                 sjef::write_backend_config_file({{"made", be_local}}, suffix(), create_type);
                 sjef::sync_backend_config_file(suffix());
                 auto be_read = sjef::read_backend_config_file(suffix(), read_type).at("made");
-                std::cout << be_read.str() << std::endl;
                 ASSERT_EQ(be_read.str(), be_local.str());
             }
 }

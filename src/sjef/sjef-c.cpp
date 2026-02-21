@@ -7,6 +7,7 @@
 #include <map>
 #include <pugixml.hpp>
 #include <string>
+#include <string.h>
 namespace fs = std::filesystem;
 static std::map<std::string, std::unique_ptr<sjef::Project>> projects;
 struct sjef::pugi_xml_document : public pugi::xml_document {};

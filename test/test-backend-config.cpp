@@ -18,6 +18,7 @@
 #include <unistd.h>
 #endif
 #include <sjef/backend-config.h>
+#include <time.h>
 
 namespace fs = std::filesystem;
 
@@ -64,6 +65,8 @@ TEST_F(test_sjef, sync_backend_config_file) {
                         else {
                             sjef::write_backend_config_file(stale_backends, suffix(), read_type);
                         }
+                        nanosleep((const struct timespec[]){{0, 5000L}}, NULL);
+
                         expected_synced_type =
                                 (identical_contents && pre_existing_read_type && read_type != create_type)
                                     ? ""

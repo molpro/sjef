@@ -26,15 +26,11 @@ TEST_F(test_sjef, default_backend_config_file_suffix) {
 }
 
 TEST_F(test_sjef, default_backend_config) {
-    for (const auto &create_type: {"xml", "yaml"}) {
-        sjef::sync_backend_config_file(suffix());
-        sjef::ensure_local_backend(suffix(), create_type);
-        auto backends = sjef::read_backend_config_file(suffix(), create_type);
-        ASSERT_EQ(backends.size(), 1);
-        EXPECT_EQ(backends.begin()->first, "local");
-        EXPECT_EQ(backends.begin()->second.name, "local");
-        EXPECT_EQ(backends.begin()->second.host, "localhost");
-    }
+    auto backends = sjef::load_backend_config(suffix());
+    ASSERT_EQ(backends.size(), 1);
+    EXPECT_EQ(backends.begin()->first, "local");
+    EXPECT_EQ(backends.begin()->second.name, "local");
+    EXPECT_EQ(backends.begin()->second.host, "localhost");
 }
 
 std::string other_type(const std::string &type) {
@@ -55,8 +51,8 @@ TEST_F(test_sjef, sync_backend_config_file) {
                 for (const auto &read_type: {"xml", "yaml"}) {
                     sjef::Backend be_local{sjef::Backend::local()};
                     // std::cout << "@@@ identical contents " << identical_contents << " preexisting_read_type " <<
-                            // pre_existing_read_type << " create type " << create_type << " read type " << read_type <<
-                            // std::endl;
+                    // pre_existing_read_type << " create type " << create_type << " read type " << read_type <<
+                    // std::endl;
                     be_local.run_command = "echo hello";
                     be_local.name = "made";
                     sjef::Backend be_bespoke{sjef::Backend::Linux()};
@@ -87,13 +83,15 @@ TEST_F(test_sjef, sync_backend_config_file) {
                     // ASSERT_EQ(be_read.str(), be_local.str());
                     // std::cout << "backends_read\n";
                     // for (const auto &[name, backend]: backends_read)
-                        // std::cout << name << " " << backend.str() << std::endl;
+                    // std::cout << name << " " << backend.str() << std::endl;
                     // std::cout << std::endl;
                     // std::cout << "fresh_backends\n";
                     // for (const auto &[name, backend]: fresh_backends)
-                        // std::cout << name << " " << backend.str() << std::endl;
+                    // std::cout << name << " " << backend.str() << std::endl;
                     for (const auto &[name, backend]: fresh_backends)
-                        EXPECT_EQ(backends_read[name], fresh_backends[name]) << "backends_read:\n"<<backends_read[name].str()<<"\nfresh_backends:\n"<<fresh_backends[name].str();
+                        EXPECT_EQ(backends_read[name], fresh_backends[name]) << "backends_read:\n" << backends_read[
+                                                                                name].str() << "\nfresh_backends:\n" <<
+ fresh_backends[name].str();
                     for (const auto &s: {"xml", "yaml"})
                         std::filesystem::remove(sjef::backend_config_file_path(suffix(), s));
                 }

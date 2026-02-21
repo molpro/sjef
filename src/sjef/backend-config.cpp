@@ -38,6 +38,13 @@ namespace sjef {
         return sjef_config_directory() / project_suffix / ("backends." + config_file_suffix);
     }
 
+    void save_backend_config(const std::map<std::string, Backend> &backends, const std::string &project_suffix) {
+     write_backend_config_file(backends, project_suffix, backend_config_file_suffix());
+        sync_backend_config_file(project_suffix);
+        ensure_local_backend(project_suffix);
+        sync_backend_config_file(project_suffix);
+    }
+
     void write_backend_config_file(const std::map<std::string, Backend> &backends, const std::string &project_suffix,
                                    std::string config_file_suffix) {
         if (config_file_suffix == "") config_file_suffix = backend_config_file_suffix();
@@ -109,6 +116,12 @@ namespace sjef {
         return (host.empty() || host == "localhost");
     }
 
+    std::map<std::string, Backend> load_backend_config(const std::string &project_suffix) {
+        sync_backend_config_file(project_suffix);
+        ensure_local_backend(project_suffix);
+        sync_backend_config_file(project_suffix);
+        return read_backend_config_file(project_suffix, backend_config_file_suffix());
+    }
     std::map<std::string, Backend> read_backend_config_file(const std::string &project_suffix,
                                                             std::string config_file_suffix) {
         if (config_file_suffix == "") config_file_suffix = backend_config_file_suffix();

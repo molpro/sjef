@@ -6,6 +6,11 @@
 #include "sjef-backend.h"
 
 namespace sjef {
+
+    std::map<std::string, Backend> load_backend_config(const std::string &project_suffix);
+
+    void save_backend_config(const std::map<std::string, Backend> &backends, const std::string &project_suffix);
+
     void set_backend_config_file_suffix(const std::string &suffix);
 
     std::string backend_config_file_suffix();

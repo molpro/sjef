@@ -20,5 +20,6 @@ namespace sjef {
 
     std::filesystem::path backend_config_file_path(const std::string &project_suffix,
                                                    std::string config_file_suffix = "");
+    void ensure_local_backend(const std::string& project_suffix, std::string config_file_suffix="") ;
 }
 #endif //SJEF_BACKEND_CONFIG_H

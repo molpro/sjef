@@ -217,14 +217,16 @@ namespace sjef {
             }
         } else
             throw std::invalid_argument("Invalid suffix");
-        if (result.find(sjef::Backend::default_name) == result.end()) {
-            result.emplace(sjef::Backend::default_name, Backend::local());
-            // std::cout << "read_backend_config_file adds default "<<sjef::Backend::default_name<<std::endl;
-            // write_backend_config_file(result, project_suffix);
-        }
+
         return result;
     }
-
+    void ensure_local_backend(const std::string& project_suffix, std::string config_file_suffix) {
+        auto backends = read_backend_config_file(project_suffix, config_file_suffix);
+        if (backends.find(sjef::Backend::default_name) == backends.end()) {
+            backends.emplace(sjef::Backend::default_name, Backend::local());
+            write_backend_config_file(backends, project_suffix);
+        }
+    }
     std::string sync_backend_config_file(const std::string &project_suffix) {
         std::map<std::string, fs::path> config_files;
 
@@ -258,4 +260,6 @@ namespace sjef {
                                   project_suffix, preferred_config_file_suffix);
         return preferred_config_file_suffix;
     }
+
+
 }

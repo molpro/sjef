@@ -27,6 +27,8 @@ TEST_F(test_sjef, default_backend_config_file_suffix) {
 
 TEST_F(test_sjef, default_backend_config) {
     for (const auto &create_type: {"xml", "yaml"}) {
+        sjef::sync_backend_config_file(suffix());
+        sjef::ensure_local_backend(suffix(), create_type);
         auto backends = sjef::read_backend_config_file(suffix(), create_type);
         ASSERT_EQ(backends.size(), 1);
         EXPECT_EQ(backends.begin()->first, "local");
@@ -91,7 +93,7 @@ TEST_F(test_sjef, sync_backend_config_file) {
                     // for (const auto &[name, backend]: fresh_backends)
                         // std::cout << name << " " << backend.str() << std::endl;
                     for (const auto &[name, backend]: fresh_backends)
-                        EXPECT_EQ(backends_read[name], fresh_backends[name]);
+                        EXPECT_EQ(backends_read[name], fresh_backends[name]) << "backends_read:\n"<<backends_read[name].str()<<"\nfresh_backends:\n"<<fresh_backends[name].str();
                     for (const auto &s: {"xml", "yaml"})
                         std::filesystem::remove(sjef::backend_config_file_path(suffix(), s));
                 }

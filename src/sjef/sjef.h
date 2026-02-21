@@ -392,12 +392,6 @@ private:
   void throw_if_backend_invalid(std::string backend = "") const;
   std::string get_project_suffix(const std::filesystem::path& filename, const std::string& default_suffix) const;
 
-  void ensure_backend_config_xml();
-
-  void ensure_backend_config_yaml();
-
-  void ensure_backend_config_file();
-
   static void recent_edit(const std::filesystem::path& add, const std::filesystem::path& remove = "");
   mutable std::filesystem::file_time_type m_property_file_modification_time;
   mutable std::map<std::string, std::filesystem::file_time_type, std::less<>> m_input_file_modification_time;
@@ -409,7 +403,6 @@ private:
   void save_property_file() const;
   void load_property_file_locked() const;
   bool properties_last_written_by_me(bool removeFile = false) const;
-  bool check_backends_xml(const std::string& suffix) const;
 
 public:
   std::filesystem::path propertyFile() const;

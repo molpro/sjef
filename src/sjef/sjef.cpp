@@ -1400,4 +1400,8 @@ std::string Project::filename_string(std::string suffix, const std::string& name
   return filename(suffix, name, run).string();
 }
 
+sjef::Backend sjef::Project::default_backend() const {
+  return sjef::default_backend(m_project_suffix);
+}
+
 } // namespace sjef

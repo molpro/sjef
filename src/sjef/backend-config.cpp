@@ -236,7 +236,7 @@ namespace sjef {
     void ensure_local_backend(const std::string& project_suffix, std::string config_file_suffix) {
         auto backends = read_backend_config_file(project_suffix, config_file_suffix);
         if (backends.find(sjef::Backend::default_name) == backends.end()) {
-            backends.emplace(sjef::Backend::default_name, Backend::local());
+            backends.emplace(sjef::Backend::default_name, sjef::default_backend(project_suffix));
             write_backend_config_file(backends, project_suffix);
         }
     }

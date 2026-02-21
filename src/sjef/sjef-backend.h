@@ -62,6 +62,8 @@ public:
 
     bool operator==(const Backend& lhs, const Backend& rhs);
 
+    Backend default_backend(const std::string& project_suffix);
+
 } // namespace sjef
 
 #endif // SJEF_BACKEND_H

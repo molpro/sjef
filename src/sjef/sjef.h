@@ -388,7 +388,7 @@ public:
   std::map<std::string, Backend>& backends() { return m_backends; }
 
 private:
-  Backend default_backend();
+  [[nodiscard]] Backend default_backend() const;
   void throw_if_backend_invalid(std::string backend = "") const;
   std::string get_project_suffix(const std::filesystem::path& filename, const std::string& default_suffix) const;
 

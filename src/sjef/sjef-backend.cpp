@@ -3,6 +3,7 @@
 #include <iostream>
 #include <mutex>
 #include <sstream>
+#include <string.h>
 
 std::string sjef::Backend::default_name = "local";
 std::string sjef::Backend::dummy_name = "__dummy";

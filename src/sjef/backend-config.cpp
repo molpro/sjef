@@ -159,7 +159,7 @@ namespace sjef {
             } catch (...) {
             }
         } else if (config_file_suffix == "yaml") {
-            auto fh = fopen(backend_config_file_path(project_suffix, config_file_suffix).c_str(), "rb");
+            auto fh = fopen(backend_config_file_path(project_suffix, config_file_suffix).string().c_str(), "rb");
             if (fh != NULL) {
                 yaml_parser_t parser;
                 if (!yaml_parser_initialize(&parser))

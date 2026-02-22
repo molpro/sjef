@@ -13,6 +13,7 @@
 #include <sjef/util/Shell.h>
 #include <stdlib.h>
 #include <sjef/util/Job.h>
+#include <pugixml.hpp>
 #ifndef WIN32
 #include <unistd.h>
 #endif

@@ -20,7 +20,7 @@ if (NOT MOLPRO STREQUAL MOLPRO-NOTFOUND)
 endif ()
 
 include(GoogleTest)
-foreach (t test-sjef test-sjef-c test-Locker test-sjef-molpro test-Shell)
+foreach (t test-sjef test-sjef-c test-Locker test-sjef-molpro test-Shell test-backend-config)
     if (NOT (MOLPRO STREQUAL MOLPRO-NOTFOUND AND t STREQUAL test-sjef-molpro))
         add_executable(${t} ${t}.cpp test-sjef.h)
         add_dependencies(${t} dummy)

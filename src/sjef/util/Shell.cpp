@@ -203,7 +203,7 @@ std::string Shell::operator()(const std::string& command, bool wait, const std::
   //  if (rc != 0)
   //    throw std::runtime_error("Host " + m_host + "; failed remote command: " + command + "\nStandard output:\n" +
   //                             m_last_out + "\nStandard error:\n" + m_last_err);
-  if (m_last_out[m_last_out.size() - 1] == '\n')
+  if (!m_last_out.empty() && m_last_out[m_last_out.size() - 1] == '\n')
     m_last_out.resize(m_last_out.size() - 1);
   return m_last_out;
 }

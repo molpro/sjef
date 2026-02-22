@@ -1,9 +1,6 @@
 #ifndef SJEF_BACKEND_H
 #define SJEF_BACKEND_H
 
-#include <pugixml.hpp>
-#include <stddef.h>
-#include <string.h>
 #include <string>
 #include <vector>
 namespace sjef {
@@ -62,6 +59,10 @@ public:
   std::string str() const;
   static const std::vector<std::string>& keys();
 };
+
+    bool operator==(const Backend& lhs, const Backend& rhs);
+
+    Backend default_backend(const std::string& project_suffix);
 
 } // namespace sjef
 

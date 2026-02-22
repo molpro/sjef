@@ -19,6 +19,7 @@
 #include <regex>
 #include <sjef/sjef-backend.h>
 #include <sjef/sjef.h>
+#include <pugixml.hpp>
 #ifndef WIN32
 #include <unistd.h>
 #endif
@@ -127,7 +128,7 @@ TEST_F(test_sjef_molpro, molpro_workflow) {
                                        << std::endl;
           auto energy = std::stod((results.end() - 1)->node().attribute("value").value());
           std::cout << "Energy " << pp.first << " : " << energy << std::endl;
-          if (energies.count(pp.first) > 0) {
+          if (!energies.empty() && energies.count(pp.first) > 0) {
             EXPECT_NEAR(energy, energies[pp.first], 1e-12);
           }
           energies[pp.first] = energy;

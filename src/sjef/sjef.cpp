@@ -176,6 +176,7 @@ std::string Project::get_project_suffix(const std::filesystem::path& filename,
 }
 
 void Project::refresh_backends(){
+  sync_backend_config_file(m_project_suffix);
   m_backends = load_backend_config(m_project_suffix);
   m_backends.try_emplace(Backend::dummy_name, Backend::local());
 }

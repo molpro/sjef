@@ -243,21 +243,21 @@ $(document).ready(function() { init_codefold(0); });
 <div class="line"><a id="l00388" name="l00388"></a><span class="lineno"><a class="line" href="classsjef_1_1_project.html#a047c7ba2e29a817c4bae3dee64a1608b">  388</a></span>  std::map&lt;std::string, Backend&gt;&amp; <a class="code hl_function" href="classsjef_1_1_project.html#a047c7ba2e29a817c4bae3dee64a1608b">backends</a>() { <span class="keywordflow">return</span> m_backends; }</div>
 <div class="line"><a id="l00389" name="l00389"></a><span class="lineno">  389</span> </div>
 <div class="line"><a id="l00390" name="l00390"></a><span class="lineno">  390</span><span class="keyword">private</span>:</div>
-<div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span>  Backend default_backend();</div>
+<div class="line"><a id="l00391" name="l00391"></a><span class="lineno">  391</span>  [[nodiscard]] Backend default_backend() <span class="keyword">const</span>;</div>
 <div class="line"><a id="l00392" name="l00392"></a><span class="lineno">  392</span>  <span class="keywordtype">void</span> throw_if_backend_invalid(std::string backend = <span class="stringliteral">&quot;&quot;</span>) <span class="keyword">const</span>;</div>
 <div class="line"><a id="l00393" name="l00393"></a><span class="lineno">  393</span>  std::string get_project_suffix(<span class="keyword">const</span> std::filesystem::path&amp; <a class="code hl_function" href="classsjef_1_1_project.html#a8c43d0fe14bd729d73453349521cf598">filename</a>, <span class="keyword">const</span> std::string&amp; default_suffix) <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span>  <span class="keyword">static</span> <span class="keywordtype">void</span> recent_edit(<span class="keyword">const</span> std::filesystem::path&amp; add, <span class="keyword">const</span> std::filesystem::path&amp; remove = <span class="stringliteral">&quot;&quot;</span>);</div>
-<div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span>  <span class="keyword">mutable</span> std::filesystem::file_time_type m_property_file_modification_time;</div>
-<div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span>  <span class="keyword">mutable</span> std::map&lt;std::string, std::filesystem::file_time_type, std::less&lt;&gt;&gt; m_input_file_modification_time;</div>
-<div class="line"><a id="l00397" name="l00397"></a><span class="lineno">  397</span>  std::set&lt;std::string, std::less&lt;&gt;&gt; m_run_directory_ignore;</div>
-<div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span>  <span class="keywordtype">void</span> property_delete_locked(<span class="keyword">const</span> std::string&amp; property);</div>
-<div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span>  <span class="keywordtype">void</span> check_property_file_locked() <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00400" name="l00400"></a><span class="lineno">  400</span>  <span class="keywordtype">void</span> check_property_file() <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>  <span class="keywordtype">void</span> save_property_file_locked() <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00402" name="l00402"></a><span class="lineno">  402</span>  <span class="keywordtype">void</span> save_property_file() <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00403" name="l00403"></a><span class="lineno">  403</span>  <span class="keywordtype">void</span> load_property_file_locked() <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00404" name="l00404"></a><span class="lineno">  404</span>  <span class="keywordtype">bool</span> properties_last_written_by_me(<span class="keywordtype">bool</span> removeFile = <span class="keyword">false</span>) <span class="keyword">const</span>;</div>
-<div class="line"><a id="l00405" name="l00405"></a><span class="lineno">  405</span>  <span class="keywordtype">bool</span> check_backends(<span class="keyword">const</span> std::string&amp; suffix) <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00394" name="l00394"></a><span class="lineno">  394</span> </div>
+<div class="line"><a id="l00395" name="l00395"></a><span class="lineno">  395</span>  <span class="keyword">static</span> <span class="keywordtype">void</span> recent_edit(<span class="keyword">const</span> std::filesystem::path&amp; add, <span class="keyword">const</span> std::filesystem::path&amp; remove = <span class="stringliteral">&quot;&quot;</span>);</div>
+<div class="line"><a id="l00396" name="l00396"></a><span class="lineno">  396</span>  <span class="keyword">mutable</span> std::filesystem::file_time_type m_property_file_modification_time;</div>
+<div class="line"><a id="l00397" name="l00397"></a><span class="lineno">  397</span>  <span class="keyword">mutable</span> std::map&lt;std::string, std::filesystem::file_time_type, std::less&lt;&gt;&gt; m_input_file_modification_time;</div>
+<div class="line"><a id="l00398" name="l00398"></a><span class="lineno">  398</span>  std::set&lt;std::string, std::less&lt;&gt;&gt; m_run_directory_ignore;</div>
+<div class="line"><a id="l00399" name="l00399"></a><span class="lineno">  399</span>  <span class="keywordtype">void</span> property_delete_locked(<span class="keyword">const</span> std::string&amp; property);</div>
+<div class="line"><a id="l00400" name="l00400"></a><span class="lineno">  400</span>  <span class="keywordtype">void</span> check_property_file_locked() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00401" name="l00401"></a><span class="lineno">  401</span>  <span class="keywordtype">void</span> check_property_file() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00402" name="l00402"></a><span class="lineno">  402</span>  <span class="keywordtype">void</span> save_property_file_locked() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00403" name="l00403"></a><span class="lineno">  403</span>  <span class="keywordtype">void</span> save_property_file() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00404" name="l00404"></a><span class="lineno">  404</span>  <span class="keywordtype">void</span> load_property_file_locked() <span class="keyword">const</span>;</div>
+<div class="line"><a id="l00405" name="l00405"></a><span class="lineno">  405</span>  <span class="keywordtype">bool</span> properties_last_written_by_me(<span class="keywordtype">bool</span> removeFile = <span class="keyword">false</span>) <span class="keyword">const</span>;</div>
 <div class="line"><a id="l00406" name="l00406"></a><span class="lineno">  406</span> </div>
 <div class="line"><a id="l00407" name="l00407"></a><span class="lineno">  407</span><span class="keyword">public</span>:</div>
 <div class="line"><a id="l00408" name="l00408"></a><span class="lineno"><a class="line" href="classsjef_1_1_project.html#a5dc54ba18b0b4d7ea616941254a5c8c4">  408</a></span>  std::filesystem::path <a class="code hl_function" href="classsjef_1_1_project.html#a5dc54ba18b0b4d7ea616941254a5c8c4">propertyFile</a>() <span class="keyword">const</span>;</div>
@@ -466,7 +466,7 @@ $(document).ready(function() { init_codefold(0); });
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Tue Feb 17 2026 23:02:14 for sjef by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
+Generated on Sun Feb 22 2026 07:35:25 for sjef by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
 </small></address>
 </body>
 </html>

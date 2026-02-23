@@ -99,3 +99,16 @@ TEST_F(test_sjef, sync_backend_config_file) {
                         std::filesystem::remove(sjef::backend_config_file_path(suffix(), s));
                 }
 }
+TEST_F(test_sjef, yaml_parse) {
+    std::map<std::string, sjef::Backend> reference_backends;
+    reference_backends["bespoke"] = sjef::Backend::Linux();
+    reference_backends["bespoke"].name = "bespoke";
+    reference_backends["bespoke"].run_command = "molpro {-n %n!MPI size}";
+    sjef::write_backend_config_file(reference_backends, suffix(), "yaml");
+    auto backends = sjef::read_backend_config_file(suffix(), "yaml");
+    EXPECT_EQ(backends["bespoke"], reference_backends["bespoke"])<<"\nReturned:\n"<<backends["bespoke"].str()<<"\nReference:\n"<<reference_backends["bespoke"].str();
+}
+
+TEST(test_backends, my_backends) {
+auto backends = sjef::read_backend_config_file("molpro", "yaml");
+}

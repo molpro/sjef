@@ -45,6 +45,21 @@ namespace sjef {
         sync_backend_config_file(project_suffix);
     }
 
+    inline std::string yaml1(const std::string& key, const std::string& value, bool multiline=false) {
+        std::string yaml_specials = "{}[]&:*#?|-<>=!%@/";
+        std::string result{"  "};
+        result += key + ": ";
+        std::string quote = yaml_specials.find_first_of(value[0]) == std::string::npos ? "" : "'";
+        auto quoted_value = quote + value + quote;
+        if (multiline) {
+            result += ">\n    " + quoted_value;
+        }
+        else result += quoted_value;
+        // std::cout << "yaml1 "<<key<<", "<<value<<"::: "<<result<<std::endl;
+        return result;
+
+    }
+
     void write_backend_config_file(const std::map<std::string, Backend> &backends, const std::string &project_suffix,
                                    std::string config_file_suffix) {
         if (config_file_suffix == "") config_file_suffix = backend_config_file_suffix();
@@ -89,19 +104,19 @@ namespace sjef {
         } else if (config_file_suffix == "yaml") {
             for (const auto &[name, backend]: backends_) {
                 stream << name << ":" << std::endl;
-                if (backend.host != "") stream << "  host: " << backend.host << std::endl;
+                if (backend.host != "") stream << yaml1("host" , backend.host) << std::endl;
                 if (backend.run_command != "")
-                    stream << "  run_command: >" << std::endl << "    " << backend.run_command <<
+                    stream << yaml1("run_command" ,backend.run_command, true) <<
                             std::endl;
-                if (backend.cache != "") stream << "  cache: " << backend.cache << std::endl;
+                if (backend.cache != "") stream << yaml1("cache" , backend.cache) << std::endl;
                 if (backend.run_jobnumber != "")
-                    stream << "  run_jobnumber: Submitted batch job *([0-9]+)" << std::endl;
-                if (backend.status_command != "") stream << "  status_command: " << backend.status_command << std::endl;
+                    stream << yaml1("run_jobnumber","Submitted batch job *([0-9]+)") << std::endl;
+                if (backend.status_command != "") stream << yaml1("status_command" , backend.status_command) << std::endl;
                 if (backend.status_running != "")
-                    stream << "  status_running:  " << backend.status_running << std::endl;
+                    stream << yaml1("status_running" , backend.status_running) << std::endl;
                 if (backend.status_waiting != "")
-                    stream << "  status_waiting:  " << backend.status_waiting << std::endl;
-                if (backend.kill_command != "") stream << "  kill_command: " << backend.kill_command << std::endl;
+                    stream << yaml1("status_waiting" , backend.status_waiting) << std::endl;
+                if (backend.kill_command != "") stream << yaml1("kill_command" , backend.kill_command) << std::endl;
                 stream << std::endl;
             }
         } else throw std::invalid_argument("Invalid suffix");

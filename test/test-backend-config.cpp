@@ -113,7 +113,7 @@ TEST_F(test_sjef, yaml_special_characters) {
     std::map<std::string, sjef::Backend> reference_backends;
     reference_backends["bespoke"] = sjef::Backend::Linux();
     reference_backends["bespoke"].name = "bespoke";
-    reference_backends["bespoke"].run_command = "molpro {-n %n!MPI size}";
+    reference_backends["bespoke"].run_command = "/shared/home1/c.sacpjk/.local/compiled-with-flame-impi/molpro_2026.1/bin/molpro {--ga-impl %ga!global data placement (ga or disk)} {-d %d!scratch directory} {-n %n!number of MPI processes} {-m %m!memory} {-G %G!Global Arrays memory} -v";
     reference_backends["bespoke"].host = "{%user}@slurmcluster";
     sjef::write_backend_config_file(reference_backends, suffix(), "yaml");
     auto backends = sjef::read_backend_config_file(suffix(), "yaml");

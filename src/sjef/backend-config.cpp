@@ -49,7 +49,13 @@ namespace sjef {
         std::string yaml_specials = "{}[]&:*#?|-<>=!%@/";
         std::string result{"  "};
         result += key + ": ";
-        std::string quote = (yaml_specials.find_first_of(value[0]) == std::string::npos && value.find_first_of(": ") == std::string::npos && value.find_first_of("#") == std::string::npos ) ? "" : "'";
+        std::string quote = (yaml_specials.find_first_of(
+                                 value[0]) == std::string::npos
+                             && value.find(": ") == std::string::npos
+                             && value.find_first_of("#") == std::string::npos
+                            )
+                                ? ""
+                                : "'";
         auto quoted_value = quote + value + quote;
         if (multiline) {
             result += ">\n    " + quoted_value;

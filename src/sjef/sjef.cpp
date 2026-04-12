@@ -233,8 +233,7 @@ void Project::force_file_names(const std::string& oldname) {
       auto ext = path.extension().string();
       if (path.stem() == oldname && !ext.empty() && m_suffixes.count(ext.substr(1)) > 0) {
         auto newpath = path.parent_path();
-        newpath /= name();
-        newpath.replace_extension(dir_itr->path().extension());
+        newpath /= name() + dir_itr->path().extension().string();
         rename(path, newpath);
 
         if (newpath.extension() == ".inp")

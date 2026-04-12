@@ -591,7 +591,7 @@ TEST_F(test_sjef, project_dir_embedded_space) {
 #endif
 
 TEST_F(test_sjef, run_directory) {
-  auto filename = testproject("run_directory");
+  auto filename = testproject("run_directory.thing");
   sjef::Project p(filename);
   std::string input = "geometry=" + p.name() + ".xyz";
   std::ofstream(p.filename("inp")) << input + "\n";

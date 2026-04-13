@@ -364,8 +364,12 @@ void Job::poll_job(int verbosity) {
       stop = Clock::now();
       {
         std::lock_guard lock(m_closing_mutex);
-        if (m_closing or status == completed or m_killed)
+        if (m_closing or status == completed or m_killed) {
+          using namespace std::literals::chrono_literals;
+          std::this_thread::sleep_for(10ms);
+          pull_rundir(verbosity);
           break;
+        }
       }
       m_trace(4 - verbosity) << "active polling cycle stops" << std::endl;
     }

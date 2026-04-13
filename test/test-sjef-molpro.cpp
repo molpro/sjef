@@ -76,6 +76,7 @@ TEST_F(test_sjef_molpro, molpro_workflow) {
     const auto cache = testfile(fs::current_path() / "molpro_workflow-cache");
     std::ofstream(sjef::expand_path((m_dot_sjef / "molpro" / "backends.xml").string()))
         << "<?xml version=\"1.0\"?>\n<backends>\n"
+        <<" <backend name=\"local\" host=\"localhost\" run_command=\"molpro  {-n %n!MPI size} {-M %M!Total memory} {-m %m!Process memory} {-G %G!GA memory}\" run_jobnumber=\"([0-9]+)\" status_command=\"/bin/ps -o pid,state -p\" status_waiting=\"Tt\" status_running=\"^ *[0-9][0-9]* *[DIRSTUtWx]\" kill_command=\"pkill -P\"/>"
         << "<backend name=\"test-remote\" run_command=\"" << boost::process::search_path("molpro").string() << "\" host=\"127.0.0.1\" cache=\"" << cache.string() << "\"/>\n"
         << "<backend name=\"test-really-remote\" run_command=\"/usr/local/bin/molpro\" host=\"peterk@pjk2022.local\" />\n"
         << "</backends>";
@@ -124,7 +125,7 @@ TEST_F(test_sjef_molpro, molpro_workflow) {
           pugi::xml_document xmldoc;
           xmldoc.load_string(p.xml().c_str());
           auto results = xmldoc.select_nodes("//jobstep//property[@name='Energy']");
-          ASSERT_GE(results.size(), 1) << "\n xml()=" << p.xml() << "\nxml file contents: " << p.file_contents("xml")
+          ASSERT_GE(results.size(), 1) << "\n xml()=" << p.xml() << "\nxml file contents: " << p.file_contents("xml") << p.file_contents("out")
                                        << std::endl;
           auto energy = std::stod((results.end() - 1)->node().attribute("value").value());
           std::cout << "Energy " << pp.first << " : " << energy << std::endl;
@@ -174,6 +175,7 @@ TEST_F(test_sjef_molpro, failure) {
     EXPECT_EQ(p.status(), sjef::status::completed);
     { std::ofstream(p.filename("inp")) << "geometry={He};crazy_command"; }
     p.run(0, true, true);
+    p.wait();
     EXPECT_EQ(p.status(), sjef::status::failed)
         << "status: " << p.status_message() << "\nxml:\n"
         << p.xml() << "\noutput file:\n"

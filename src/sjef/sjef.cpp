@@ -649,6 +649,7 @@ void Project::wait(unsigned int maximum_microseconds) const {
     if (microseconds < maximum_microseconds)
       microseconds *= 2;
   }
+  m_job.reset(nullptr);
   //  std::cout << "wait status="<<status()<<std::endl;
 }
 

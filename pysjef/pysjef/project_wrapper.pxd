@@ -26,6 +26,7 @@ cdef extern from "sjef/sjef.h" namespace "sjef":
         bool import_file(string, bool) except +
         bool export_file(string, bool) except +
         void clean(int) except +
+        void run_delete(int) except +
         string xml() except +
         string file_contents(string, string) except +
         string file_contents(string) except +

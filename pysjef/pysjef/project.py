@@ -245,6 +245,12 @@ class Project(Node):
         """
         self._project_wrapper.clean(keep_run_directories)
 
+    def run_delete(self, run):
+        """
+        Remove a specific run directory from the project
+        """
+        self._project_wrapper.run_delete(run)
+
     def erase(self, path=None):
         """
         Delete the project under path with its directory and all files.

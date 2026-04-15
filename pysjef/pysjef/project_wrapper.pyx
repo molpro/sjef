@@ -214,6 +214,10 @@ cdef class ProjectWrapper:
         """Removed run directories from the project"""
         deref(self.c_project).clean(keep_run_directories)
 
+    def run_delete(self, int run):
+        """Removed run directories from the project"""
+        deref(self.c_project).run_delete(run)
+
     def kill(self):
         """Kill the job started by ``run``"""
         deref(self.c_project).kill()

@@ -1,5 +1,6 @@
 #ifndef SJEF_LIB_LOCKER_H_
 #define SJEF_LIB_LOCKER_H_
+#define BOOST_ALL_NO_LIB
 #include <filesystem>
 #include <map>
 #include <mutex>

@@ -1,5 +1,6 @@
 #ifndef SJEF_LIB_UTIL_SHELL_H_
 #define SJEF_LIB_UTIL_SHELL_H_
+#define BOOST_ALL_NO_LIB
 #include "Logger.h"
 #if __has_include(<boost/process/v1/child.hpp>)
 #define BOOST_PROCESS_VERSION 1

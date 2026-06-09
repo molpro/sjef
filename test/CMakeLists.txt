@@ -40,7 +40,7 @@ foreach (t test-c-sjef-backend)
 endforeach ()
 
 if (NOT TARGET Boost::headers)
-    find_package(Boost 1.90 REQUIRED CONFIG)
+    find_package(Boost REQUIRED CONFIG)
 endif ()
 #target_link_libraries(test-Locker PRIVATE Boost::headers)
 target_include_directories(test-Locker PRIVATE ${Boost_INCLUDE_DIRS})

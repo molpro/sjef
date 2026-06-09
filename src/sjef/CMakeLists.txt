@@ -19,7 +19,7 @@ endif ()
 target_include_directories(${PROJECT_NAME} PRIVATE ${tclap_SOURCE_DIR}/include)
 
 
-find_package(Boost REQUIRED CONFIG)
+find_package(Boost REQUIRED)
 target_include_directories(${PROJECT_NAME} PRIVATE ${Boost_INCLUDE_DIRS})
 if (NOT MSVC)
     target_link_libraries(${PROJECT_NAME} PRIVATE pthread)

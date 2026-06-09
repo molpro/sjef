@@ -2,11 +2,13 @@
 #include <gtest/gtest.h>
 #include <signal.h>
 
+#ifdef USE_BOOST_SEARCH_PATH
 #if __has_include(<boost/process/v1/search_path.hpp>)
 #define BOOST_PROCESS_VERSION 1
 #include <boost/process/v1/search_path.hpp>
 #else
 #include <boost/process/search_path.hpp>
+#endif
 #endif
 #include <chrono>
 #include <fstream>
@@ -48,12 +50,35 @@ protected:
 };
 } // namespace
 
+static std::string executable(const std::string& command) {
+  if (fs::path(command).is_absolute())
+    return command;
+  else {
+#ifdef USE_BOOST_SEARCH_PATH
+    constexpr bool use_boost_search_path = true;
+    if (use_boost_search_path) {
+      return bp::search_path(command).string();
+    } else
+#endif
+    {
+      std::stringstream path{std::string{getenv("PATH")}};
+      std::string elem;
+      while (std::getline(path, elem, ':')) {
+        auto resolved = elem / fs::path{command};
+        if (fs::is_regular_file(resolved))
+          return resolved.string();
+      }
+      return "";
+    }
+  }
+}
+
 TEST_F(test_sjef_molpro, spawn_many_molpro) {
   if (sjef::util::Shell::local_asynchronous_supported()) {
     sjef::Project p(testfile("spawn_many.molpro"));
     { std::ofstream(p.filename("inp")) << ""; }
     const auto& backend = sjef::Backend::default_name;
-    if (not boost::process::search_path("molpro").empty()) // test the default backend only if it exists
+    if (not executable("molpro").empty()) // test the default backend only if it exists
       for (auto i = 0; i < 1; ++i) {
         ASSERT_TRUE(p.run(backend, 0, true, true));
         EXPECT_NE(p.property_get("jobnumber"), "-1");
@@ -77,7 +102,7 @@ TEST_F(test_sjef_molpro, molpro_workflow) {
     std::ofstream(sjef::expand_path((m_dot_sjef / "molpro" / "backends.xml").string()))
         << "<?xml version=\"1.0\"?>\n<backends>\n"
         <<" <backend name=\"local\" host=\"localhost\" run_command=\"molpro  {-n %n!MPI size} {-M %M!Total memory} {-m %m!Process memory} {-G %G!GA memory}\" run_jobnumber=\"([0-9]+)\" status_command=\"/bin/ps -o pid,state -p\" status_waiting=\"Tt\" status_running=\"^ *[0-9][0-9]* *[DIRSTUtWx]\" kill_command=\"pkill -P\"/>"
-        << "<backend name=\"test-remote\" run_command=\"" << boost::process::search_path("molpro").string() << "\" host=\"127.0.0.1\" cache=\"" << cache.string() << "\"/>\n"
+        << "<backend name=\"test-remote\" run_command=\"" << executable("molpro") << "\" host=\"127.0.0.1\" cache=\"" << cache.string() << "\"/>\n"
         << "<backend name=\"test-really-remote\" run_command=\"/usr/local/bin/molpro\" host=\"peterk@pjk2022.local\" />\n"
         << "</backends>";
     std::map<std::string, double> energies;

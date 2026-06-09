@@ -1,9 +1,13 @@
 #include "Shell.h"
 #if __has_include(<boost/process/child.hpp>)
+#ifdef USE_BOOST_SEARCH_PATH
 #include <boost/process/search_path.hpp>
+#endif
 #include <boost/process/spawn.hpp>
 #else
+#ifdef USE_BOOST_SEARCH_PATH
 #include <boost/process/v1/search_path.hpp>
+#endif
 #include <boost/process/v1/spawn.hpp>
 #endif
 #include <chrono>
@@ -15,6 +19,7 @@
 namespace fs = std::filesystem;
 
 namespace sjef::util {
+static std::string executable(const std::string& command) ;
 
 Shell::Shell(std::string host, std::string shell) : m_host(std::move(host)), m_shell((shell)) {
   if (!localhost()) {
@@ -25,7 +30,7 @@ Shell::Shell(std::string host, std::string shell) : m_host(std::move(host)), m_s
 #ifdef WIN32
     auto ssh = "C:\\Windows\\System32\\OpenSSH\\ssh.exe";
 #else
-    auto ssh = bp::search_path("ssh");
+    auto ssh = executable("ssh");
 #endif
     m_process =
         bp::child(ssh, m_host, std::move(shell), "-l", bp::std_in<m_in, bp::std_err> * m_err, bp::std_out > *m_out);
@@ -40,10 +45,13 @@ static std::string executable(const std::string& command) {
   if (fs::path(command).is_absolute())
     return command;
   else {
+#ifdef USE_BOOST_SEARCH_PATH
     constexpr bool use_boost_search_path = true;
     if (use_boost_search_path) {
       return bp::search_path(command).string();
-    } else {
+    } else
+#endif
+    {
       std::stringstream path{std::string{getenv("PATH")}};
       std::string elem;
       while (std::getline(path, elem, ':')) {

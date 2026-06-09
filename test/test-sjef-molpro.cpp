@@ -2,14 +2,6 @@
 #include <gtest/gtest.h>
 #include <signal.h>
 
-#ifdef USE_BOOST_SEARCH_PATH
-#if __has_include(<boost/process/v1/search_path.hpp>)
-#define BOOST_PROCESS_VERSION 1
-#include <boost/process/v1/search_path.hpp>
-#else
-#include <boost/process/search_path.hpp>
-#endif
-#endif
 #include <chrono>
 #include <fstream>
 #ifndef WIN32
@@ -54,22 +46,14 @@ static std::string executable(const std::string& command) {
   if (fs::path(command).is_absolute())
     return command;
   else {
-#ifdef USE_BOOST_SEARCH_PATH
-    constexpr bool use_boost_search_path = true;
-    if (use_boost_search_path) {
-      return bp::search_path(command).string();
-    } else
-#endif
-    {
-      std::stringstream path{std::string{getenv("PATH")}};
-      std::string elem;
-      while (std::getline(path, elem, ':')) {
-        auto resolved = elem / fs::path{command};
-        if (fs::is_regular_file(resolved))
-          return resolved.string();
-      }
-      return "";
+    std::stringstream path{std::string{getenv("PATH")}};
+    std::string elem;
+    while (std::getline(path, elem, ':')) {
+      auto resolved = elem / fs::path{command};
+      if (fs::is_regular_file(resolved))
+        return resolved.string();
     }
+    return "";
   }
 }
 

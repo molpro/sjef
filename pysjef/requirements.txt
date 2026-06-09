@@ -1,7 +1,6 @@
 python >=3.10
 numpy >=1.17
-libboost ==1.90
-libboost-devel ==1.90
+libboost-devel ==1.88
 pugixml >=1.10
 cython >=3.0
 lxml >=4.0

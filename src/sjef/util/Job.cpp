@@ -380,14 +380,14 @@ void Job::poll_job(int verbosity) {
   if (!localhost() and m_backend_command_server != nullptr and (status == completed or status == killed)) {
     m_backend_command_server.reset(new Shell(m_backend.host)); // so that any zombie is resolved or similar
     m_trace(4 - verbosity) << "Pull run directory at end of job " << std::endl;
-    m_trace(4 - verbosity) << Shell()("echo local rundir;ls -lta '" + m_project.filename("", "", 0).string()) + "'"
+    m_trace(4 - verbosity) << Shell()("echo local rundir;ls -lta '" + m_project.filename("", "", 0).string() + "'")
                            << std::endl;
     m_trace(4 - verbosity) << "remote cache directory: " << m_remote_cache_directory << std::endl;
     m_trace(4 - verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta '" + m_remote_cache_directory +
                                                           "' 2>&1")
                            << std::endl;
     auto rundir_result = pull_rundir(verbosity);
-    m_trace(4 - verbosity) << Shell()("echo local rundir;ls -lta '" + m_project.filename("", "", 0).string()) + "'"
+    m_trace(4 - verbosity) << Shell()("echo local rundir;ls -lta '" + m_project.filename("", "", 0).string() + "'")
                            << std::endl;
     m_trace(4 - verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta '" + m_remote_cache_directory +
                                                           "'  2>&1")

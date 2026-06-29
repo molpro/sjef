@@ -25,7 +25,7 @@ TEST(Shell, local) {
   pwd = std::regex_replace(pwd, std::regex{"\\\\"}, "/");
 #endif
   for (int i = 0; i < 2; ++i)
-    EXPECT_EQ(comm("pwd",true,".",99), pwd);
+    EXPECT_EQ(comm("pwd",true,".",0), pwd);
   EXPECT_EQ(comm.out(), pwd);
 }
 
@@ -39,7 +39,7 @@ TEST(Shell, remote) {
   pwd = std::regex_replace(pwd, std::regex{"\\\\"}, "/");
   for (int i = 0; i < 2; ++i) {
     auto output=comm("cd " + fs::current_path().string() + ";pwd");
-    std::cout << "output "<<output << std::endl;
+    // std::cout << "output "<<output << std::endl;
     EXPECT_EQ(output, pwd);
   }
   for (int i = 0; i < 2; ++i)

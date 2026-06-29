@@ -144,11 +144,9 @@ void Shell::capture_job_number_from_error(const std::string& command) const {
   std::string line;
   try {
     while (std::getline(*m_err, line)) {
-      std::cout << "capture_job_number line: " << line << std::endl;
       std::smatch match;
       if (std::regex_search(line, match, std::regex{jobnumber_tag + "\\s*(\\d+)"})) {
         m_job_number = std::stoi(match[1]);
-        std::cout << "capture_job_number m_job_number=" << m_job_number << std::endl;
         break;
       }
     }
@@ -162,7 +160,7 @@ void Shell::capture_job_number_from_error(const std::string& command) const {
 }
 
 void Shell::run_local_async(const std::string& command, const std::string& directory, int verbosity,
-                            const std::string& out, const std::string& err) const {
+                            const std::string& out) const {
   fs::path current_path_save;
   try {
     current_path_save = fs::current_path();
@@ -182,7 +180,6 @@ void Shell::run_local_async(const std::string& command, const std::string& direc
     m_stdout_future_running = true;
     m_stdout_future = std::async(std::launch::async, &Shell::capture_out, this);
   } else {
-    std::cout << "run_local_async out=" << out <<" shell="<< m_shell << std::endl;
     m_process = bp::child(executable("nohup"), m_shell, "-c", pipeline, bp::std_out > out, bp::std_err > *m_err);
     m_process.detach();
   }
@@ -193,12 +190,11 @@ void Shell::run_local_async(const std::string& command, const std::string& direc
 }
 
 void Shell::run_remote(std::string command, const std::string& directory, bool wait, int verbosity,
-                       const std::string& out, const std::string& err) const {
+                       const std::string& out) const {
   if (out == "/dev/null")
     command = "(( " + command + ") 2>&1 & echo " + jobnumber_tag + " $! 1>&2)";
   else
     command = "(( " + command + ") > " + out + " 2>&1 & echo " + jobnumber_tag + " $! 1>&2)";
-  std::cout << "run_remote command=" << command << std::endl;
   if (!m_process.valid() || !m_process.running())
     throw Shell::runtime_error("remote server process has died");
   m_stdout_future_running = true;
@@ -207,7 +203,6 @@ void Shell::run_remote(std::string command, const std::string& directory, bool w
     m_in << std::string{"cd '"} + directory + "'" << std::endl;
     m_in << std::string{"nohup /bin/sh -c '"} + command + "'" << std::endl;
     capture_job_number_from_error(command);
-    std::cout << "!run_remote command=" << command << ", m_job_number=" << m_job_number << std::endl;
     m_in << ">&2 echo '" << terminator << "' $?" << std::endl;
     m_in << "echo '" << terminator << "'" << std::endl;
   } catch (const std::exception& e) {
@@ -220,15 +215,12 @@ void Shell::run_remote(std::string command, const std::string& directory, bool w
 }
 
 void Shell::capture_out() const {
-  std::cout << "enter capture_out()" << std::endl;
   m_last_out.clear();
   std::string line;
   try {
     while (std::getline(*m_out, line) && line != terminator) {
-      std::cout << "out line from command " << line << std::endl;
       m_last_out += line + '\n';
     }
-    std::cout << "out line after while" << line << std::endl;
   } catch (const std::exception& e) {
     throw Shell::runtime_error((std::string{"Shell() has failed whilst capturing the output.\nExit code: "} +
                                 std::to_string(m_process.exit_code()) + "\n\nstdout:\n" + m_last_out +
@@ -270,9 +262,9 @@ std::string Shell::operator()(const std::string& command, bool wait, const std::
     if (wait)
       run_local_sync(command, directory, verbosity, out, err);
     else
-      run_local_async(command, directory, verbosity, out, err);
+      run_local_async(command, directory, verbosity, out);
   } else {
-    run_remote(command, directory, wait, verbosity, out, err);
+    run_remote(command, directory, wait, verbosity, out);
   }
   //  m_trace(3 - verbosity) << "last line=" << line << std::endl;
   //  auto rc = line.empty() ? -1 : std::stoi(line.substr(terminator.size() + 1));

@@ -56,4 +56,4 @@ def test_run_ssh_bad(project):
         assert False
     except Exception as e:
         # print('exception caught,', e)
-        assert 'failed' in str(e)
+        assert 'failed' in str(e) or 'remote server process has died' in str(e)

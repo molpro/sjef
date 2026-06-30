@@ -344,8 +344,8 @@ bool Shell::running() const {
   if (localhost() and m_job_number == 0)
     return m_process.running();
   bp::ipstream out;
-  system((std::string{"ps -aux -p "} + std::to_string(m_job_number)).c_str());
-  auto command = std::string{"ps -p "} + std::to_string(m_job_number) + "; echo $?";
+  system((std::string{"ps -l -p "} + std::to_string(m_job_number)).c_str());
+  auto command = std::string{"ps -l -p "} + std::to_string(m_job_number) + "; echo $?";
   auto proc = bp::child(std::vector<std::string>{"/bin/sh", "-c", command}, bp::std_out > out);
   proc.wait();
   std::string line;

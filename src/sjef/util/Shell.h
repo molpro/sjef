@@ -87,8 +87,6 @@ private:
   mutable std::mutex m_run_mutex;
   mutable int m_job_number = 0;
   mutable bp::child m_process;
-  mutable std::future<void> m_stdout_future;
-  mutable bool m_stdout_future_running = false;
 
 protected:
   void run_local_sync(const std::string& command, const std::string& directory, int verbosity, const std::string& out,

@@ -180,26 +180,15 @@ void Shell::run_local_async(const std::string& command, const std::string& direc
   }
   fs::current_path(directory);
 
-  // std::string pipeline{"(( " + command + ") 2>&1 & echo " + jobnumber_tag + " $! 1>&2)"};
   std::string pipeline{"(( " + std::regex_replace(command, std::regex{"'"}, "''") + ") 2>&1 & echo " + jobnumber_tag +
                        " $! 1>&2)"};
-  // std::cout << "pipeline=" << pipeline << std::endl;
   m_out.reset(new bp::ipstream);
   m_err.reset(new bp::ipstream);
   m_trace(2 - verbosity) << "launching shell local process: " << executable("nohup") << " " << m_shell << " -c '"
                          << pipeline << "'" << std::endl;
-  if (out == "!/dev/null") {
-    m_process = bp::child(executable("nohup"), m_shell, "-c", pipeline, bp::std_out > *m_out, bp::std_err > *m_err);
-    m_process.detach();
-    m_stdout_future_running = true;
-    m_stdout_future = std::async(std::launch::async, &Shell::capture_out, this);
-  } else {
-    std::cout << "launching to out="<<out<<std::endl;
-    m_process = bp::child(executable("nohup"), m_shell, "-c", pipeline, bp::std_out > out, bp::std_err > *m_err);
-    m_process.detach();
-  }
+  m_process = bp::child(executable("nohup"), m_shell, "-c", pipeline, bp::std_out > out, bp::std_err > *m_err);
+  m_process.detach();
   capture_job_number_from_error(command);
-  // std::cout << "run_local_async, m_process.id()=" << m_process.id() << std::endl;
   fs::current_path(current_path_save);
   if (!m_process.valid())
     throw Shell::runtime_error("Spawning run process has failed");
@@ -212,12 +201,6 @@ void Shell::run_remote_async(std::string command, const std::string& directory, 
       "(( cd ''" + dir + "'' && " + command + ") > " + out + " 2> " + err + " & echo " + jobnumber_tag + " $! 1>&2)";
   if (!m_process.valid() || !m_process.running())
     throw Shell::runtime_error("remote server process has died");
-  if (m_stdout_future_running) {
-    throw std::runtime_error("remote server process has not finished capturing output");
-    capture_out();
-  }
-  // m_stdout_future_running = true;
-  // m_stdout_future = std::async(std::launch::async, &Shell::capture_out, this);
   try {
     m_in << std::string{"nohup /bin/sh -c '"} + command + "'" << std::endl;
     capture_job_number_from_error(command);
@@ -319,12 +302,6 @@ std::string Shell::operator()(const std::string& command, bool wait, const std::
 }
 
 void Shell::wait(int min_wait_milliseconds, int max_wait_milliseconds) const {
-  std::cout << "wait, m_job_number=" << m_job_number << localhost() << std::endl;
-  if (m_stdout_future_running)
-    m_stdout_future.get();
-  m_stdout_future_running = false;
-  std::cout << "past future get"<<std::endl;
-  std::cout << m_last_out << std::endl;
   using namespace std::chrono_literals;
   if (max_wait_milliseconds <= 0)
     max_wait_milliseconds = min_wait_milliseconds;
@@ -339,32 +316,24 @@ void Shell::wait(int min_wait_milliseconds, int max_wait_milliseconds) const {
 }
 
 bool Shell::running() const {
-  std::cout << "running, m_job_number=" << m_job_number << localhost()<<m_process.running() << std::endl;
+  // std::cout << "running, m_job_number=" << m_job_number << localhost() << m_process.running() << std::endl;
   // if (localhost() and m_process.running()) return true;
   if (localhost() and m_job_number == 0)
     return m_process.running();
   bp::ipstream out;
-  system((std::string{"ps -l -p "} + std::to_string(m_job_number)).c_str());
   auto command = std::string{"ps -l -p "} + std::to_string(m_job_number) + "; echo $?";
   auto proc = bp::child(std::vector<std::string>{"/bin/sh", "-c", command}, bp::std_out > out);
   proc.wait();
   std::string line;
   bool result = false;
   while (std::getline(out, line)) {
-    std::cout << "line " << line << std::endl;
-    if (line.find(" "+std::to_string(m_job_number)+" ") != std::string::npos) {
-      std::cout << "found job number, checking for zombie "<<(line.find(" Z")==std::string::npos)<<std::endl;
+    if (line.find(" " + std::to_string(m_job_number) + " ") != std::string::npos) {
       result = line.find(" Z") == std::string::npos;
     }
     if (line.size() == 1)
-    result = result && line == "0";
+      result = result && line == "0";
   }
-  if (result)
-    std::cout << "running"<<std::endl;
-  else
-    std::cout << "not running"<<std::endl;
   return result;
-  // return (*this)(std::string{"ps -p "} + std::to_string(m_job_number) + " > /dev/null 2>/dev/null; echo $?") == "0";
 }
 bool Shell::local_asynchronous_supported() {
   // #ifdef WIN32

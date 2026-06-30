@@ -75,6 +75,7 @@ public:
    * directory name if filename does not have one
    * @param suffixes The file suffixes for special (input, output) files within
    * the project
+   * @param record_as_recent Whether to record this project in the user's recent projects file
    */
   explicit Project(const std::filesystem::path& filename, bool construct = true, const std::string& default_suffix = "",
                    const mapstringstring_t& suffixes = {{"inp", "inp"}, {"out", "out"}, {"xml", "xml"}}, bool record_as_recent=true);

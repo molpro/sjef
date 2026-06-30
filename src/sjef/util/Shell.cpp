@@ -353,6 +353,7 @@ bool Shell::running() const {
   while (std::getline(out, line)) {
     std::cout << "line " << line << std::endl;
     if (line.find(" "+std::to_string(m_job_number)+" ") == std::string::npos) {
+      std::cout << "found job number, checking for zombie "<<line.find(" Z")<<std::endl;
       result = line.find(" Z") == std::string::npos;
     }
     result = result && line == "0";

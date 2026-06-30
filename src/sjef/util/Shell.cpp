@@ -345,14 +345,17 @@ bool Shell::running() const {
     return m_process.running();
   bp::ipstream out;
   system((std::string{"ps -aux -p "} + std::to_string(m_job_number)).c_str());
-  auto command = std::string{"ps -p "} + std::to_string(m_job_number) + " >/dev/null ; echo $?";
+  auto command = std::string{"ps -p "} + std::to_string(m_job_number) + "; echo $?";
   auto proc = bp::child(std::vector<std::string>{"/bin/sh", "-c", command}, bp::std_out > out);
   proc.wait();
   std::string line;
   bool result = false;
   while (std::getline(out, line)) {
     std::cout << "line " << line << std::endl;
-    result = std::stoi(line) == 0;
+    if (line.find(" "+std::to_string(m_job_number)+" ") == std::string::npos) {
+      result = line.find(" Z") == std::string::npos;
+    }
+    result = result && std::stoi(line) == 0;
     std::cout << "sto survives " << result << std::endl;
   }
   return result;

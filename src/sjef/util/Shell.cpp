@@ -188,7 +188,7 @@ void Shell::run_local_async(const std::string& command, const std::string& direc
   m_err.reset(new bp::ipstream);
   m_trace(2 - verbosity) << "launching shell local process: " << executable("nohup") << " " << m_shell << " -c '"
                          << pipeline << "'" << std::endl;
-  if (out == "/dev/null") {
+  if (out == "!/dev/null") {
     m_process = bp::child(executable("nohup"), m_shell, "-c", pipeline, bp::std_out > *m_out, bp::std_err > *m_err);
     m_process.detach();
     m_stdout_future_running = true;
@@ -323,6 +323,7 @@ void Shell::wait(int min_wait_milliseconds, int max_wait_milliseconds) const {
     m_stdout_future.get();
   m_stdout_future_running = false;
   std::cout << "past future get"<<std::endl;
+  std::cout << m_last_out << std::endl;
   using namespace std::chrono_literals;
   if (max_wait_milliseconds <= 0)
     max_wait_milliseconds = min_wait_milliseconds;

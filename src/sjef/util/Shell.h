@@ -31,8 +31,23 @@ public:
    * @param host hostname passed to ssh. If "localhost", ssh will not be used.
    * @param shell Shell command. If empty, then operator() will run commands directly and synchronously rather than in a shell.
    */
-  Shell(std::string host, std::string shell = "bash");
+  Shell(std::string host, std::string shell = "/bin/bash");
   Shell() : Shell("localhost") {}
+  /*!
+   *@brief Execute a command. For a remote host, the command is sent to the remote shell already set up in the class
+   * constructor. For a local host, a new process is created.
+   *
+   * @param command Any valid input for /bin/sh
+   * @param wait If true, block until the process has been completed. The standard output and error streams are
+   * subsequently available through the out() and err() class functions. If false, return
+   * immediately after launching the process. Standard output and error are written to specified files; the process id
+   * is available through job_number()
+   * @param directory Working directory.
+   * @param verbosity
+   * @param out file name to receive standard output.
+   * @param err file name to receive standard error.
+   * @return The command standard output, except for asynchronous jobs, which return an empty string.
+   */
   std::string operator()(const std::string& command, bool wait = true, const std::string& directory = ".",
                          int verbosity = 0, const std::string& out = "/dev/null",
                          const std::string& err = "/dev/null") const;
@@ -73,6 +88,16 @@ private:
   mutable int m_job_number = 0;
   mutable bp::child m_process;
 
+protected:
+  void run_local_sync(const std::string& command, const std::string& directory, int verbosity, const std::string& out,
+                      const std::string& err) const;
+  void capture_job_number_from_error(const std::string& command) const;
+  void run_local_async(const std::string& command, const std::string& directory, int verbosity,
+                       const std::string& out) const;
+  void run_remote_async(std::string command, const std::string& directory, int verbosity, const std::string& out,
+                        const std::string& err) const;
+  void run_remote_sync(std::string command, const std::string& directory, int verbosity, const std::string& out) const;
+  void capture_out() const;
   bool localhost() const { return (m_host.empty() || m_host == "localhost"); }
 };
 

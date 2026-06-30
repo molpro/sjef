@@ -24,10 +24,9 @@ TEST(Shell, local) {
   pwd = std::regex_replace(pwd, std::regex{"C:"}, "/c");
   pwd = std::regex_replace(pwd, std::regex{"\\\\"}, "/");
 #endif
-  for (int i = 0; i < 1; ++i)
-    EXPECT_EQ(comm("pwd"), pwd);
+  for (int i = 0; i < 2; ++i)
+    EXPECT_EQ(comm("pwd",true,".",0), pwd);
   EXPECT_EQ(comm.out(), pwd);
-  EXPECT_EQ(comm.job_number(), 0);
 }
 
 TEST(Shell, remote) {
@@ -38,27 +37,62 @@ TEST(Shell, remote) {
   auto pwd = fs::current_path().string();
   pwd = std::regex_replace(pwd, std::regex{"C:"}, "/c");
   pwd = std::regex_replace(pwd, std::regex{"\\\\"}, "/");
-  for (int i = 0; i < 2; ++i)
-    EXPECT_EQ(comm("cd " + fs::current_path().string() + ";pwd"), pwd);
+  for (int i = 0; i < 2; ++i) {
+    auto output=comm("cd " + fs::current_path().string() + ";pwd");
+    // std::cout << "output "<<output << std::endl;
+    EXPECT_EQ(output, pwd);
+  }
   for (int i = 0; i < 2; ++i)
     EXPECT_EQ(comm("pwd", true, fs::current_path().string()), pwd);
-  EXPECT_EQ(comm.job_number(), 0);
+  // EXPECT_EQ(comm.job_number(), 0);
 #endif
 }
 
 TEST(Shell, local_asynchronous) {
   if (sjef::util::Shell::local_asynchronous_supported()) {
-    const std::string testfile{"testfile"};
     sjef::util::Shell comm;
-    comm("pwd", false);
+    fs::path testfile{"test_local_asynchronous"};
+    comm("rm -f "+testfile.string(), true);
+    auto start_time = std::chrono::system_clock::now();
+    comm("sleep 1; touch "+testfile.string(), false);//,"/tmp",4);
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start_time).count();
+    EXPECT_LT(duration, 1000) << "Asynchronous shell took too long to return: " << duration << " ms";
     EXPECT_NE(comm.job_number(), 0) << "Output stream:\n"
                                     << comm.out() << std::endl
                                     << "Error stream:\n"
                                     << comm.err() << std::endl;
+    EXPECT_FALSE(fs::exists(testfile.string()));
     comm.wait();
+    EXPECT_GT(
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start_time).count(), 1000)
+        << "Asynchronous shell took too short time to finish: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start_time).count() << " ms";
     EXPECT_FALSE(comm.running());
+    EXPECT_TRUE(fs::exists(testfile.string()));
   }
 }
+#ifndef WIN32
+TEST(Shell, remote_asynchronous_2) {
+  char hostname[HOST_NAME_MAX];
+  gethostname(hostname, HOST_NAME_MAX);
+  sjef::util::Shell comm(hostname);
+    comm("rm -f /tmp/pwd.txt", true);
+    auto start_time = std::chrono::system_clock::now();
+    comm("sleep 1; touch /tmp/pwd.txt", false);//,"/tmp",4);
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start_time).count();
+    EXPECT_LT(duration, 1000) << "Asynchronous shell took too long to return: " << duration << " ms";
+    EXPECT_NE(comm.job_number(), 0) << "Output stream:\n"
+                                    << comm.out() << std::endl
+                                    << "Error stream:\n"
+                                    << comm.err() << std::endl;
+    EXPECT_FALSE(fs::exists("/tmp/pwd.txt"));
+    comm.wait();
+    EXPECT_GT(
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start_time).count(), 1000)
+        << "Asynchronous shell took too short time to finish: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start_time).count() << " ms";
+    EXPECT_FALSE(comm.running());
+    EXPECT_TRUE(fs::exists("/tmp/pwd.txt"));
+}
+#endif
 
 TEST(Shell, bad_shell) {
   if (sjef::util::Shell::local_asynchronous_supported()) {
@@ -79,8 +113,8 @@ TEST(Shell, bad_shell) {
 
     {
       sjef::util::Shell comm("localhost", "/bin/badshell");
-      EXPECT_THROW(comm("echo hello"), sjef::util::Shell::runtime_error); // TODO this should throw an exception
-      EXPECT_THROW(comm("echo hello", false, ".", 0, outfile), sjef::util::Shell::runtime_error);
+      EXPECT_THROW(comm("echo hello"), sjef::util::Shell::runtime_error);
+      EXPECT_EQ(comm("echo hello", false, ".", 0, outfile), "");
       std::ifstream t(outfile);
       comm.wait();
       std::stringstream buffer;

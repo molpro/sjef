@@ -355,8 +355,7 @@ bool Shell::running() const {
     if (line.find(" "+std::to_string(m_job_number)+" ") == std::string::npos) {
       result = line.find(" Z") == std::string::npos;
     }
-    result = result && std::stoi(line) == 0;
-    std::cout << "sto survives " << result << std::endl;
+    result = result && line == "0";
   }
   return result;
   // return (*this)(std::string{"ps -p "} + std::to_string(m_job_number) + " > /dev/null 2>/dev/null; echo $?") == "0";

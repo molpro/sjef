@@ -194,6 +194,7 @@ void Shell::run_local_async(const std::string& command, const std::string& direc
     m_stdout_future_running = true;
     m_stdout_future = std::async(std::launch::async, &Shell::capture_out, this);
   } else {
+    std::cout << "launching to out="<<out<<std::endl;
     m_process = bp::child(executable("nohup"), m_shell, "-c", pipeline, bp::std_out > out, bp::std_err > *m_err);
     m_process.detach();
   }
@@ -338,7 +339,8 @@ void Shell::wait(int min_wait_milliseconds, int max_wait_milliseconds) const {
 }
 
 bool Shell::running() const {
-  std::cout << "running, m_job_number=" << m_job_number << localhost() << std::endl;
+  std::cout << "running, m_job_number=" << m_job_number << localhost()<<m_process.running() << std::endl;
+  if (localhost() and m_process.running()) return true;
   if (localhost() and m_job_number == 0)
     return m_process.running();
   bp::ipstream out;

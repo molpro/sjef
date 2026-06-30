@@ -318,9 +318,11 @@ std::string Shell::operator()(const std::string& command, bool wait, const std::
 }
 
 void Shell::wait(int min_wait_milliseconds, int max_wait_milliseconds) const {
+  std::cout << "wait, m_job_number=" << m_job_number << localhost() << std::endl;
   if (m_stdout_future_running)
     m_stdout_future.get();
   m_stdout_future_running = false;
+  std::cout << "past future get"<<std::endl;
   using namespace std::chrono_literals;
   if (max_wait_milliseconds <= 0)
     max_wait_milliseconds = min_wait_milliseconds;

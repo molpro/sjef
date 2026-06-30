@@ -56,13 +56,16 @@ TEST(Shell, local_asynchronous) {
     auto start_time = std::chrono::system_clock::now();
     comm("sleep 1; touch "+testfile.string(), false);//,"/tmp",4);
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start_time).count();
+    std::cout << "duration " << duration << std::endl;
     EXPECT_LT(duration, 1000) << "Asynchronous shell took too long to return: " << duration << " ms";
     EXPECT_NE(comm.job_number(), 0) << "Output stream:\n"
                                     << comm.out() << std::endl
                                     << "Error stream:\n"
                                     << comm.err() << std::endl;
     EXPECT_FALSE(fs::exists(testfile.string()));
+    std::cout << "before comm.wait()"<<std::endl;
     comm.wait();
+    std::cout << "after comm.wait()"<<std::endl;
     EXPECT_GT(
         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start_time).count(), 1000)
         << "Asynchronous shell took too short time to finish: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start_time).count() << " ms";

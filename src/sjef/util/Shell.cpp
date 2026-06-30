@@ -358,6 +358,10 @@ bool Shell::running() const {
     }
     result = result && line == "0";
   }
+  if (result)
+    std::cout << "running"<<std::endl;
+  else
+    std::cout << "not running"<<std::endl;
   return result;
   // return (*this)(std::string{"ps -p "} + std::to_string(m_job_number) + " > /dev/null 2>/dev/null; echo $?") == "0";
 }

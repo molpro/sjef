@@ -171,7 +171,7 @@ void Shell::capture_job_number_from_error(const std::string& command) const {
 }
 
 void Shell::run_local_async(const std::string& command, const std::string& directory, int verbosity,
-                            const std::string& out, const std::string& err) const {
+                            const std::string& out) const {
   fs::path current_path_save;
   try {
     current_path_save = fs::current_path();
@@ -288,7 +288,7 @@ std::string Shell::operator()(const std::string& command, bool wait, const std::
     if (wait)
       run_local_sync(command, directory, verbosity, out, err);
     else
-      run_local_async(command, directory, verbosity, out, err);
+      run_local_async(command, directory, verbosity, out);
   } else {
     if (wait)
       run_remote_sync(command, directory, verbosity, out);

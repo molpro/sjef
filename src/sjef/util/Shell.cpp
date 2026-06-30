@@ -340,10 +340,11 @@ void Shell::wait(int min_wait_milliseconds, int max_wait_milliseconds) const {
 
 bool Shell::running() const {
   std::cout << "running, m_job_number=" << m_job_number << localhost()<<m_process.running() << std::endl;
-  if (localhost() and m_process.running()) return true;
+  // if (localhost() and m_process.running()) return true;
   if (localhost() and m_job_number == 0)
     return m_process.running();
   bp::ipstream out;
+  system((std::string{"ps -aux -p "} + std::to_string(m_job_number)).c_str());
   auto command = std::string{"ps -p "} + std::to_string(m_job_number) + " >/dev/null ; echo $?";
   auto proc = bp::child(std::vector<std::string>{"/bin/sh", "-c", command}, bp::std_out > out);
   proc.wait();

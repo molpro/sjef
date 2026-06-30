@@ -337,7 +337,7 @@ void Shell::wait(int min_wait_milliseconds, int max_wait_milliseconds) const {
 }
 
 bool Shell::running() const {
-  // std::cout << "running, m_job_number=" << m_job_number << localhost() << std::endl;
+  std::cout << "running, m_job_number=" << m_job_number << localhost() << std::endl;
   if (localhost() and m_job_number == 0)
     return m_process.running();
   bp::ipstream out;
@@ -347,9 +347,9 @@ bool Shell::running() const {
   std::string line;
   bool result = false;
   while (std::getline(out, line)) {
-    // std::cout << "line " << line << std::endl;
+    std::cout << "line " << line << std::endl;
     result = std::stoi(line) == 0;
-    // std::cout << "sto survives " << result << std::endl;
+    std::cout << "sto survives " << result << std::endl;
   }
   return result;
   // return (*this)(std::string{"ps -p "} + std::to_string(m_job_number) + " > /dev/null 2>/dev/null; echo $?") == "0";

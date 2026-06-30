@@ -623,7 +623,7 @@ TEST_F(test_sjef, run_directory) {
 TEST_F(test_sjef, sync_backend) {
   auto suffix = this->suffix();
   ASSERT_TRUE(fs::is_directory(sjef::expand_path(std::string{m_dot_sjef / suffix})));
-  std::map<std::string, bool> cache_names{{"test-remote-cache", true},  {"test-r$mote-cache", false},
+  const std::map<std::string, bool> cache_names{{"test-remote-cache", true},  {"test-r$mote-cache", false},
                                           {"test-r?mote-cache", false}, {"test-rémote-cache", true},
                                           {"test-r%mote-cache", false}, {"test-rümote-cache", true},
                                           {"test-r*mote-cache", false}, {"test-r&mote-cache", false},

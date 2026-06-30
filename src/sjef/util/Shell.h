@@ -94,10 +94,11 @@ protected:
   void run_local_sync(const std::string& command, const std::string& directory, int verbosity, const std::string& out,
                       const std::string& err) const;
   void capture_job_number_from_error(const std::string& command) const;
-  void run_local_async(const std::string& command, const std::string& directory, int verbosity,
-                       const std::string& out) const;
-  void run_remote(std::string command, const std::string& directory, bool wait, int verbosity,
-                  const std::string& out) const;
+  void run_local_async(const std::string& command, const std::string& directory, int verbosity, const std::string& out,
+                       const std::string& err) const;
+  void run_remote_async(std::string command, const std::string& directory, int verbosity, const std::string& out,
+                        const std::string& err) const;
+  void run_remote_sync(std::string command, const std::string& directory, int verbosity, const std::string& out) const;
   void capture_out() const;
   bool localhost() const { return (m_host.empty() || m_host == "localhost"); }
 };

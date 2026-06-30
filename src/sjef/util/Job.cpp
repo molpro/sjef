@@ -295,7 +295,6 @@ status Job::get_status(int verbosity) {
 }
 void Job::kill(int verbosity) {
   m_trace(4 - verbosity) << "Job::kill()" << std::endl;
-  std::cout << "Job::kill()"<<std::endl;
   if (localhost()) {
     // catch failure to kill local jobs
     auto pid = m_project.local_pid_from_output();

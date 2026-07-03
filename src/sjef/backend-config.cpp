@@ -117,7 +117,7 @@ namespace sjef {
                             std::endl;
                 if (backend.cache != "") stream << yaml1("cache" , backend.cache) << std::endl;
                 if (backend.run_jobnumber != "")
-                    stream << yaml1("run_jobnumber","Submitted batch job *([0-9]+)") << std::endl;
+                    stream << yaml1("run_jobnumber",backend.run_jobnumber) << std::endl;
                 if (backend.status_command != "") stream << yaml1("status_command" , backend.status_command) << std::endl;
                 if (backend.status_running != "")
                     stream << yaml1("status_running" , backend.status_running) << std::endl;

@@ -2,6 +2,7 @@
 #include "Shell.h"
 #include "util.h"
 #include <chrono>
+#include <fstream>
 #include <functional>
 #include <future>
 #include <regex>
@@ -65,8 +66,8 @@ void setup_rsync_path() {
 #endif
 #ifdef WIN32
   auto conda_prefix = getenv("CONDA_PREFIX");
-//  std::cout << "getenv(PATH) " << getenv("PATH") << std::endl;
-//  std::cout << "conda_prefix " << conda_prefix << std::endl;
+  //  std::cout << "getenv(PATH) " << getenv("PATH") << std::endl;
+  //  std::cout << "conda_prefix " << conda_prefix << std::endl;
   if (conda_prefix != NULL) {
     _putenv_s("PATH", (std::string(conda_prefix) + "\\rsync\\bin;" + getenv("PATH")).c_str());
   }
@@ -195,6 +196,13 @@ sjef::util::Job::~Job() {
   m_poll_task.wait();
 }
 
+inline std::string slurp(const std::filesystem::path& path) {
+  std::ostringstream buf;
+  std::ifstream input(path);
+  buf << input.rdbuf();
+  return buf.str();
+}
+
 std::string Job::run(const std::string& command, int verbosity, bool wait) {
   m_closing = true;
   m_poll_task.wait();
@@ -223,11 +231,12 @@ std::string Job::run(const std::string& command, int verbosity, bool wait) {
     m_trace(4 - verbosity) << "Job::run() gives directory " << m_project.filename("", "", 0) << std::endl;
     m_trace(4 - verbosity) << "before submit, m_backend_command_server? " << (m_backend_command_server == nullptr)
                            << std::endl;
-    run_output =
-        (*m_backend_command_server)(command, wait or backend_submits_batch,
-                                    localhost() ? m_project.filename("", "", 0).string() : m_remote_cache_directory,
-                                    verbosity, m_project.filename("stdout", "", 0).filename().string(),
-                                    m_project.filename("stderr", "", 0).filename().string());
+    (*m_backend_command_server)(command, wait or backend_submits_batch,
+                                localhost() ? m_project.filename("", "", 0).string() : m_remote_cache_directory,
+                                verbosity, m_project.filename("stdout", "", 0).filename().string(),
+                                m_project.filename("stderr", "", 0).filename().string());
+    pull_rundir();
+    run_output = slurp(m_project.filename("stdout", "", 0)) + "\n" + slurp(m_project.filename("stderr", "", 0));
     if (backend_submits_batch) {
       std::smatch match;
       if (std::regex_search(run_output, match, std::regex{m_backend.run_jobnumber})) {
@@ -413,8 +422,8 @@ void Job::poll_job(int verbosity) {
       m_trace(-verbosity) << "Output stream from rsync:\n" << std::get<1>(rundir_result) << std::endl;
       m_trace(-verbosity) << "Error stream from rsync:\n" << std::get<2>(rundir_result) << std::endl;
       m_trace(-verbosity) << "To recover manually, try\n"
-                          << "rsync -asv " << m_backend.host + ":'" + m_remote_cache_directory + "/'"
-                          << " '" << m_project.filename("", "", 0).string() + "'" << std::endl;
+                          << "rsync -asv " << m_backend.host + ":'" + m_remote_cache_directory + "/'" << " '"
+                          << m_project.filename("", "", 0).string() + "'" << std::endl;
     }
   }
   m_project.m_xml_cached = "";

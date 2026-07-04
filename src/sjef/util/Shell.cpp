@@ -215,7 +215,7 @@ void Shell::run_remote_sync(std::string command, const std::string& directory, i
                             const std::string& out) const {
   m_job_number = 0;
   auto dir = std::regex_replace(directory, std::regex{" "}, "\\ ");
-  auto pipeline = "( cd ''" + dir + "'' && " + command + ")";
+  auto pipeline = "cd ''" + dir + "'' && " + command;
   if (out == "/dev/null") {
     command = pipeline + " 2>&1 ";
     // m_out.reset(new bp::ipstream);

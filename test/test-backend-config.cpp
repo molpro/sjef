@@ -23,7 +23,7 @@
 namespace fs = std::filesystem;
 
 TEST_F(test_sjef, default_backend_config_file_suffix) {
-    ASSERT_EQ(sjef::backend_config_file_suffix(), "xml");
+    ASSERT_EQ(sjef::backend_config_file_suffix(), "yaml");
 }
 
 TEST_F(test_sjef, default_backend_config) {

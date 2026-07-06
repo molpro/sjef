@@ -11,13 +11,15 @@
 #include <yaml.h>
 
 #include "util/Locker.h"
+
+#include <regex>
 namespace fs = std::filesystem;
 
 namespace sjef {
     struct pugi_xml_document : public pugi::xml_document {
     };
 
-    static std::string s_default_suffix{"xml"};
+    static std::string s_default_suffix{"yaml"};
     static std::string s_file_suffix{s_default_suffix};
 
     void set_backend_config_file_suffix(const std::string &suffix) {
@@ -260,6 +262,16 @@ namespace sjef {
         if (backends.find(sjef::Backend::default_name) == backends.end()) {
             backends.emplace(sjef::Backend::default_name, sjef::default_backend(project_suffix));
             write_backend_config_file(backends, project_suffix);
+        }
+        for (auto &[name, backend] : backends) { // repair config files from earlier mistake
+          if ((std::regex_match(backend.run_command, std::regex("^[a-zA-Z0-9_/'._-]*/molpro.*$")) or
+              std::regex_match(backend.run_command, std::regex("^molpro.*$")))
+               and std::regex_match(backend.run_jobnumber, std::regex("Submitted.*"))) {
+
+          // std::cout << "repairing " << name << std::endl;
+            backend.run_jobnumber = "([0-9]+)";
+            write_backend_config_file(backends, project_suffix);
+          }
         }
     }
     std::string sync_backend_config_file(const std::string &project_suffix) {

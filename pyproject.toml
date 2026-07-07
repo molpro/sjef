@@ -1,0 +1,32 @@
+[build-system]
+requires = [
+    "Cython>=3.0",
+    "scikit-build-core>=0.10",
+    "setuptools_scm>=8.1",
+    "cmake>=3.26",
+    "libboost-headers>=1.88",
+]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "pysjef"
+dependencies = [
+    "regex",
+    "lxml",
+]
+dynamic = [
+    "version",
+]
+readme = "pysjef/README.rst"
+license = "MIT"
+
+[tool.scikit-build]
+cmake.source-dir = "."
+wheel.packages = ["pysjef/pysjef"]
+sdist.include = ["pysjef/pysjef/_version.py"]
+
+[tool.scikit-build.metadata.version]
+provider = "scikit_build_core.metadata.setuptools_scm"
+
+[tool.setuptools_scm]
+write_to = "pysjef/pysjef/_version.py"

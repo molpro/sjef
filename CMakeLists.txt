@@ -8,7 +8,7 @@ include(FetchContent)
 FetchContent_Declare(
         LibraryManager
         GIT_REPOSITORY https://github.com/molpro/library-manager.git
-        GIT_TAG 70fa57fd2d58776a32a8694c0d48524527b54a40
+        GIT_TAG c382c85d12a6b51974b82f07eccaaa65ddb21859
 )
 FetchContent_MakeAvailable(LibraryManager)
 

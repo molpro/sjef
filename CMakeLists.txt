@@ -8,7 +8,7 @@ include(FetchContent)
 FetchContent_Declare(
         LibraryManager
         GIT_REPOSITORY https://github.com/molpro/library-manager.git
-        GIT_TAG c382c85d12a6b51974b82f07eccaaa65ddb21859
+        GIT_TAG 71c0165d48924610b65edbfbd99e336bfc7909df
 )
 FetchContent_MakeAvailable(LibraryManager)
 
@@ -49,6 +49,9 @@ if(BOOST_BUILD_HINTS)
     add_library(Boost::boost INTERFACE IMPORTED)
     target_include_directories(Boost::boost INTERFACE "${BOOST_BUILD_HINTS}")
 else()
+    if(POLICY CMP0167)
+        cmake_policy(SET CMP0167 NEW)
+    endif()
     find_package(Boost REQUIRED)
 endif()
 

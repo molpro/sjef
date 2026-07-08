@@ -9,7 +9,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES CXX_EXTENSIONS OFF)
 target_compile_definitions(${PROJECT_NAME} PRIVATE SJEF_VERSION=\"${SJEF_VERSION}\")
 
 include(FetchContent)
-FetchContent_Declare(tclap GIT_REPOSITORY https://github.com/molpro/tclap.git GIT_TAG v1.2.5)
+FetchContent_Declare(tclap GIT_REPOSITORY https://github.com/molpro/tclap.git GIT_TAG 61987f0d9de1680a2f971a7c40a1f578f65fa5de)
 FetchContent_GetProperties(tclap)
 if (NOT tclap_POPULATED)
     FetchContent_MakeAvailable(tclap)

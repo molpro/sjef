@@ -19,7 +19,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${tclap_SOURCE_DIR}/include)
 
 
 
-target_link_libraries(sjef PRIVATE Boost::boost)
+target_link_libraries(sjef PUBLIC Boost::boost)
 
 #target_include_directories(${PROJECT_NAME} PUBLIC ${Boost_INCLUDE_DIRS})
 if (NOT MSVC)

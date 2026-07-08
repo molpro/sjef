@@ -39,11 +39,9 @@ foreach (t test-c-sjef-backend)
     target_link_libraries(${t} PUBLIC ${PROJECT_NAME})
 endforeach ()
 
-#target_link_libraries(test-Locker PRIVATE Boost::headers)
-target_include_directories(test-Locker PRIVATE ${Boost_INCLUDE_DIRS})
+target_link_libraries(test-Locker PRIVATE Boost::headers)
 if (NOT MOLPRO STREQUAL MOLPRO-NOTFOUND)
-#    target_link_libraries(test-sjef-molpro PRIVATE Boost::headers)
-    target_include_directories(test-sjef-molpro PRIVATE ${Boost_INCLUDE_DIRS})
+    target_link_libraries(test-sjef-molpro PRIVATE Boost::headers)
 endif ()
 
 add_executable(logger logger.cpp)

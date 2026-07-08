@@ -4,7 +4,6 @@ LibraryManager_Append(${PROJECT_NAME}
         PRIVATE_HEADER util/util.h backend-config.h
 )
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
-#target_compile_options(${PROJECT_NAME} PUBLIC -fPIC)
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_EXTENSIONS OFF)
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE SJEF_VERSION=\"${SJEF_VERSION}\")
@@ -18,10 +17,8 @@ endif ()
 target_include_directories(${PROJECT_NAME} PRIVATE ${tclap_SOURCE_DIR}/include)
 
 
-
 target_link_libraries(sjef PUBLIC Boost::boost)
 
-#target_include_directories(${PROJECT_NAME} PUBLIC ${Boost_INCLUDE_DIRS})
 if (NOT MSVC)
     target_link_libraries(${PROJECT_NAME} PRIVATE pthread)
 endif ()
@@ -44,7 +41,7 @@ FetchContent_MakeAvailable(LibYAML)
 target_link_libraries(${PROJECT_NAME} PUBLIC yaml)
 
 if (MINGW)
-target_link_libraries(${PROJECT_NAME} PUBLIC ws2_32)
+    target_link_libraries(${PROJECT_NAME} PUBLIC ws2_32)
 endif ()
 
 add_executable(dummy dummy.cpp)

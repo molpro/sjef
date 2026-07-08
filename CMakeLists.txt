@@ -16,7 +16,7 @@ LibraryManager_Project(DEFAULT_VERSION "$Format:%(describe:tags)$")
 message(VERBOSE "PROJECT_VERSION=${PROJECT_VERSION}")
 message(VERBOSE "PROJECT_VERSION_FULL=${PROJECT_VERSION_FULL}")
 
-option(BUILD_TESTS "Whether to build tests or not" ON)
+option(BUILD_TESTS "Whether to build tests or not" OFF)
 option(BUILD_PROGRAM "Whether to build sjef command-line program or not" ON)
 
 project(sjef LANGUAGES CXX C VERSION ${PROJECT_VERSION})

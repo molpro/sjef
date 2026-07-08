@@ -33,7 +33,26 @@ option(BUILD_PYTHON "Whether to build the Python bindings or not" ON)
 set(CMAKE_POLICY_DEFAULT_CMP0048 NEW)
 if (BUILD_PYTHON)
     set (BUILD_SHARED_LIBS OFF)
+endif()
+
+
+set(BOOST_BUILD_HINTS "")
+foreach(prefix IN LISTS CMAKE_PREFIX_PATH)
+    if(IS_DIRECTORY "${prefix}/libboost_headers/include/boost")
+        set(BOOST_BUILD_HINTS "${prefix}/libboost_headers/include")
+        break()
     endif()
+endforeach()
+
+if(BOOST_BUILD_HINTS)
+    message(STATUS "Using libboost-headers from: ${BOOST_BUILD_HINTS}")
+    add_library(Boost::boost INTERFACE IMPORTED)
+    target_include_directories(Boost::boost INTERFACE "${BOOST_BUILD_HINTS}")
+else()
+    find_package(Boost REQUIRED)
+endif()
+
+
 add_subdirectory(src)
 
 if (BUILD_PYTHON)
@@ -56,6 +75,7 @@ if (BUILD_PYTHON)
     target_link_libraries(project_wrapper PRIVATE sjef)
     target_include_directories(project_wrapper PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
     install(TARGETS project_wrapper DESTINATION pysjef)
+
 endif()
 
 if (BUILD_TESTS)

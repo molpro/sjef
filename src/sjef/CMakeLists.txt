@@ -18,8 +18,10 @@ endif ()
 target_include_directories(${PROJECT_NAME} PRIVATE ${tclap_SOURCE_DIR}/include)
 
 
-find_package(Boost REQUIRED)
-target_include_directories(${PROJECT_NAME} PUBLIC ${Boost_INCLUDE_DIRS})
+
+target_link_libraries(sjef PRIVATE Boost::boost)
+
+#target_include_directories(${PROJECT_NAME} PUBLIC ${Boost_INCLUDE_DIRS})
 if (NOT MSVC)
     target_link_libraries(${PROJECT_NAME} PRIVATE pthread)
 endif ()

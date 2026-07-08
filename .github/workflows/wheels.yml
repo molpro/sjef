@@ -60,6 +60,7 @@ jobs:
     environment: pypi
     permissions:
       id-token: write   # trusted publishing to PyPI, no API token needed
+      contents: read
     steps:
       - uses: actions/download-artifact@v4
         with:

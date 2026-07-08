@@ -70,25 +70,18 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 5
-    env:
-      CXXFLAGS: -fPIC
     steps:
       - uses: actions/checkout@v3
       - name: Build
         run: |
           git config --global --add safe.directory /__w/sjef/sjef
           . /opt/conda/etc/profile.d/conda.sh
-          mkdir -p /var/run/sshd
-          /usr/sbin/sshd
-          cd pysjef
-          conda install -c conda-forge -y --file requirements.txt
-          BUILD=cmake-build-$(uname)-$(uname -m)
-          cmake -S .. -B $BUILD -DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF || { echo 'cmake configuration failed' ; exit 1; }
-          cmake --build $BUILD -t install || { echo 'cmake install failed' ; exit 1; }
-          cat pyproject.toml
           python -m pip install .
       - name: Test
-        run: pytest
+        run: |
+          mkdir -p /var/run/sshd
+          /usr/sbin/sshd
+          pytest
   windows-python:
     strategy:
       fail-fast: false
@@ -113,13 +106,7 @@ jobs:
         shell: pwsh
         run: |
           conda activate test
-          conda install -q -c conda-forge -y --file pysjef/requirements.txt libboost
-          conda info
-          conda list
-          cmake -LAH -S . -B cmake-build -DBUILD_TESTS=OFF -DBUILD_PROGRAM=OFF -DBUILD_DOCUMENTATION=OFF
-          cmake --build cmake-build -t install --config Release
-          cat pysjef/pyproject.toml
-          python -m pip install ./pysjef
+          python -m pip install .
       - name: Minimal test
         shell: pwsh
         run: |

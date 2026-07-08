@@ -39,9 +39,9 @@ foreach (t test-c-sjef-backend)
     target_link_libraries(${t} PUBLIC ${PROJECT_NAME})
 endforeach ()
 
-target_link_libraries(test-Locker PRIVATE Boost::headers)
+target_link_libraries(test-Locker PRIVATE Boost::boost)
 if (NOT MOLPRO STREQUAL MOLPRO-NOTFOUND)
-    target_link_libraries(test-sjef-molpro PRIVATE Boost::headers)
+    target_link_libraries(test-sjef-molpro PRIVATE Boost::boost)
 endif ()
 
 add_executable(logger logger.cpp)

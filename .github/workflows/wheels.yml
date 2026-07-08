@@ -14,8 +14,8 @@ jobs:
         include:
           - os: ubuntu-latest
           - os: ubuntu-24.04-arm
-          - os: macos-13      # Intel
-          - os: macos-14      # Apple Silicon
+          - os: macos-15-intel      # Intel
+          - os: macos-latest      # Apple Silicon
           - os: windows-latest
     runs-on: ${{ matrix.os }}
     steps:

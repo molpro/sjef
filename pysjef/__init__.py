@@ -7,6 +7,7 @@ from .container import DirectoryNode
 from .settings import Settings
 from .project import xpath
 from .project_wrapper import ProjectWrapper
+from .tree_view import tree_view
 
 import logging
 

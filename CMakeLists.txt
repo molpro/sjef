@@ -63,8 +63,8 @@ if (BUILD_PYTHON)
     find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
     find_program(CYTHON_EXECUTABLE cython REQUIRED)
 
-    set(CYTHON_SRC ${CMAKE_CURRENT_SOURCE_DIR}/pysjef/project_wrapper.pyx)
-    set(CYTHON_CPP ${CMAKE_CURRENT_SOURCE_DIR}/pysjef/project_wrapper.cpp)
+    set(CYTHON_SRC ${CMAKE_CURRENT_SOURCE_DIR}/src/pysjef/project_wrapper.pyx)
+    set(CYTHON_CPP ${CMAKE_CURRENT_SOURCE_DIR}/src/pysjef/project_wrapper.cpp)
 
     add_custom_command(OUTPUT ${CYTHON_CPP}
             COMMAND ${CYTHON_EXECUTABLE} --cplus -3 -I ${CMAKE_CURRENT_SOURCE_DIR}/src ${CYTHON_SRC} -o ${CYTHON_CPP}

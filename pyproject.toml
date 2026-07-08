@@ -3,7 +3,6 @@ requires = [
     "Cython>=3.0",
     "scikit-build-core>=0.10",
     "setuptools_scm>=8.1",
-    "cmake>=3.26",
     "libboost-headers>=1.88",
 ]
 build-backend = "scikit_build_core.build"

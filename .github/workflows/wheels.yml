@@ -24,7 +24,7 @@ jobs:
           fetch-depth: 0   # setuptools_scm and LibraryManager both need tag history
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.21
+        uses: pypa/cibuildwheel@v2.22
         env:
           CIBW_BEFORE_ALL_LINUX: >
             set -eux &&

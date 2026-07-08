@@ -26,7 +26,7 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.22
         env:
-          CIBW_MACOS_DEPLOYMENT_TARGET: "10.15"
+          CIBW_MACOS_DEPLOYMENT_TARGET: "11.0"
           CIBW_BEFORE_ALL_LINUX: >
             set -eux &&
             if command -v yum >/dev/null 2>&1; then

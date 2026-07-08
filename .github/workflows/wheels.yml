@@ -26,14 +26,12 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.21
         env:
-          CIBW_BEFORE_BUILD: |
-            set -eux
-            # Install libxml2/libxslt development packages required to build lxml
-            # Works across manylinux variants by checking available package manager.
+          CIBW_BEFORE_BUILD: >
+            set -eux &&
             if command -v yum >/dev/null 2>&1; then
-              yum -y install libxml2-devel libxslt-devel
+              yum -y install libxml2-devel libxslt-devel;
             elif command -v apt-get >/dev/null 2>&1; then
-              apt-get update && apt-get install -y libxml2-dev libxslt1-dev
+              apt-get update && apt-get install -y libxml2-dev libxslt1-dev;
             fi
 
       - uses: actions/upload-artifact@v4

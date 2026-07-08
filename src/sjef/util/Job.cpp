@@ -12,8 +12,10 @@
 #include <stdlib.h>
 #include <string>
 #if defined(WIN32) || defined(__WIN64)
-#ifdef _M_AMD64
+#if defined(_M_AMD64) || defined(_M_X64)
 #define _AMD64_
+#elif defined(_M_IX86)
+#define _X86_
 #endif
 #include <handleapi.h>
 #include <processthreadsapi.h>

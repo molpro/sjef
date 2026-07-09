@@ -21,12 +21,23 @@ option(BUILD_PROGRAM "Whether to build sjef command-line program or not" ON)
 
 project(sjef LANGUAGES CXX C VERSION ${PROJECT_VERSION})
 set(SJEF_VERSION ${PROJECT_VERSION_FULL})
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum macOS deployment target")
 
 set(PROGRAM_FILENAME "sjef")
 set(PROGRAM_NAME "sjef-program")
 
 if (MSVC)
     add_compile_options(/EHsc /permissive-)
+
+    # Define Windows target architecture
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+        add_compile_options(/D_WIN64)
+    else()
+        add_compile_options(/D_WIN32)
+    endif()
+
+    # Define minimum Windows version
+    add_compile_definitions(_WIN32_WINNT=0x0601)
 endif ()
 
 option(BUILD_PYTHON "Whether to build the Python bindings or not" ON)

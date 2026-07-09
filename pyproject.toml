@@ -13,6 +13,7 @@ dependencies = [ "regex", "lxml", ]
 dynamic = [ "version", ]
 readme = "README.md"
 license = "MIT"
+requires-python = ">=3.10"
 
 [tool.scikit-build]
 cmake.source-dir = "."
@@ -20,8 +21,10 @@ wheel.packages = ["src/pysjef"]
 sdist.include = ["src/pysjef/_version.py"]
 
 [tool.scikit-build.cmake.define]
+CMAKE_OSX_DEPLOYMENT_TARGET = "11.0"
 BUILD_PYTHON = "ON"
 BUILD_DOCUMENTATION = "OFF"
+BUILD_PROGRAM = "OFF"
 
 [[tool.dynamic-metadata]]
 field = "version"
@@ -29,3 +32,12 @@ provider = "scikit_build_core.metadata.setuptools_scm"
 
 [tool.setuptools_scm]
 write_to = "src/pysjef/_version.py"
+
+[tool.cibuildwheel]
+build-verbosity = 1
+test-command = "python -c \"import pysjef; print(pysjef.__version__)\""
+skip = ["pp*"]
+
+[tool.cibuildwheel.linux]
+manylinux-x86_64-image = "manylinux_2_28"
+manylinux-aarch64-image = "manylinux_2_28"

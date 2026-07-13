@@ -74,25 +74,25 @@ $(function() {
 <div class="contents">
 <div class="textblock"><p><a class="anchor" id="md__2____w_2sjef_2sjef_2_r_e_a_d_m_e"></a></p>
 <p>A library that supports the running of any program asynchronously either locally, directly on a remote machine, or via a batch queueing system. The library has the following features.</p><ul>
-<li>Management of project bundles. A bundle is a directory that represents one instance of running the target program, and contains all input and output files, plus a registry of properties. The purpose of the project bundle is to keep together everything needed for running and inspecting the job.</li>
+<li>Management of project bundles. A bundle is a directory that represents one instance of running the target program and contains all input and output files, plus a registry of properties. The purpose of the project bundle is to keep together everything needed for running and inspecting the job.</li>
 <li>Launching and monitoring of jobs. Jobs are placed through the definition via configuration files of one or more <a class="el" href="md__2____w_2sjef_2sjef_2src_2sjef_2backends.html">backends</a> that implement local or remote execution, possibly via a batch queueing system. Communication with remote hosts is via ssh, and users will normally want to arrange that password-free access to the host is established. A cache copy of the project bundle is maintained on the remote host, and synchronization in both directions is carried out as needed. The library can query the status of a job, and by default prevents the re-running of a job that is incomplete, or for which the input is identical to those of an already completed run.</li>
 <li>Editing and viewing of input and output files.</li>
-<li>Support for programs that produced marked-up output (e.g. XML or JSON).</li>
+<li>Support for programs that produced marked-up output (e.g., XML or JSON).</li>
 <li>Maintenance of a recent project list.</li>
 <li>Support for multiple software packages. The file suffix of the project bundle is interpreted as identifying the target software, and configuration data (backends, recent projects) are stored separately for each suffix.</li>
 </ul>
-<p>The library is implemented natively in C++ via the <code><a class="el" href="classsjef_1_1_project.html">sjef::Project</a></code> class, together with a C binding. There is additionally a free-standing <a class="el" href="md__2____w_2sjef_2sjef_2sjef-program.html">sjef</a> program that implements most of the library functions through command-line options, as well as the <a href="https://gitlab.com/molpro/pysjef">pysjef</a> Python bundle that includes in addition support for analysing marked-up output produced in one or more projects.</p>
+<p>The library is implemented natively in C++ via the <code><a class="el" href="classsjef_1_1_project.html">sjef::Project</a></code> class, together with a C binding. There is additionally a freestanding <a class="el" href="md__2____w_2sjef_2sjef_2sjef-program.html">sjef</a> program that implements most of the library functions through command-line options, as well as the <a href="https://gitlab.com/molpro/pysjef">pysjef</a> Python bundle that includes in addition support for analysing marked-up output produced in one or more projects.</p>
 <h2><a class="anchor" id="autotoc_md0"></a>
 Customization</h2>
 <ul>
-<li>Code can be added to utilize additional information available in some programs - for example, the reconstruction from an output file of the input that generated it, in order to know whether the input file has since been modified.</li>
+<li>Code can be added to make use of additional information available in some programs - for example, the reconstruction from an output file of the input that generated it, in order to know whether the input file has since been modified.</li>
 <li>Versions of the sjef program customized to a single software package can be constructed using a wrapper script or shell alias that gives sjef an option to force the suffix. </li>
 </ul>
 </div></div><!-- PageDoc -->
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Thu Jul 9 2026 10:05:54 for sjef by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
+Generated on Mon Jul 13 2026 16:15:07 for sjef by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
 </small></address>
 </body>
 </html>

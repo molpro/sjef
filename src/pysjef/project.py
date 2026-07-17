@@ -323,6 +323,9 @@ class Project(Node):
         # return Path(self.filename("xml")).read_text()
         return self._project_wrapper.xml()
 
+    def xml_run(self,run:int):
+        return self._project_wrapper.xml(run)
+
     def view_input(self):
         """
         Opens the input file in editor as specified by '$EDITOR' environment

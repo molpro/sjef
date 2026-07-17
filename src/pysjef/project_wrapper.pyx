@@ -241,9 +241,9 @@ cdef class ProjectWrapper:
             return deref(self.c_project).file_contents(cextension, name.encode(
                 'utf-8')).decode('utf-8')
 
-    def xml(self):
+    def xml(self, run=0):
         """Return the xml output file contents"""
-        return deref(self.c_project).xml().decode('utf-8')
+        return deref(self.c_project).xml(run).decode('utf-8')
 
     def input_from_output(self):
         """Return the input constructed from the output"""

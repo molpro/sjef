@@ -600,6 +600,9 @@ std::string Project::xml(int run, bool sync) const {
   //  std::cout << "Project::xml() status="<<status()<<std::endl;
   if (status() != completed)
     return xmlRepair(file_contents(m_suffixes.at("xml"), "", run, sync));
+  if (run != last_run_directory)
+    m_xml_cached.clear();
+  last_run_directory = run;
   if (m_xml_cached.empty()) {
     m_xml_cached = xmlRepair(file_contents(m_suffixes.at("xml"), "", run, sync));
     //    std::cout << "m_xml_cached set to " << m_xml_cached << std::endl;

@@ -55,6 +55,7 @@ class Project(Node):
         self.parent = parent
         self.suffix = suffix
         self.is_project = True
+        self.run_directory = 0
         if name:
             self._set_attributes()
 
@@ -220,7 +221,7 @@ class Project(Node):
 
     def run_directory_new(self):
         """
-        Check weather the job has changed since the previous run and needs to be rerun
+        Check whether the job has changed since the previous run and needs to be rerun
         :return: True/False
         """
         self._project_wrapper.run_directory_new()
@@ -321,7 +322,7 @@ class Project(Node):
     def xml(self):
         # from pathlib import Path
         # return Path(self.filename("xml")).read_text()
-        return self._project_wrapper.xml()
+        return self._project_wrapper.xml(self.run_directory)
 
     def xml_run(self,run:int):
         return self._project_wrapper.xml(run)

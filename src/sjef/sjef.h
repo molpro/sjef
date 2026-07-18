@@ -415,6 +415,7 @@ public:
 
 private:
   std::string cache(const Backend& backend) const;
+  mutable int last_run_directory = 0;
   void force_file_names(const std::string& oldname);
   static void backend_watcher(sjef::Project& project_, int min_wait_milliseconds, int max_wait_milliseconds = 0,
                               int poll_milliseconds = 1);

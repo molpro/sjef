@@ -42,9 +42,14 @@ static std::string executable(const std::string& command) {
   if (fs::path(command).is_absolute())
     return command;
   else {
+#ifdef WIN32
+    constexpr char path_separator = ';';
+#else
+    constexpr char path_separator = ':';
+#endif
     std::stringstream path{std::string{getenv("PATH")}};
     std::string elem;
-    while (std::getline(path, elem, ':')) {
+    while (std::getline(path, elem, path_separator)) {
       auto resolved = elem / fs::path{command};
       if (fs::is_regular_file(resolved))
         return resolved.string();

@@ -9,6 +9,7 @@
 #include <regex>
 #include <sstream>
 #include <thread>
+#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -38,24 +39,57 @@ Shell::Shell(std::string host, std::string shell) : m_host(std::move(host)), m_s
 }
 
 ///> @private
-static std::string executable(const std::string& command) {
-  if (fs::path(command).is_absolute())
-    return command;
-  else {
+static std::string search_path_dirs(const std::string& path_string, const std::string& command) {
 #ifdef WIN32
-    constexpr char path_separator = ';';
+  constexpr char path_separator = ';';
+  // Windows resolves a bare command name against PATHEXT-style extensions
+  // (.exe, .bat, ...) -- that's what lets `where nohup` find nohup.exe.
+  // std::filesystem does no such resolution on its own, so try the bare
+  // name first, then with .exe appended, since that's what these
+  // POSIX-style utilities (nohup, bash, ...) actually get installed as.
+  const std::vector<std::string> candidates = {command, command + ".exe"};
 #else
-    constexpr char path_separator = ':';
+  constexpr char path_separator = ':';
+  const std::vector<std::string> candidates = {command};
 #endif
-    std::stringstream path{std::string{getenv("PATH")}};
-    std::string elem;
-    while (std::getline(path, elem, path_separator)) {
-      auto resolved = elem / fs::path{command};
+  std::stringstream path{path_string};
+  std::string elem;
+  while (std::getline(path, elem, path_separator)) {
+    for (const auto& candidate : candidates) {
+      auto resolved = fs::path{elem} / candidate;
       if (fs::is_regular_file(resolved))
         return resolved.string();
     }
-    return "";
   }
+  return "";
+}
+
+static std::string executable(const std::string& command) {
+  if (fs::path(command).is_absolute())
+    return command;
+  auto result = search_path_dirs(std::string{getenv("PATH")}, command);
+  if (!result.empty())
+    return result;
+#ifdef WIN32
+  // Git for Windows bundles POSIX utilities (nohup, bash, ...) in
+  // <git-root>/usr/bin, which its own installer deliberately does not add
+  // to PATH -- only <git-root>/cmd is added, to avoid flooding a user's
+  // PATH with a parallel universe of Unix-named tools. Derive <git-root>
+  // from wherever git.exe was actually found (git itself IS reliably on
+  // PATH), rather than assuming a fixed install location like
+  // "C:\Program Files\Git".
+  auto git = search_path_dirs(std::string{getenv("PATH")}, "git");
+  if (!git.empty()) {
+    // git is at <git-root>/cmd/git.exe
+    auto git_root = fs::path{git}.parent_path().parent_path();
+    for (const auto& candidate : {command, command + ".exe"}) {
+      auto resolved = git_root / "usr" / "bin" / candidate;
+      if (fs::is_regular_file(resolved))
+        return resolved.string();
+    }
+  }
+#endif
+  return "";
 }
 
 std::vector<std::string> tokenise(const std::string& command) {

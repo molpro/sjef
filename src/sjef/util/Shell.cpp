@@ -143,16 +143,19 @@ void Shell::run_local_sync(const std::string& command, const std::string& direct
       m_process = bp::child(tokens, bp::std_out > out, bp::std_err > err);
     m_job_number = m_process.id();
   } else {
-    m_trace(2 - verbosity) << "launching shell local process: " << executable("nohup") << " " << m_shell << " -c "
+    auto shell_path = executable(m_shell);
+    if (shell_path.empty())
+      shell_path = m_shell; // preserve prior behaviour if resolution fails
+    m_trace(2 - verbosity) << "launching shell local process: " << executable("nohup") << " " << shell_path << " -c "
                            << command << std::endl;
     std::string pipeline{std::regex_replace(command, std::regex{"'"}, "''")};
     // std::cout << "run_local_sync pipeline=" << pipeline << std::endl;
     // std::cout << "run_local_sync out=" << out << std::endl;
     // std::cout << "run_local_sync err=" << err << std::endl;
     if (out == "/dev/null" and err == "/dev/null")
-      m_process = bp::child(executable("nohup"), m_shell, "-c", pipeline, bp::std_out > *m_out, bp::std_err > *m_err);
+      m_process = bp::child(executable("nohup"), shell_path, "-c", pipeline, bp::std_out > *m_out, bp::std_err > *m_err);
     else
-      m_process = bp::child(executable("nohup"), m_shell, "-c", pipeline, bp::std_out > out, bp::std_err > err);
+      m_process = bp::child(executable("nohup"), shell_path, "-c", pipeline, bp::std_out > out, bp::std_err > err);
   }
   if (!m_process.valid())
     throw Shell::runtime_error("Spawning run process has failed");
@@ -223,9 +226,21 @@ void Shell::run_local_async(const std::string& command, const std::string& direc
                        " $! 1>&2)"};
   m_out.reset(new bp::ipstream);
   m_err.reset(new bp::ipstream);
-  m_trace(2 - verbosity) << "launching shell local process: " << executable("nohup") << " " << m_shell << " -c '"
+  // Resolve the shell to its full path ourselves, rather than relying on
+  // nohup's own internal PATH-searching to find a bare name like "bash".
+  // On a minimal/non-standard MSYS2-family environment (as opposed to a
+  // full Git for Windows install), that internal resolution can fail
+  // silently -- nohup starts fine (no exception here), but then can't
+  // exec the shell, dies immediately, and produces no output, with the
+  // failure visible only on nohup's own stderr (captured into *m_err,
+  // not the run directory's output file). Handing nohup an absolute path
+  // sidesteps its own internal search entirely.
+  auto shell_path = executable(m_shell);
+  if (shell_path.empty())
+    shell_path = m_shell; // preserve prior behaviour if resolution fails
+  m_trace(2 - verbosity) << "launching shell local process: " << executable("nohup") << " " << shell_path << " -c '"
                          << pipeline << "'" << std::endl;
-  m_process = bp::child(executable("nohup"), m_shell, "-c", pipeline, bp::std_out > out, bp::std_err > *m_err);
+  m_process = bp::child(executable("nohup"), shell_path, "-c", pipeline, bp::std_out > out, bp::std_err > *m_err);
   m_process.detach();
   capture_job_number_from_error(command);
   fs::current_path(current_path_save);

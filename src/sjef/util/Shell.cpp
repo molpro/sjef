@@ -1,8 +1,10 @@
 #include "Shell.h"
 #if __has_include(<boost/process/child.hpp>)
 #include <boost/process/spawn.hpp>
+#include <boost/process/windows.hpp>
 #else
 #include <boost/process/v1/spawn.hpp>
+#include <boost/process/v1/windows.hpp>
 #endif
 #include <chrono>
 #include <filesystem>
@@ -12,6 +14,19 @@
 #include <vector>
 
 namespace fs = std::filesystem;
+
+// Prevent Windows from auto-allocating a visible console window for each
+// spawned child process (nohup, and the bash/mpiexec/etc it in turn execs)
+// when the parent has no console of its own to inherit. Without this, every
+// local job launch or quick synchronous shell call briefly flashes a new
+// console window, and unreliable stdout/stderr redirection for such
+// children is a known consequence of the same underlying Windows console
+// allocation behaviour.
+#ifdef WIN32
+#define SJEF_NO_CONSOLE_WINDOW , bp::windows::create_no_window
+#else
+#define SJEF_NO_CONSOLE_WINDOW
+#endif
 
 namespace sjef::util {
 static std::string executable(const std::string& command);
@@ -167,9 +182,9 @@ void Shell::run_local_sync(const std::string& command, const std::string& direct
     // std::cout << "run_local_sync out=" << out << std::endl;
     // std::cout << "run_local_sync err=" << err << std::endl;
     if (out == "/dev/null" and err == "/dev/null")
-      m_process = bp::child(executable("nohup"), shell_path, "-c", pipeline, bp::std_out > *m_out, bp::std_err > *m_err);
+      m_process = bp::child(executable("nohup"), shell_path, "-c", pipeline, bp::std_out > *m_out, bp::std_err > *m_err SJEF_NO_CONSOLE_WINDOW);
     else
-      m_process = bp::child(executable("nohup"), shell_path, "-c", pipeline, bp::std_out > out, bp::std_err > err);
+      m_process = bp::child(executable("nohup"), shell_path, "-c", pipeline, bp::std_out > out, bp::std_err > err SJEF_NO_CONSOLE_WINDOW);
   }
   if (!m_process.valid())
     throw Shell::runtime_error("Spawning run process has failed");
@@ -254,7 +269,7 @@ void Shell::run_local_async(const std::string& command, const std::string& direc
     shell_path = m_shell; // preserve prior behaviour if resolution fails
   m_trace(2 - verbosity) << "launching shell local process: " << executable("nohup") << " " << shell_path << " -c '"
                          << pipeline << "'" << std::endl;
-  m_process = bp::child(executable("nohup"), shell_path, "-c", pipeline, bp::std_out > out, bp::std_err > *m_err);
+  m_process = bp::child(executable("nohup"), shell_path, "-c", pipeline, bp::std_out > out, bp::std_err > *m_err SJEF_NO_CONSOLE_WINDOW);
   m_process.detach();
   capture_job_number_from_error(command);
   fs::current_path(current_path_save);

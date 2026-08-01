@@ -1,10 +1,14 @@
 #include "Shell.h"
 #if __has_include(<boost/process/child.hpp>)
 #include <boost/process/spawn.hpp>
+#ifdef WIN32
 #include <boost/process/windows.hpp>
+#endif
 #else
 #include <boost/process/v1/spawn.hpp>
+#ifdef WIN32
 #include <boost/process/v1/windows.hpp>
+#endif
 #endif
 #include <chrono>
 #include <filesystem>

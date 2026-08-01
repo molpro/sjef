@@ -67,7 +67,21 @@ static std::string search_path_dirs(const std::string& path_string, const std::s
 static std::string executable(const std::string& command) {
   if (fs::path(command).is_absolute())
     return command;
-  auto result = search_path_dirs(std::string{getenv("PATH")}, command);
+#ifdef WIN32
+  // A Unix-style absolute path (like sjef's own "/bin/bash" default shell)
+  // has no drive letter, so it isn't caught by is_absolute() above -- but
+  // its root directory still causes path::operator/ to discard the
+  // left-hand side entirely whenever the right-hand side has a root
+  // directory, so elem / "/bin/bash" collapses to just "/bin/bash" on
+  // every iteration regardless of elem, and the search can never succeed.
+  // Reduce it to its filename (e.g. "bash") before searching, since
+  // that's genuinely what we're looking for on this platform.
+  std::string search_name =
+      (!command.empty() && command.front() == '/') ? fs::path(command).filename().string() : command;
+#else
+  const std::string& search_name = command;
+#endif
+  auto result = search_path_dirs(std::string{getenv("PATH")}, search_name);
   if (!result.empty())
     return result;
 #ifdef WIN32
@@ -82,7 +96,7 @@ static std::string executable(const std::string& command) {
   if (!git.empty()) {
     // git is at <git-root>/cmd/git.exe
     auto git_root = fs::path{git}.parent_path().parent_path();
-    for (const auto& candidate : {command, command + ".exe"}) {
+    for (const auto& candidate : {search_name, search_name + ".exe"}) {
       auto resolved = git_root / "usr" / "bin" / candidate;
       if (fs::is_regular_file(resolved))
         return resolved.string();

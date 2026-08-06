@@ -31,11 +31,11 @@ cdef extern from "sjef/sjef.h" namespace "sjef":
         string file_contents(string, string) except +
         string file_contents(string) except +
         string input_from_output() except +
-        bool run(int, bool, bool, string) except +
-        bool run(string, int, bool, bool, string) except +
+        bool run(int, bool, bool, string) except + nogil
+        bool run(string, int, bool, bool, string) except + nogil
         bool run_needed(int) except +
         void run_directory_new() except +
-        void kill() except +
+        void kill() except + nogil
         void wait() except +
         void wait(unsigned int) except +
         status status() except +

@@ -190,13 +190,26 @@ cdef class ProjectWrapper:
         deref(self.c_project).trash()
 
     def run(self, backend=None, verbosity=0, bool force=False, bool wait=False, options=""):
+        # For a remote backend this blocks on network I/O (pushing the run directory via
+        # rsync/ssh), which can take several seconds. It touches only the C++ Project object,
+        # never the Python C-API, so it's safe to release the GIL for the call's duration -
+        # otherwise a caller who has moved this onto a background thread to keep a GUI
+        # responsive gets no benefit, since the call would still hold the GIL for its whole
+        # duration and starve every other Python thread, including the one running the GUI's
+        # own event loop.
         cdef int v = verbosity
         cdef string bend
+        cdef string opts = options.encode('utf-8')
+        cdef Project* proj = self.c_project.get()
+        cdef bool result
         if backend is None:
-            return deref(self.c_project).run(v, force, wait, options.encode('utf-8'))
+            with nogil:
+                result = deref(proj).run(v, force, wait, opts)
         else:
             bend = backend.encode('utf-8')
-            return deref(self.c_project).run(bend, v, force, wait, options.encode('utf-8'))
+            with nogil:
+                result = deref(proj).run(bend, v, force, wait, opts)
+        return result
 
     def run_needed(self, int verbosity = 0):
         return deref(self.c_project).run_needed(verbosity)
@@ -220,7 +233,12 @@ cdef class ProjectWrapper:
 
     def kill(self):
         """Kill the job started by ``run``"""
-        deref(self.c_project).kill()
+        # Same reasoning as run(): for a remote backend this sends the kill command over
+        # ssh and blocks waiting for it, and for a local job it does a synchronous 1s sleep
+        # to let the script clean up. Pure C++/no Python C-API, so safe to release the GIL.
+        cdef Project* proj = self.c_project.get()
+        with nogil:
+            deref(proj).kill()
 
     def wait(self, max_microseconds = None):
         """Wait for completion of the job started by ``run``"""

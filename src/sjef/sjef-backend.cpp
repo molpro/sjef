@@ -27,7 +27,10 @@ std::string sjef::Backend::str() const {
             << " host=\"" << host << "\""
             << " cache=\"" << cache << "\""
             << " run_command=\"" << run_command << "\""
+            << " run_jobnumber=\"" << run_jobnumber << "\""
             << " status_command=\"" << status_command << "\""
+            << " status_running=\"" << status_running << "\""
+            << " status_waiting=\"" << status_waiting << "\""
             << " kill_command=\"" << kill_command << "\"";
     return ss.str();
 }

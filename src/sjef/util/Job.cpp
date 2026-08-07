@@ -385,17 +385,12 @@ void Job::poll_job(int verbosity) {
           // cleanup bug below: that still requires m_seen_running, so at worst a fast-failing job's
           // remote cache directory is left behind instead of being cleaned up immediately.
           status = completed;
-        } else {
-          // Still within the grace period for a freshly submitted job that has not yet been confirmed
-          // running. Report "waiting" rather than the raw "unknown" reading: callers (e.g. pysjef's
-          // Project.wait(), which only loops on "running"/"waiting") treat "unknown" as a terminal,
-          // stop-waiting state, so leaking a merely-transient "unknown" here would make them give up
-          // before this grace period has had a chance to resolve to a real answer. Do NOT infer
-          // completion straight from m_initial_status == waiting -- that value just means a submission
-          // is in progress (see Job::run()), so a single "unknown" read here only means we haven't
-          // caught up with the freshly submitted job yet.
-          status = waiting;
         }
+        // else: still within the grace period for a freshly submitted job that has not yet been
+        // confirmed running; leave status as unknown (m_initial_status == waiting covers this) and
+        // retry on the next cycle. Do NOT infer completion straight from m_initial_status == waiting --
+        // that value just means a submission is in progress (see Job::run()), so a single "unknown"
+        // read here only means we haven't caught up with the freshly submitted job yet.
       } else {
         m_unconfirmed_polls = 0;
       }

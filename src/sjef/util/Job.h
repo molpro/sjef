@@ -64,6 +64,15 @@ protected:
   bool m_closing = false; //!< set to signal that polling should be stopped
   std::mutex m_closing_mutex;
   status m_initial_status;
+  //! Set once get_status() has genuinely (not by default/fallback) observed this job as running or
+  //! waiting. Used to distinguish a trustworthy "it was running and has now disappeared, so it must
+  //! have finished" inference from a mere guess made before the job was ever confirmed to exist.
+  bool m_seen_running = false;
+  //! Counts consecutive poll cycles where the job has never been seen running and its status is
+  //! unknown -- e.g. because it failed and exited before any status check could catch it. Bounds how
+  //! long poll_job() will wait for confirmation before concluding the job must be finished, so that a
+  //! fast-failing job (bad command line, immediate crash, ...) is reported rather than polled forever.
+  int m_unconfirmed_polls = 0;
   std::tuple<bool, std::string, std::string> push_rundir(int verbosity = 0);
   std::tuple<bool, std::string, std::string> pull_rundir(int verbosity = 0);
   std::string m_remote_rsync;

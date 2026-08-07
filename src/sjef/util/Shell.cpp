@@ -284,8 +284,14 @@ void Shell::run_local_async(const std::string& command, const std::string& direc
 void Shell::run_remote_async(std::string command, const std::string& directory, int verbosity, const std::string& out,
                              const std::string& err) const {
   auto dir = std::regex_replace(directory, std::regex{" "}, "\\ ");
+  // The redirection must be inside the "cd && ..." chain, applied to the command itself, not wrapped
+  // around the whole "(cd dir && cmd)" subshell. "(cd dir && cmd) > out 2> err" sets up the redirection
+  // before the subshell's cd has run, so relative "out"/"err" paths resolve against the shell's
+  // original directory rather than "dir" -- silently sending stdout/stderr to $HOME instead of the run
+  // directory, invisible whenever the job succeeds (its real output is Molpro's own .xml/.out files,
+  // unaffected) but losing the only diagnostic evidence whenever the command fails outright.
   command =
-      "(( cd ''" + dir + "'' && " + command + ") > " + out + " 2> " + err + " & echo " + jobnumber_tag + " $! 1>&2)";
+      "(( cd ''" + dir + "'' && " + command + " > " + out + " 2> " + err + ") & echo " + jobnumber_tag + " $! 1>&2)";
   if (!m_process.valid() || !m_process.running())
     throw Shell::runtime_error("remote server process has died");
   try {

@@ -119,8 +119,9 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verb
   auto start_time = std::chrono::steady_clock::now();
   ensure_remote_cache_directory();
   const Shell& shell = Shell("localhost", "");
+  std::string rsync_out;
   try {
-    auto rsync_out = shell(command, true, ".", verbosity);
+    rsync_out = shell(command, true, ".", verbosity);
   } catch (const sjef::util::Shell::runtime_error& e) {
     std::cout << "caught exception in Job::push_rundir(): " << e.what() << std::endl;
     throw sync_error(e.what());
@@ -129,7 +130,9 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verb
     m_project.m_trace(3 - verbosity)
         << "time for push_rundir() rsync "
         << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
-        << "ms" << std::endl;
+        << "ms" << std::endl
+        << "Output from rsync\n:" << rsync_out << std::endl
+        << "Error stream from rsync\n:" << shell.err() << std::endl;
   return {shell.err().find("rsync error:") == std::string::npos, shell.out(),
           shell.err()}; // TODO: implement more robust error checking
 }
@@ -361,11 +364,35 @@ void Job::poll_job(int verbosity) {
 
       start = Clock::now();
       status = m_killed ? killed : get_status(verbosity);
+      if (status == running or status == waiting)
+        m_seen_running = true;
       if (status == unknown) {
-        if (m_initial_status == killed)
+        if (m_initial_status == killed) {
           status = killed;
-        if (m_initial_status == running or m_initial_status == completed or m_initial_status == waiting)
+        } else if (m_seen_running or m_initial_status == completed) {
+          // Either this job has actually been observed alive during this Job instance's lifetime and
+          // has now disappeared (the normal way to detect completion on a backend with no batch
+          // scheduler to query), or this instance exists only to check on a job that a previous
+          // invocation already recorded as completed.
           status = completed;
+        } else if (++m_unconfirmed_polls >= 5) {
+          // We've polled several times since submission without ever catching the job running, and
+          // without any other trustworthy signal either. Most likely it failed and exited before any
+          // status check could see it (e.g. the remote command line itself is rejected immediately --
+          // this is not hypothetical, it happens whenever a backend's run_command has gone stale). Give
+          // up waiting for confirmation rather than polling forever, so that whatever output/error the
+          // job did produce still gets pulled back and reported. This does not reopen the premature-
+          // cleanup bug below: that still requires m_seen_running, so at worst a fast-failing job's
+          // remote cache directory is left behind instead of being cleaned up immediately.
+          status = completed;
+        }
+        // else: still within the grace period for a freshly submitted job that has not yet been
+        // confirmed running; leave status as unknown (m_initial_status == waiting covers this) and
+        // retry on the next cycle. Do NOT infer completion straight from m_initial_status == waiting --
+        // that value just means a submission is in progress (see Job::run()), so a single "unknown"
+        // read here only means we haven't caught up with the freshly submitted job yet.
+      } else {
+        m_unconfirmed_polls = 0;
       }
       m_trace(4 - verbosity) << "got status " << status << std::endl;
       pull_rundir(verbosity);
@@ -387,7 +414,16 @@ void Job::poll_job(int verbosity) {
     std::this_thread::sleep_for(10ms);
     std::this_thread::sleep_for((stop - start) * 2);
   }
-  if (!localhost() and m_backend_command_server != nullptr and (status == completed or status == killed)) {
+  // Only perform the remote-cache cleanup (which can delete the remote run directory) when we have
+  // genuine confidence in the verdict. "killed" only ever comes from an explicit Job::kill() call (this
+  // session) or a status genuinely persisted as killed by a previous one, so it's trustworthy as-is. But
+  // "completed" can also arise from poll_job()'s status-defaulting above (or any future bug in it)
+  // without this instance ever really having tracked the job -- e.g. the brief window right after
+  // construction, before Job::run() has paused this polling cycle, where get_status() could still be
+  // querying a stale job number left over from a previous run of the same project. Require m_seen_running
+  // too in that case, so cleanup only fires once we've actually confirmed the job was alive.
+  if (!localhost() and m_backend_command_server != nullptr and
+      (status == killed or (status == completed and m_seen_running))) {
     m_backend_command_server.reset(new Shell(m_backend.host)); // so that any zombie is resolved or similar
     m_trace(4 - verbosity) << "Pull run directory at end of job " << std::endl;
     m_trace(4 - verbosity) << Shell()("echo local rundir;ls -lta '" + m_project.filename("", "", 0).string() + "'")

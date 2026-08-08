@@ -50,7 +50,7 @@ Shell::Shell(std::string host, std::string shell) : m_host(std::move(host)), m_s
     auto ssh = executable("ssh");
 #endif
     m_process =
-        bp::child(ssh, m_host, std::move(shell), "-l", bp::std_in<m_in, bp::std_err> * m_err, bp::std_out > *m_out);
+        bp::child(ssh, m_host, std::move(shell), "-l", bp::std_in<m_in, bp::std_err> * m_err, bp::std_out > *m_out SJEF_NO_CONSOLE_WINDOW);
     //    std::cout << "ssh is"<<ssh<<", "<<m_process.valid()<<", "<<m_process.running()<<std::endl;
     if (!m_process.valid() || !m_process.running())
       throw Shell::runtime_error("Spawning run process has failed");

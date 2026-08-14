@@ -557,16 +557,24 @@ bool Project::run_needed(int verbosity) const {
       << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start_time).count()
       << std::endl;
   if (run_input_hash.empty()) { // if there's no input hash, look at the xml file instead
-    const auto input_file_contents = std::regex_replace(
-        std::regex_replace(std::regex_replace(std::regex_replace(file_contents("inp", "", -1), std::regex{"\r"}, ""),
-                                              std::regex{" *\n\n*"}, "\n"),
-                           std::regex{"\n$"}, ""),
-        std::regex{"^\n*"}, "");
+    // Molpro drops blank (or whitespace-only) lines entirely from the <input> section of
+    // the xml stream, so both sides of the comparison must have their blank lines collapsed
+    // in the same way, regardless of how many there are or whether they contain whitespace.
+    auto normalise = [](std::string text) {
+      text = std::regex_replace(text, std::regex{"\r"}, "");
+      text = std::regex_replace(text, std::regex{"[ \t]*\n"}, "\n"); // strip trailing whitespace on each line
+      text = std::regex_replace(text, std::regex{"\n\n+"}, "\n");   // collapse runs of blank lines
+      text = std::regex_replace(text, std::regex{"^\n+"}, "");      // strip leading blank lines
+      text = std::regex_replace(text, std::regex{"\n$"}, "");       // strip trailing newline
+      return text;
+    };
+    const auto input_file_contents = normalise(file_contents("inp", "", -1));
+    const auto output_input_contents = normalise(input_from_output());
     m_trace(3 - verbosity) << "There's no run_input_hash, so compare output and input: "
-                           << (input_file_contents != input_from_output()) << "\ninput_file:\n"
+                           << (input_file_contents != output_input_contents) << "\ninput_file:\n"
                            << input_file_contents << "@\ninput_from_output:\n"
-                           << input_from_output() << "@" << std::endl;
-    return (input_file_contents != input_from_output());
+                           << output_input_contents << "@" << std::endl;
+    return (input_file_contents != output_input_contents);
   }
   {
     m_trace(3 - verbosity) << "sjef::Project::run_needed, input_hash =" << input_hash() << std::endl;

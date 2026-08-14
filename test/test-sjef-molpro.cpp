@@ -176,6 +176,19 @@ TEST_F(test_sjef_molpro, run_needed) {
 
 }
 
+// https://github.com/molpro/sjef/issues/321: Molpro omits blank (including whitespace-only)
+// lines from the <input> section of the xml stream, so a run should not be considered
+// necessary just because the input file has a blank line that contains only whitespace.
+TEST_F(test_sjef_molpro, run_needed_whitespace_only_blank_line) {
+  sjef::Project He("He.molpro");
+  auto copy = testfile("HecopyBlankLine.molpro");
+  He.copy(copy, false, false, false, 999);
+  sjef::Project Hecopy(copy);
+  EXPECT_FALSE(Hecopy.run_needed());
+  { std::ofstream(Hecopy.filename("inp")) << "geometry={He}\nrhf   \nmp2\n   \nccsd\n"; }
+  EXPECT_FALSE(Hecopy.run_needed());
+}
+
 TEST_F(test_sjef_molpro, failure) {
   if (sjef::util::Shell::local_asynchronous_supported()) {
     sjef::Project p(testfile("test.molpro"));

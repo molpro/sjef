@@ -399,7 +399,18 @@ void Job::poll_job(int verbosity) {
       }
       m_trace(4 - verbosity) << "got status " << status << std::endl;
       pull_rundir(verbosity);
-      set_status(status);
+      // Don't publish a terminal status (completed/killed) for a remote job yet: the block below
+      // this loop still has to pull the run directory one or more times more, compare manifests
+      // against the remote cache, and remove that remote cache -- all further I/O against this
+      // same local project directory. Publishing "completed" here lets an external caller (e.g.
+      // pysjef's Project.wait(), which only loops on "running"/"waiting") see the job as finished
+      // and start touching or deleting the local project directory while that trailing I/O is
+      // still in flight, racing a pull_rundir() rsync against a directory being removed out from
+      // under it. Local jobs have no such follow-up I/O (see the localhost() guard below), so
+      // publishing immediately for them is safe and keeps existing behaviour.
+      bool about_to_finish = (status == completed or status == killed or m_killed) and !localhost();
+      if (!about_to_finish)
+        set_status(status);
       //    std::cout << "set status " << m_project.status_message() << std::endl;
       stop = Clock::now();
       {
@@ -467,6 +478,12 @@ void Job::poll_job(int verbosity) {
                           << m_project.filename("", "", 0).string() + "'" << std::endl;
     }
   }
+  // Publish the terminal status only now, after all the trailing pull_rundir()/remote-cache
+  // cleanup above has actually finished touching the local project directory (see the deferral
+  // at the top of the loop). status_from_output() re-derives from status() by default, so this
+  // still applies its own override (downgrading to "failed" if the pulled output records an
+  // error) exactly as before -- only the timing of the first, terminal set_status() moved.
+  set_status(status);
   m_project.m_xml_cached = "";
   set_status(m_project.status_from_output());
   m_backend_command_server.reset(); // close down backend server as no longer needed

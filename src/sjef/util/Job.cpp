@@ -26,8 +26,6 @@ namespace sjef::util {
 
 ///> @private
 const bool Job::localhost() const { return (m_backend.host.empty() || m_backend.host == "localhost"); }
-
-std::mutex kill_mutex;
 sjef::util::Job::Job(const sjef::Project& project)
     : m_project(project), m_backend(m_project.backends().at(m_project.property_get("backend"))),
       m_remote_cache_directory(m_backend.cache + "/" +
@@ -215,7 +213,7 @@ std::string Job::run(const std::string& command, int verbosity, bool wait) {
   m_backend_command_server.reset(new Shell(m_backend.host));
   std::string run_output;
   {
-    auto l = std::lock_guard(kill_mutex);
+    auto l = std::lock_guard(m_kill_mutex);
     //  const auto& substr = std::regex_replace(command, std::regex{"'"}, "").substr(0, m_backend.run_command.size());
     m_trace(4 - verbosity) << "Job::run() command=" << command << std::endl;
     //  m_trace(4 - verbosity) << "Job::run substr=" << substr << " m_backend.run_command=" << m_backend.run_command
@@ -328,7 +326,7 @@ void Job::kill(int verbosity) {
     }
   }
   {
-    auto l = std::lock_guard(kill_mutex);
+    auto l = std::lock_guard(m_kill_mutex);
     //    std::cout << "Job::kill() gets mutex"<<std::endl;
     if (m_backend_command_server != nullptr) {
       auto status_string = (*m_backend_command_server)(m_backend.kill_command + " " + std::to_string(m_job_number),
@@ -357,7 +355,7 @@ void Job::poll_job(int verbosity) {
   while (true) {
     //    std::cout << "m_killed " << m_killed << std::endl;
     {
-      auto l = std::lock_guard(kill_mutex);
+      auto l = std::lock_guard(m_kill_mutex);
       //      std::cout << "active polling cycle starts"<<std::endl;
       //      if (m_killed)
       //        std::cout << "poll_job received kill sentinel" << std::endl;

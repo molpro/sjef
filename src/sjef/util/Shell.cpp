@@ -201,16 +201,27 @@ void Shell::run_local_sync(const std::string& command, const std::string& direct
   }
   if (!m_process.valid())
     throw Shell::runtime_error("Spawning run process has failed");
-  std::string line;
   try {
-    while (std::getline(*m_err, line) && line.substr(0, terminator.size()) != terminator) {
-      m_last_err += line + '\n';
-    }
+    read_lines_with_deadline(
+        m_err,
+        [&](const std::string& l) {
+          if (l.substr(0, terminator.size()) == terminator)
+            return true;
+          m_last_err += l + '\n';
+          return false;
+        },
+        "local command stderr (\"" + command + "\")", command_idle_timeout);
     // std::cout << "wait , read output" << std::endl;
-    while (std::getline(*m_out, line) && line != terminator) {
-      // std::cout << "out line from command " << line << std::endl;
-      m_last_out += line + '\n';
-    }
+    read_lines_with_deadline(
+        m_out,
+        [&](const std::string& l) {
+          if (l == terminator)
+            return true;
+          m_last_out += l + '\n';
+          // std::cout << "out line from command " << l << std::endl;
+          return false;
+        },
+        "local command output (\"" + command + "\")", command_idle_timeout);
     m_job_number = 0;
     // std::cout << "finished wait , read output" << std::endl;
     // std::cout << "m_last_output " << m_last_out << std::endl;

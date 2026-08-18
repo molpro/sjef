@@ -11,7 +11,9 @@
 #endif
 #endif
 #include <chrono>
+#include <condition_variable>
 #include <filesystem>
+#include <mutex>
 #include <regex>
 #include <sstream>
 #include <thread>
@@ -36,6 +38,13 @@ namespace sjef::util {
 static std::string executable(const std::string& command);
 const std::string jobnumber_tag{"@@@JOBNUMBER"};
 const std::string terminator{"@@@EOF"};
+// How long to wait for the next line of output from a command's stream before concluding that the
+// process on the other end (in practice, almost always a remote login node/session over ssh) has gone
+// unresponsive. Deliberately generous rather than tight, like rsync's own --timeout=5 elsewhere in this
+// codebase: unlike that idle timeout on an already-flowing data transfer, this covers the first response
+// to a freshly-sent command, which can legitimately take a while on a loaded shared login node (PAM,
+// profile scripts, etc.), and a false positive here misreports a slow-but-healthy job as unresponsive.
+constexpr auto command_idle_timeout = std::chrono::seconds(30);
 
 Shell::Shell(std::string host, std::string shell) : m_host(std::move(host)), m_shell((shell)) {
   // std::cout << "Shell() host=" << m_host << ", local? " << localhost() << ", shell=" << m_shell << std::endl;
@@ -224,18 +233,18 @@ void Shell::run_local_sync(const std::string& command, const std::string& direct
 void Shell::capture_job_number_from_error(const std::string& command) const {
   m_last_err.clear();
   m_job_number = 0;
-  std::string line;
   try {
-    while (std::getline(*m_err, line)) {
-      // std::cout << "capture_job_number_from_error, line=" << line << std::endl;
-      std::smatch match;
-      if (std::regex_search(line, match, std::regex{jobnumber_tag + "\\s*(\\d+)"})) {
-        // std::cout << "capture_job_number_from_error, match=" << match[1] << std::endl;
-        m_job_number = std::stoi(match[1]);
-        // std::cout << "stoi survives, capture_job_number_from_error, match=" << m_job_number << std::endl;
-        break;
-      }
-    }
+    read_lines_with_deadline(
+        m_err,
+        [&](const std::string& line) {
+          std::smatch match;
+          if (std::regex_search(line, match, std::regex{jobnumber_tag + "\\s*(\\d+)"})) {
+            m_job_number = std::stoi(match[1]);
+            return true;
+          }
+          return false;
+        },
+        "job-number echo from \"" + command + "\"", command_idle_timeout);
   } catch (const std::exception& e) {
     throw runtime_error(
         (std::string{"Shell(\""} + command + "\") has failed whilst capturing the job number.\nExit code: " +
@@ -329,15 +338,84 @@ void Shell::run_remote_sync(std::string command, const std::string& directory, i
     throw Shell::runtime_error("remote server process has died");
 }
 
+void Shell::read_lines_with_deadline(const std::shared_ptr<std::istream>& stream,
+                                     const std::function<bool(const std::string&)>& on_line,
+                                     const std::string& context, std::chrono::seconds idle_timeout) const {
+  struct SharedState {
+    std::mutex mutex;
+    std::condition_variable cv;
+    std::string line;
+    bool line_ready = false;
+    bool finished = false; // set once the reader has hit eof or an error; `error` distinguishes which
+    std::exception_ptr error;
+  };
+  auto state = std::make_shared<SharedState>();
+  // This reader keeps blocking on std::getline() against `stream` for as long as the process feeding it
+  // stays silent -- there is no way to cancel a blocking read on a pipe, so if the wait below times out,
+  // this thread is abandoned still trying to read rather than joined. It only touches `state` and
+  // `stream`, both captured by shared_ptr, so it stays safe to run to completion (or forever) regardless
+  // of whether this Shell, or even this call to read_lines_with_deadline, still exists by then.
+  std::thread([state, stream]() {
+    std::string next_line;
+    try {
+      while (std::getline(*stream, next_line)) {
+        std::unique_lock l(state->mutex);
+        state->line = next_line;
+        state->line_ready = true;
+        state->cv.notify_one();
+        // Wait for the consumer to take this line before reading the next one, so that a slow
+        // consumer (blocked on its own deadline logic) can't cause lines to be read and lost before
+        // anyone looks at them.
+        state->cv.wait(l, [&] { return !state->line_ready; });
+      }
+    } catch (...) {
+      std::lock_guard l(state->mutex);
+      state->error = std::current_exception();
+      state->finished = true;
+      state->cv.notify_one();
+      return;
+    }
+    std::lock_guard l(state->mutex);
+    state->finished = true;
+    state->cv.notify_one();
+  }).detach();
+
+  while (true) {
+    std::unique_lock l(state->mutex);
+    if (!state->cv.wait_for(l, idle_timeout, [&] { return state->line_ready || state->finished; }))
+      throw Shell::runtime_error((std::string{"No response (for "} + std::to_string(idle_timeout.count()) +
+                                  "s) whilst waiting for " + context +
+                                  " -- the remote host or session appears unresponsive")
+                                     .c_str());
+    if (state->line_ready) {
+      auto received = std::move(state->line);
+      state->line_ready = false;
+      l.unlock();
+      state->cv.notify_one(); // let the reader proceed to the next line
+      if (on_line(received))
+        return;
+      continue;
+    }
+    // finished: either eof (no error) or a genuine stream error
+    if (state->error)
+      std::rethrow_exception(state->error);
+    return;
+  }
+}
+
 void Shell::capture_out() const {
   // std::cout << "capture_out" << m_last_out << std::endl;
   m_last_out.clear();
-  std::string line;
   try {
-    while (std::getline(*m_out, line) && line != terminator) {
-      // std::cout << "capture_out, line=" << line << std::endl;
-      m_last_out += line + '\n';
-    }
+    read_lines_with_deadline(
+        m_out,
+        [&](const std::string& line) {
+          if (line == terminator)
+            return true;
+          m_last_out += line + '\n';
+          return false;
+        },
+        "command output" + (localhost() ? std::string{} : " from " + m_host), command_idle_timeout);
   } catch (const std::exception& e) {
     throw Shell::runtime_error((std::string{"Shell() has failed whilst capturing the output.\nExit code: "} +
                                 std::to_string(m_process.exit_code()) + "\n\nstdout:\n" + m_last_out +

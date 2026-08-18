@@ -171,9 +171,9 @@ void Shell::run_local_sync(const std::string& command, const std::string& direct
     if (!tokens.empty())
       tokens[0] = executable(tokens[0]);
     if (out == "/dev/null" and err == "/dev/null")
-      m_process = bp::child(tokens, bp::std_out > *m_out, bp::std_err > *m_err);
+      m_process = bp::child(tokens, bp::std_out > *m_out, bp::std_err > *m_err SJEF_NO_CONSOLE_WINDOW);
     else
-      m_process = bp::child(tokens, bp::std_out > out, bp::std_err > err);
+      m_process = bp::child(tokens, bp::std_out > out, bp::std_err > err SJEF_NO_CONSOLE_WINDOW);
     m_job_number = m_process.id();
   } else {
     auto shell_path = executable(m_shell);
@@ -415,7 +415,7 @@ bool Shell::running() const {
     return m_process.running();
   bp::ipstream out;
   auto command = std::string{"ps -l -p "} + std::to_string(m_job_number) + "; echo $?";
-  auto proc = bp::child(std::vector<std::string>{"/bin/sh", "-c", command}, bp::std_out > out);
+  auto proc = bp::child(std::vector<std::string>{"/bin/sh", "-c", command}, bp::std_out > out SJEF_NO_CONSOLE_WINDOW);
   proc.wait();
   std::string line;
   bool result = false;

@@ -460,7 +460,18 @@ void Job::poll_job(int verbosity) {
         m_unconfirmed_polls = 0;
       }
       m_trace(4 - verbosity) << "got status " << status << std::endl;
-      pull_rundir(verbosity);
+      try {
+        pull_rundir(verbosity);
+      } catch (const std::exception& e) {
+        // A failed sync here (e.g. the remote host/session was briefly unresponsive) must not be
+        // allowed to propagate: this whole function runs on a detached std::async thread that
+        // nothing ever calls get() on, so an uncaught exception here silently kills polling for
+        // good, leaving status stuck at whatever it last was (typically "running"/"waiting") and
+        // an external caller like pysjef's Project.wait() looping forever with no error at all.
+        // Log and retry on the next cycle instead -- exactly as if this cycle's pull had simply
+        // seen nothing new.
+        m_trace(-verbosity) << "pull_rundir() failed during polling, will retry: " << e.what() << std::endl;
+      }
       // Don't publish a terminal status (completed/killed) for a remote job yet: the block below
       // this loop still has to pull the run directory one or more times more, compare manifests
       // against the remote cache, and remove that remote cache -- all further I/O against this
@@ -480,7 +491,14 @@ void Job::poll_job(int verbosity) {
         if (m_closing or status == completed or m_killed) {
           using namespace std::literals::chrono_literals;
           std::this_thread::sleep_for(10ms);
-          pull_rundir(verbosity);
+          try {
+            pull_rundir(verbosity);
+          } catch (const std::exception& e) {
+            // Same reasoning as above: don't let a failed final pull abort the function before it
+            // reaches the terminal set_status() below (or the cleanup block, which retries the pull
+            // anyway). Losing this one pull is recoverable; losing the terminal status is not.
+            m_trace(-verbosity) << "final pull_rundir() before break failed: " << e.what() << std::endl;
+          }
           break;
         }
       }
@@ -500,44 +518,58 @@ void Job::poll_job(int verbosity) {
   // too in that case, so cleanup only fires once we've actually confirmed the job was alive.
   if (!localhost() and m_backend_command_server != nullptr and
       (status == killed or (status == completed and m_seen_running))) {
-    m_backend_command_server.reset(new Shell(m_backend.host)); // so that any zombie is resolved or similar
-    m_trace(4 - verbosity) << "Pull run directory at end of job " << std::endl;
-    m_trace(4 - verbosity) << Shell()("echo local rundir;ls -lta '" + m_project.filename("", "", 0).string() + "'")
-                           << std::endl;
-    m_trace(4 - verbosity) << "remote cache directory: " << m_remote_cache_directory << std::endl;
-    m_trace(4 - verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta '" + m_remote_cache_directory +
-                                                          "' 2>&1")
-                           << std::endl;
-    auto rundir_result = pull_rundir(verbosity);
-    m_trace(4 - verbosity) << Shell()("echo local rundir;ls -lta '" + m_project.filename("", "", 0).string() + "'")
-                           << std::endl;
-    m_trace(4 - verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta '" + m_remote_cache_directory +
-                                                          "'  2>&1")
-                           << std::endl;
-    auto remote_manifest = vector_to_set(util::splitString(
-        (*m_backend_command_server)("ls -1 '" + m_remote_cache_directory + "' 2>&1 | grep -v Info.plist"), '\n'));
-    auto local_manifest = vector_to_set(util::splitString(
-        Shell()("ls -1 '" + m_project.filename("", "", 0).string() + "' 2>&1 | grep -v Info.plist"), '\n'));
-    //    std::cout << "rundir_result " << std::get<0>(rundir_result) << std::endl;
-    if (!std::get<0>(rundir_result) or remote_manifest == local_manifest) {
-      {
-        m_trace(4 - verbosity) << "remove run directory " + m_remote_cache_directory + " at end of job " << std::endl;
-        auto slash = m_remote_cache_directory.rfind("/");
-        (*m_backend_command_server)("cd '" + m_remote_cache_directory.substr(0, slash) + "' && rm -rf '" +
-                                    m_remote_cache_directory.substr(slash + 1) + "'");
+    // This whole block is best-effort: it can fail (a timed-out pull, an unresponsive remote ls/rm) for
+    // exactly the same reasons a mid-poll sync can, and for exactly the same reason as the try/catches
+    // around pull_rundir() above, none of that may be allowed to propagate out of this function. This
+    // is the *last* code before the terminal set_status() below; leaving the remote cache behind
+    // undeleted (it can be cleaned up by a later Job for the same project, or manually) is a much
+    // smaller problem than never publishing a terminal status at all and hanging every external caller
+    // forever.
+    try {
+      m_backend_command_server.reset(new Shell(m_backend.host)); // so that any zombie is resolved or similar
+      m_trace(4 - verbosity) << "Pull run directory at end of job " << std::endl;
+      m_trace(4 - verbosity) << Shell()("echo local rundir;ls -lta '" + m_project.filename("", "", 0).string() + "'")
+                             << std::endl;
+      m_trace(4 - verbosity) << "remote cache directory: " << m_remote_cache_directory << std::endl;
+      m_trace(4 - verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta '" + m_remote_cache_directory +
+                                                            "' 2>&1")
+                             << std::endl;
+      auto rundir_result = pull_rundir(verbosity);
+      m_trace(4 - verbosity) << Shell()("echo local rundir;ls -lta '" + m_project.filename("", "", 0).string() + "'")
+                             << std::endl;
+      m_trace(4 - verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta '" + m_remote_cache_directory +
+                                                            "'  2>&1")
+                             << std::endl;
+      auto remote_manifest = vector_to_set(util::splitString(
+          (*m_backend_command_server)("ls -1 '" + m_remote_cache_directory + "' 2>&1 | grep -v Info.plist"), '\n'));
+      auto local_manifest = vector_to_set(util::splitString(
+          Shell()("ls -1 '" + m_project.filename("", "", 0).string() + "' 2>&1 | grep -v Info.plist"), '\n'));
+      //    std::cout << "rundir_result " << std::get<0>(rundir_result) << std::endl;
+      if (!std::get<0>(rundir_result) or remote_manifest == local_manifest) {
+        {
+          m_trace(4 - verbosity) << "remove run directory " + m_remote_cache_directory + " at end of job "
+                                 << std::endl;
+          auto slash = m_remote_cache_directory.rfind("/");
+          (*m_backend_command_server)("cd '" + m_remote_cache_directory.substr(0, slash) + "' && rm -rf '" +
+                                      m_remote_cache_directory.substr(slash + 1) + "'");
+        }
+      } else if (remote_manifest.count("No such file") !=
+                 0) { // sometimes sync will be tried before the remote cache
+                     // exists, so stay quiet when that happens
+        m_trace(-verbosity) << "Not removing remote cache " << m_backend.host + ":'" + m_remote_cache_directory + "'"
+                            << " because master local copy " << m_project.filename("", "", 0) << " has failed to update"
+                            << std::endl;
+        m_trace(-verbosity) << "remote manifest:\n" << remote_manifest << std::endl;
+        m_trace(-verbosity) << "local manifest:\n" << local_manifest << std::endl;
+        m_trace(-verbosity) << "Output stream from rsync:\n" << std::get<1>(rundir_result) << std::endl;
+        m_trace(-verbosity) << "Error stream from rsync:\n" << std::get<2>(rundir_result) << std::endl;
+        m_trace(-verbosity) << "To recover manually, try\n"
+                            << "rsync -asv " << m_backend.host + ":'" + m_remote_cache_directory + "/'" << " '"
+                            << m_project.filename("", "", 0).string() + "'" << std::endl;
       }
-    } else if (remote_manifest.count("No such file") != 0) { // sometimes sync will be tried before the remote cache
-                                                             // exists, so stay quiet when that happens
-      m_trace(-verbosity) << "Not removing remote cache " << m_backend.host + ":'" + m_remote_cache_directory + "'"
-                          << " because master local copy " << m_project.filename("", "", 0) << " has failed to update"
-                          << std::endl;
-      m_trace(-verbosity) << "remote manifest:\n" << remote_manifest << std::endl;
-      m_trace(-verbosity) << "local manifest:\n" << local_manifest << std::endl;
-      m_trace(-verbosity) << "Output stream from rsync:\n" << std::get<1>(rundir_result) << std::endl;
-      m_trace(-verbosity) << "Error stream from rsync:\n" << std::get<2>(rundir_result) << std::endl;
-      m_trace(-verbosity) << "To recover manually, try\n"
-                          << "rsync -asv " << m_backend.host + ":'" + m_remote_cache_directory + "/'" << " '"
-                          << m_project.filename("", "", 0).string() + "'" << std::endl;
+    } catch (const std::exception& e) {
+      m_trace(-verbosity) << "End-of-job remote cache cleanup failed, leaving remote cache " << m_backend.host
+                          << ":'" << m_remote_cache_directory << "' in place: " << e.what() << std::endl;
     }
   }
   // Publish the terminal status only now, after all the trailing pull_rundir()/remote-cache

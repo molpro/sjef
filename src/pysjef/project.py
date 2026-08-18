@@ -201,6 +201,7 @@ class Project(Node):
     def run(self, backend=None, verbosity=0, force=False, wait=False, options=""):
         """
         Start a sjef job
+
         :param backend: name of the backend
         :param verbosity: If >0, show underlying processing
         :param force: whether to force submission of job even if run_needed() reports that it's unnecessary
@@ -215,6 +216,7 @@ class Project(Node):
     def run_needed(self, verbosity=0):
         """
         Check weather the job has changed since the previous run and needs to be rerun
+
         :return: True/False
         """
         return self._project_wrapper.run_needed(verbosity)
@@ -222,6 +224,7 @@ class Project(Node):
     def run_directory_new(self):
         """
         Check whether the job has changed since the previous run and needs to be rerun
+
         :return: True/False
         """
         self._project_wrapper.run_directory_new()
@@ -229,6 +232,7 @@ class Project(Node):
     def wait(self, max_epoch=.005):
         """
         Wait unconditionally for status() to return neither 'waiting' nor 'running'
+
         :param max_epoch: maximum time to wait between checking status (seconds)
         """
         epoch = 0.001
@@ -273,6 +277,7 @@ class Project(Node):
     def parse(self, force=False, **options):
         """
         Parse the output file and save resultant node as a child
+
         :param force: reparse the output
         """
         if not force and len(self.children) == 1:
@@ -290,6 +295,7 @@ class Project(Node):
     def import_input(self, fpath):
         """
         Copy file into the project as input file, or write string to input file
+
         :param fpath: path to input file
         """
         fpath = Path(fpath)
@@ -299,6 +305,7 @@ class Project(Node):
     def write_input(self, content):
         """
         Create an input file with content specified as a string
+
         :param content: string with content for the input file
         """
         self.write_file(self.name + '.inp', content)
@@ -371,6 +378,7 @@ class Project(Node):
     def refresh_backends(self):
         """
         Reload the backends from the configuration file
+
         :return:
         """
         return self._project_wrapper.refresh_backends()
@@ -378,6 +386,7 @@ class Project(Node):
     def backend_get(self, backend, key):
         """
         Obtain the value of a field in the backend
+
         :param backend:
         :param key:
         :return:

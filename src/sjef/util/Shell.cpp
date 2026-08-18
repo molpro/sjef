@@ -347,6 +347,13 @@ void Shell::read_lines_with_deadline(const std::shared_ptr<std::istream>& stream
     std::string line;
     bool line_ready = false;
     bool finished = false; // set once the reader has hit eof or an error; `error` distinguishes which
+    // Set once the consumer is done, whether because on_line() said so or because it gave up on a
+    // timeout. Tells the reader not to start (or report the result of) another blocking read: without
+    // this, a reader left over from one call -- e.g. one line "ahead", already unblocked and back in
+    // getline() for what it assumes is still this call's stream -- races the *next* call's own new
+    // reader thread for whatever the process sends next, on the same shared stream, and can steal or
+    // corrupt that next call's response instead of it ever reaching its own reader.
+    bool stop_requested = false;
     std::exception_ptr error;
   };
   auto state = std::make_shared<SharedState>();
@@ -354,45 +361,68 @@ void Shell::read_lines_with_deadline(const std::shared_ptr<std::istream>& stream
   // stays silent -- there is no way to cancel a blocking read on a pipe, so if the wait below times out,
   // this thread is abandoned still trying to read rather than joined. It only touches `state` and
   // `stream`, both captured by shared_ptr, so it stays safe to run to completion (or forever) regardless
-  // of whether this Shell, or even this call to read_lines_with_deadline, still exists by then.
+  // of whether this Shell, or even this call to read_lines_with_deadline, still exists by then. Once it
+  // does eventually unblock, stop_requested tells it to quietly exit instead of publishing a result
+  // nobody is listening for (see SharedState::stop_requested above).
   std::thread([state, stream]() {
     std::string next_line;
     try {
       while (std::getline(*stream, next_line)) {
         std::unique_lock l(state->mutex);
+        if (state->stop_requested)
+          return;
         state->line = next_line;
         state->line_ready = true;
         state->cv.notify_one();
-        // Wait for the consumer to take this line before reading the next one, so that a slow
-        // consumer (blocked on its own deadline logic) can't cause lines to be read and lost before
-        // anyone looks at them.
+        // Wait for the consumer to fully decide what to do with this line -- not just acknowledge
+        // receiving it -- before reading the next one. The consumer clears line_ready and sets
+        // stop_requested (if it's done) atomically under this same lock before releasing us, so by
+        // the time we wake up here we already know whether to loop for another line or stop; there
+        // is no window where we could race ahead into another blocking read the consumer never asked
+        // for.
         state->cv.wait(l, [&] { return !state->line_ready; });
+        if (state->stop_requested)
+          return;
       }
     } catch (...) {
       std::lock_guard l(state->mutex);
+      if (state->stop_requested)
+        return;
       state->error = std::current_exception();
       state->finished = true;
       state->cv.notify_one();
       return;
     }
     std::lock_guard l(state->mutex);
+    if (state->stop_requested)
+      return;
     state->finished = true;
     state->cv.notify_one();
   }).detach();
 
   while (true) {
     std::unique_lock l(state->mutex);
-    if (!state->cv.wait_for(l, idle_timeout, [&] { return state->line_ready || state->finished; }))
+    if (!state->cv.wait_for(l, idle_timeout, [&] { return state->line_ready || state->finished; })) {
+      // Whenever the reader does eventually unblock (which may be never), tell it to give up quietly
+      // rather than hand a now-irrelevant line to nobody and potentially collide with whatever fresh
+      // read the next call on this stream starts in the meantime.
+      state->stop_requested = true;
       throw Shell::runtime_error((std::string{"No response (for "} + std::to_string(idle_timeout.count()) +
                                   "s) whilst waiting for " + context +
                                   " -- the remote host or session appears unresponsive")
                                      .c_str());
+    }
     if (state->line_ready) {
       auto received = std::move(state->line);
       state->line_ready = false;
+      // Decide before releasing the reader: it must already know whether to stop by the time
+      // line_ready flips, not find out only after it has started blocking on another read.
+      bool stop = on_line(received);
+      if (stop)
+        state->stop_requested = true;
       l.unlock();
-      state->cv.notify_one(); // let the reader proceed to the next line
-      if (on_line(received))
+      state->cv.notify_one();
+      if (stop)
         return;
       continue;
     }

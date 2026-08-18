@@ -2,9 +2,13 @@
 #include "Shell.h"
 #include "util.h"
 #include <chrono>
+#include <condition_variable>
 #include <fstream>
 #include <functional>
 #include <future>
+#include <map>
+#include <memory>
+#include <mutex>
 #include <regex>
 #include <set>
 #include <signal.h>
@@ -24,6 +28,63 @@ namespace fs = std::filesystem;
 
 namespace sjef::util {
 
+namespace {
+// Bounds how many Job constructors may simultaneously be inside the "new session handshake" (which
+// rsync / rsync --version / remote cache setup, over a freshly-spawned ssh session) for the same
+// remote host. Launching many jobs in parallel against a real remote login node was observed to spawn
+// that many brand-new ssh sessions at once, each immediately sending its handshake commands -- and a
+// burst like that can make even a login node that is perfectly healthy for one connection at a time
+// become unresponsive (well within OpenSSH's own default connection-flood defenses, e.g. MaxStartups),
+// producing exactly the "no response" timeouts this throttle exists to avoid triggering in the first
+// place. It only gates the handshake, not the job's subsequent run/poll lifecycle, so once a session is
+// past this, it proceeds fully independently and concurrently with every other job as before.
+class HostConnectionThrottle {
+public:
+  explicit HostConnectionThrottle(int max_concurrent) : m_max(max_concurrent) {}
+  void acquire() {
+    std::unique_lock l(m_mutex);
+    m_cv.wait(l, [&] { return m_count < m_max; });
+    ++m_count;
+  }
+  void release() {
+    std::lock_guard l(m_mutex);
+    --m_count;
+    m_cv.notify_one();
+  }
+
+private:
+  std::mutex m_mutex;
+  std::condition_variable m_cv;
+  int m_count = 0;
+  const int m_max;
+};
+
+class ThrottleGuard {
+public:
+  explicit ThrottleGuard(HostConnectionThrottle& throttle) : m_throttle(throttle) { m_throttle.acquire(); }
+  ~ThrottleGuard() { m_throttle.release(); }
+  ThrottleGuard(const ThrottleGuard&) = delete;
+
+private:
+  HostConnectionThrottle& m_throttle;
+};
+
+HostConnectionThrottle& handshake_throttle_for_host(const std::string& host) {
+  // How many new-session handshakes to a single host may be in flight at once. Deliberately well under
+  // OpenSSH's own conservative defaults for simultaneous unauthenticated/new connections (e.g.
+  // MaxStartups 10:30:100), so this throttle -- not the remote sshd's own flood defenses -- is what
+  // determines how launches against a busy or fragile login node are paced.
+  constexpr int max_concurrent_handshakes_per_host = 3;
+  static std::mutex registry_mutex;
+  static std::map<std::string, std::unique_ptr<HostConnectionThrottle>> registry;
+  std::lock_guard l(registry_mutex);
+  auto [it, inserted] = registry.try_emplace(host, nullptr);
+  if (inserted)
+    it->second = std::make_unique<HostConnectionThrottle>(max_concurrent_handshakes_per_host);
+  return *it->second;
+}
+} // namespace
+
 ///> @private
 const bool Job::localhost() const { return (m_backend.host.empty() || m_backend.host == "localhost"); }
 sjef::util::Job::Job(const sjef::Project& project)
@@ -35,6 +96,7 @@ sjef::util::Job::Job(const sjef::Project& project)
       m_initial_status(static_cast<sjef::status>(std::stoi("0" + m_project.property_get("_status")))) {
   //  std::cout << "Job constructor, m_job_number=" << m_job_number << std::endl;
   if (!localhost()) {
+    ThrottleGuard throttle(handshake_throttle_for_host(m_backend.host));
     m_remote_rsync =
         (*m_backend_command_server)("PATH=$HOME/bin:/usr/local/bin:/opt/homebrew/bin:/opt/bin:$PATH which rsync");
     if (m_remote_rsync.empty())

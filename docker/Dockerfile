@@ -5,6 +5,15 @@ RUN . /opt/conda/etc/profile.d/conda.sh && conda install -y conda-anaconda-tos &
 
 RUN  . /opt/conda/etc/profile.d/conda.sh && conda install -c conda-forge -y python 'numpy>=1.17' 'libboost-devel>=1.90' 'pugixml>=1.10' 'cython>=3.0' 'lxml>=4.0' pip regex c-compiler cxx-compiler ghostscript 'pytest>=7' 'cmake>=3.27' 'make>=4' scipy
 
+# conda-forge's c-compiler/cxx-compiler only provide an arch-prefixed ar
+# (e.g. x86_64-conda-linux-gnu-ar), not a plain `ar` on PATH, and don't set
+# $AR either. CMake's compiler-id detection can't infer the prefix from an
+# unprefixed `gcc`/`cc`, so CMAKE_AR ends up NOTFOUND and linking any static
+# library (e.g. the bundled libyaml) fails. Symlink whatever ar gcc itself
+# resolves to, which is correct for whichever architecture this is built on.
+RUN . /opt/conda/etc/profile.d/conda.sh && conda activate base \
+ && ln -sf "$(gcc -print-prog-name=ar)" /opt/conda/bin/ar
+
 ENV CONDA_PREFIX=/opt/conda
 
 RUN apt-get update

@@ -11,7 +11,10 @@
 #endif
 #endif
 #include <chrono>
+#include <condition_variable>
 #include <filesystem>
+#include <iostream>
+#include <mutex>
 #include <regex>
 #include <sstream>
 #include <thread>
@@ -36,6 +39,13 @@ namespace sjef::util {
 static std::string executable(const std::string& command);
 const std::string jobnumber_tag{"@@@JOBNUMBER"};
 const std::string terminator{"@@@EOF"};
+// How long to wait for the next line of output from a command's stream before concluding that the
+// process on the other end (in practice, almost always a remote login node/session over ssh) has gone
+// unresponsive. Deliberately generous rather than tight, like rsync's own --timeout=5 elsewhere in this
+// codebase: unlike that idle timeout on an already-flowing data transfer, this covers the first response
+// to a freshly-sent command, which can legitimately take a while on a loaded shared login node (PAM,
+// profile scripts, etc.), and a false positive here misreports a slow-but-healthy job as unresponsive.
+constexpr auto command_idle_timeout = std::chrono::seconds(30);
 
 Shell::Shell(std::string host, std::string shell) : m_host(std::move(host)), m_shell((shell)) {
   // std::cout << "Shell() host=" << m_host << ", local? " << localhost() << ", shell=" << m_shell << std::endl;
@@ -54,6 +64,23 @@ Shell::Shell(std::string host, std::string shell) : m_host(std::move(host)), m_s
     //    std::cout << "ssh is"<<ssh<<", "<<m_process.valid()<<", "<<m_process.running()<<std::endl;
     if (!m_process.valid() || !m_process.running())
       throw Shell::runtime_error("Spawning run process has failed");
+  }
+}
+
+Shell::~Shell() {
+  // valid() is false for a process that was never started (e.g. localhost()), already reaped by
+  // wait()/exit_code(), or explicitly detach()ed by run_local_async() for a fire-and-forget local job
+  // -- detach() means "this process should keep running independently of this Shell object", so this
+  // must not touch it. Anything still valid() and running() here is a live session (interactive remote
+  // shell, or a synchronous local/rsync child between spawning and this destructor somehow being
+  // reached first) that nothing else is ever going to wait for or use again; terminate it rather than
+  // leaving it to run forever as an orphan.
+  try {
+    if (m_process.valid() && m_process.running())
+      m_process.terminate();
+  } catch (...) {
+    // Best-effort cleanup only; a destructor must not throw, and there is nothing more useful to do
+    // with a failure to terminate an already-orphaned process.
   }
 }
 
@@ -192,16 +219,27 @@ void Shell::run_local_sync(const std::string& command, const std::string& direct
   }
   if (!m_process.valid())
     throw Shell::runtime_error("Spawning run process has failed");
-  std::string line;
   try {
-    while (std::getline(*m_err, line) && line.substr(0, terminator.size()) != terminator) {
-      m_last_err += line + '\n';
-    }
+    read_lines_with_deadline(
+        m_err,
+        [&](const std::string& l) {
+          if (l.substr(0, terminator.size()) == terminator)
+            return true;
+          m_last_err += l + '\n';
+          return false;
+        },
+        "local command stderr (\"" + command + "\")", command_idle_timeout);
     // std::cout << "wait , read output" << std::endl;
-    while (std::getline(*m_out, line) && line != terminator) {
-      // std::cout << "out line from command " << line << std::endl;
-      m_last_out += line + '\n';
-    }
+    read_lines_with_deadline(
+        m_out,
+        [&](const std::string& l) {
+          if (l == terminator)
+            return true;
+          m_last_out += l + '\n';
+          // std::cout << "out line from command " << l << std::endl;
+          return false;
+        },
+        "local command output (\"" + command + "\")", command_idle_timeout);
     m_job_number = 0;
     // std::cout << "finished wait , read output" << std::endl;
     // std::cout << "m_last_output " << m_last_out << std::endl;
@@ -224,18 +262,18 @@ void Shell::run_local_sync(const std::string& command, const std::string& direct
 void Shell::capture_job_number_from_error(const std::string& command) const {
   m_last_err.clear();
   m_job_number = 0;
-  std::string line;
   try {
-    while (std::getline(*m_err, line)) {
-      // std::cout << "capture_job_number_from_error, line=" << line << std::endl;
-      std::smatch match;
-      if (std::regex_search(line, match, std::regex{jobnumber_tag + "\\s*(\\d+)"})) {
-        // std::cout << "capture_job_number_from_error, match=" << match[1] << std::endl;
-        m_job_number = std::stoi(match[1]);
-        // std::cout << "stoi survives, capture_job_number_from_error, match=" << m_job_number << std::endl;
-        break;
-      }
-    }
+    read_lines_with_deadline(
+        m_err,
+        [&](const std::string& line) {
+          std::smatch match;
+          if (std::regex_search(line, match, std::regex{jobnumber_tag + "\\s*(\\d+)"})) {
+            m_job_number = std::stoi(match[1]);
+            return true;
+          }
+          return false;
+        },
+        "job-number echo from \"" + command + "\"", command_idle_timeout);
   } catch (const std::exception& e) {
     throw runtime_error(
         (std::string{"Shell(\""} + command + "\") has failed whilst capturing the job number.\nExit code: " +
@@ -329,15 +367,114 @@ void Shell::run_remote_sync(std::string command, const std::string& directory, i
     throw Shell::runtime_error("remote server process has died");
 }
 
+void Shell::read_lines_with_deadline(const std::shared_ptr<std::istream>& stream,
+                                     const std::function<bool(const std::string&)>& on_line,
+                                     const std::string& context, std::chrono::seconds idle_timeout) const {
+  struct SharedState {
+    std::mutex mutex;
+    std::condition_variable cv;
+    std::string line;
+    bool line_ready = false;
+    bool finished = false; // set once the reader has hit eof or an error; `error` distinguishes which
+    // Set once the consumer is done, whether because on_line() said so or because it gave up on a
+    // timeout. Tells the reader not to start (or report the result of) another blocking read: without
+    // this, a reader left over from one call -- e.g. one line "ahead", already unblocked and back in
+    // getline() for what it assumes is still this call's stream -- races the *next* call's own new
+    // reader thread for whatever the process sends next, on the same shared stream, and can steal or
+    // corrupt that next call's response instead of it ever reaching its own reader.
+    bool stop_requested = false;
+    std::exception_ptr error;
+  };
+  auto state = std::make_shared<SharedState>();
+  // This reader keeps blocking on std::getline() against `stream` for as long as the process feeding it
+  // stays silent -- there is no way to cancel a blocking read on a pipe, so if the wait below times out,
+  // this thread is abandoned still trying to read rather than joined. It only touches `state` and
+  // `stream`, both captured by shared_ptr, so it stays safe to run to completion (or forever) regardless
+  // of whether this Shell, or even this call to read_lines_with_deadline, still exists by then. Once it
+  // does eventually unblock, stop_requested tells it to quietly exit instead of publishing a result
+  // nobody is listening for (see SharedState::stop_requested above).
+  std::thread([state, stream]() {
+    std::string next_line;
+    try {
+      while (std::getline(*stream, next_line)) {
+        std::unique_lock l(state->mutex);
+        if (state->stop_requested)
+          return;
+        state->line = next_line;
+        state->line_ready = true;
+        state->cv.notify_one();
+        // Wait for the consumer to fully decide what to do with this line -- not just acknowledge
+        // receiving it -- before reading the next one. The consumer clears line_ready and sets
+        // stop_requested (if it's done) atomically under this same lock before releasing us, so by
+        // the time we wake up here we already know whether to loop for another line or stop; there
+        // is no window where we could race ahead into another blocking read the consumer never asked
+        // for.
+        state->cv.wait(l, [&] { return !state->line_ready; });
+        if (state->stop_requested)
+          return;
+      }
+    } catch (...) {
+      std::lock_guard l(state->mutex);
+      if (state->stop_requested)
+        return;
+      state->error = std::current_exception();
+      state->finished = true;
+      state->cv.notify_one();
+      return;
+    }
+    std::lock_guard l(state->mutex);
+    if (state->stop_requested)
+      return;
+    state->finished = true;
+    state->cv.notify_one();
+  }).detach();
+
+  while (true) {
+    std::unique_lock l(state->mutex);
+    if (!state->cv.wait_for(l, idle_timeout, [&] { return state->line_ready || state->finished; })) {
+      // Whenever the reader does eventually unblock (which may be never), tell it to give up quietly
+      // rather than hand a now-irrelevant line to nobody and potentially collide with whatever fresh
+      // read the next call on this stream starts in the meantime.
+      state->stop_requested = true;
+      throw Shell::runtime_error((std::string{"No response (for "} + std::to_string(idle_timeout.count()) +
+                                  "s) whilst waiting for " + context +
+                                  " -- the remote host or session appears unresponsive")
+                                     .c_str());
+    }
+    if (state->line_ready) {
+      auto received = std::move(state->line);
+      state->line_ready = false;
+      // Decide before releasing the reader: it must already know whether to stop by the time
+      // line_ready flips, not find out only after it has started blocking on another read.
+      bool stop = on_line(received);
+      if (stop)
+        state->stop_requested = true;
+      l.unlock();
+      state->cv.notify_one();
+      if (stop)
+        return;
+      continue;
+    }
+    // finished: either eof (no error) or a genuine stream error
+    if (state->error)
+      std::rethrow_exception(state->error);
+    return;
+  }
+}
+
 void Shell::capture_out() const {
   // std::cout << "capture_out" << m_last_out << std::endl;
   m_last_out.clear();
-  std::string line;
   try {
-    while (std::getline(*m_out, line) && line != terminator) {
-      // std::cout << "capture_out, line=" << line << std::endl;
-      m_last_out += line + '\n';
-    }
+    read_lines_with_deadline(
+        m_out,
+        [&](const std::string& line) {
+          if (line == terminator)
+            return true;
+          m_last_out += line + '\n';
+          return false;
+        },
+        "command output" + (localhost() ? std::string{} : " from " + m_host), command_idle_timeout);
   } catch (const std::exception& e) {
     throw Shell::runtime_error((std::string{"Shell() has failed whilst capturing the output.\nExit code: "} +
                                 std::to_string(m_process.exit_code()) + "\n\nstdout:\n" + m_last_out +

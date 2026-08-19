@@ -2,9 +2,13 @@
 #include "Shell.h"
 #include "util.h"
 #include <chrono>
+#include <condition_variable>
 #include <fstream>
 #include <functional>
 #include <future>
+#include <map>
+#include <memory>
+#include <mutex>
 #include <regex>
 #include <set>
 #include <signal.h>
@@ -24,10 +28,87 @@ namespace fs = std::filesystem;
 
 namespace sjef::util {
 
+namespace {
+// Bounds how many Job constructors may simultaneously be inside the "new session handshake" (which
+// rsync / rsync --version / remote cache setup, over a freshly-spawned ssh session) for the same
+// remote host. Launching many jobs in parallel against a real remote login node was observed to spawn
+// that many brand-new ssh sessions at once, each immediately sending its handshake commands -- and a
+// burst like that can make even a login node that is perfectly healthy for one connection at a time
+// become unresponsive (well within OpenSSH's own default connection-flood defenses, e.g. MaxStartups),
+// producing exactly the "no response" timeouts this throttle exists to avoid triggering in the first
+// place. It only gates the handshake, not the job's subsequent run/poll lifecycle, so once a session is
+// past this, it proceeds fully independently and concurrently with every other job as before.
+class HostConnectionThrottle {
+public:
+  explicit HostConnectionThrottle(int max_concurrent) : m_max(max_concurrent) {}
+  void acquire() {
+    std::unique_lock l(m_mutex);
+    m_cv.wait(l, [&] { return m_count < m_max; });
+    ++m_count;
+  }
+  void release() {
+    std::lock_guard l(m_mutex);
+    --m_count;
+    m_cv.notify_one();
+  }
+
+private:
+  std::mutex m_mutex;
+  std::condition_variable m_cv;
+  int m_count = 0;
+  const int m_max;
+};
+
+class ThrottleGuard {
+public:
+  explicit ThrottleGuard(HostConnectionThrottle& throttle) : m_throttle(throttle) { m_throttle.acquire(); }
+  ~ThrottleGuard() { m_throttle.release(); }
+  ThrottleGuard(const ThrottleGuard&) = delete;
+
+private:
+  HostConnectionThrottle& m_throttle;
+};
+
+HostConnectionThrottle& throttle_for_host(const std::string& host, int max_concurrent,
+                                          std::map<std::string, std::unique_ptr<HostConnectionThrottle>>& registry,
+                                          std::mutex& registry_mutex) {
+  std::lock_guard l(registry_mutex);
+  auto [it, inserted] = registry.try_emplace(host, nullptr);
+  if (inserted)
+    it->second = std::make_unique<HostConnectionThrottle>(max_concurrent);
+  return *it->second;
+}
+
+HostConnectionThrottle& handshake_throttle_for_host(const std::string& host) {
+  // How many new-session handshakes to a single host may be in flight at once. Deliberately well under
+  // OpenSSH's own conservative defaults for simultaneous unauthenticated/new connections (e.g.
+  // MaxStartups 10:30:100), so this throttle -- not the remote sshd's own flood defenses -- is what
+  // determines how launches against a busy or fragile login node are paced.
+  constexpr int max_concurrent_handshakes_per_host = 3;
+  static std::mutex registry_mutex;
+  static std::map<std::string, std::unique_ptr<HostConnectionThrottle>> registry;
+  return throttle_for_host(host, max_concurrent_handshakes_per_host, registry, registry_mutex);
+}
+
+HostConnectionThrottle& rsync_throttle_for_host(const std::string& host) {
+  // How many rsync invocations (push_rundir/pull_rundir) against a single host may be in flight at
+  // once. Unlike the handshake throttle above, this bounds a genuinely different, and far more
+  // frequently hit, server-side resource: every rsync call's --rsh multiplexes onto the *one* shared
+  // ssh ControlMaster connection per host (see system_specific_ssh_options()), so all of them together
+  // -- across every concurrently-running job for this host, for the job's entire lifetime, not just its
+  // launch -- compete for that one connection's session slots. A real login node was observed refusing
+  // sessions outright ("mux_client_request_session: session request failed: Session open refused by
+  // peer") once enough concurrent jobs' launches and poll cycles overlapped, which is exactly OpenSSH's
+  // own MaxSessions (default 10) being exceeded. This keeps concurrent usage well under that.
+  constexpr int max_concurrent_rsyncs_per_host = 4;
+  static std::mutex registry_mutex;
+  static std::map<std::string, std::unique_ptr<HostConnectionThrottle>> registry;
+  return throttle_for_host(host, max_concurrent_rsyncs_per_host, registry, registry_mutex);
+}
+} // namespace
+
 ///> @private
 const bool Job::localhost() const { return (m_backend.host.empty() || m_backend.host == "localhost"); }
-
-std::mutex kill_mutex;
 sjef::util::Job::Job(const sjef::Project& project)
     : m_project(project), m_backend(m_project.backends().at(m_project.property_get("backend"))),
       m_remote_cache_directory(m_backend.cache + "/" +
@@ -37,6 +118,7 @@ sjef::util::Job::Job(const sjef::Project& project)
       m_initial_status(static_cast<sjef::status>(std::stoi("0" + m_project.property_get("_status")))) {
   //  std::cout << "Job constructor, m_job_number=" << m_job_number << std::endl;
   if (!localhost()) {
+    ThrottleGuard throttle(handshake_throttle_for_host(m_backend.host));
     m_remote_rsync =
         (*m_backend_command_server)("PATH=$HOME/bin:/usr/local/bin:/opt/homebrew/bin:/opt/bin:$PATH which rsync");
     if (m_remote_rsync.empty())
@@ -118,6 +200,7 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verb
   m_project.m_trace(2 - verbosity) << "Push rsync: " << command << std::endl;
   auto start_time = std::chrono::steady_clock::now();
   ensure_remote_cache_directory();
+  ThrottleGuard rsync_throttle(rsync_throttle_for_host(m_backend.host));
   const Shell& shell = Shell("localhost", "");
   std::string rsync_out;
   try {
@@ -171,6 +254,7 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::pull_rundir(int verb
     command += " -v";
   m_project.m_trace(2 - verbosity) << "Pull rsync: " << command << std::endl;
   auto start_time = std::chrono::steady_clock::now();
+  ThrottleGuard rsync_throttle(rsync_throttle_for_host(m_backend.host));
   const Shell& shell = Shell("localhost", "");
   std::string rsync_out;
   try {
@@ -215,7 +299,7 @@ std::string Job::run(const std::string& command, int verbosity, bool wait) {
   m_backend_command_server.reset(new Shell(m_backend.host));
   std::string run_output;
   {
-    auto l = std::lock_guard(kill_mutex);
+    auto l = std::lock_guard(m_kill_mutex);
     //  const auto& substr = std::regex_replace(command, std::regex{"'"}, "").substr(0, m_backend.run_command.size());
     m_trace(4 - verbosity) << "Job::run() command=" << command << std::endl;
     //  m_trace(4 - verbosity) << "Job::run substr=" << substr << " m_backend.run_command=" << m_backend.run_command
@@ -328,7 +412,7 @@ void Job::kill(int verbosity) {
     }
   }
   {
-    auto l = std::lock_guard(kill_mutex);
+    auto l = std::lock_guard(m_kill_mutex);
     //    std::cout << "Job::kill() gets mutex"<<std::endl;
     if (m_backend_command_server != nullptr) {
       auto status_string = (*m_backend_command_server)(m_backend.kill_command + " " + std::to_string(m_job_number),
@@ -357,7 +441,7 @@ void Job::poll_job(int verbosity) {
   while (true) {
     //    std::cout << "m_killed " << m_killed << std::endl;
     {
-      auto l = std::lock_guard(kill_mutex);
+      auto l = std::lock_guard(m_kill_mutex);
       //      std::cout << "active polling cycle starts"<<std::endl;
       //      if (m_killed)
       //        std::cout << "poll_job received kill sentinel" << std::endl;
@@ -400,8 +484,30 @@ void Job::poll_job(int verbosity) {
         m_unconfirmed_polls = 0;
       }
       m_trace(4 - verbosity) << "got status " << status << std::endl;
-      pull_rundir(verbosity);
-      set_status(status);
+      try {
+        pull_rundir(verbosity);
+      } catch (const std::exception& e) {
+        // A failed sync here (e.g. the remote host/session was briefly unresponsive) must not be
+        // allowed to propagate: this whole function runs on a detached std::async thread that
+        // nothing ever calls get() on, so an uncaught exception here silently kills polling for
+        // good, leaving status stuck at whatever it last was (typically "running"/"waiting") and
+        // an external caller like pysjef's Project.wait() looping forever with no error at all.
+        // Log and retry on the next cycle instead -- exactly as if this cycle's pull had simply
+        // seen nothing new.
+        m_trace(-verbosity) << "pull_rundir() failed during polling, will retry: " << e.what() << std::endl;
+      }
+      // Don't publish a terminal status (completed/killed) for a remote job yet: the block below
+      // this loop still has to pull the run directory one or more times more, compare manifests
+      // against the remote cache, and remove that remote cache -- all further I/O against this
+      // same local project directory. Publishing "completed" here lets an external caller (e.g.
+      // pysjef's Project.wait(), which only loops on "running"/"waiting") see the job as finished
+      // and start touching or deleting the local project directory while that trailing I/O is
+      // still in flight, racing a pull_rundir() rsync against a directory being removed out from
+      // under it. Local jobs have no such follow-up I/O (see the localhost() guard below), so
+      // publishing immediately for them is safe and keeps existing behaviour.
+      bool about_to_finish = (status == completed or status == killed or m_killed) and !localhost();
+      if (!about_to_finish)
+        set_status(status);
       //    std::cout << "set status " << m_project.status_message() << std::endl;
       stop = Clock::now();
       {
@@ -409,14 +515,28 @@ void Job::poll_job(int verbosity) {
         if (m_closing or status == completed or m_killed) {
           using namespace std::literals::chrono_literals;
           std::this_thread::sleep_for(10ms);
-          pull_rundir(verbosity);
+          try {
+            pull_rundir(verbosity);
+          } catch (const std::exception& e) {
+            // Same reasoning as above: don't let a failed final pull abort the function before it
+            // reaches the terminal set_status() below (or the cleanup block, which retries the pull
+            // anyway). Losing this one pull is recoverable; losing the terminal status is not.
+            m_trace(-verbosity) << "final pull_rundir() before break failed: " << e.what() << std::endl;
+          }
           break;
         }
       }
       m_trace(4 - verbosity) << "active polling cycle stops" << std::endl;
     }
     using namespace std::literals::chrono_literals;
-    std::this_thread::sleep_for(10ms);
+    // For a remote backend, each cycle above is a real network round trip (a status check plus an
+    // rsync pull), and a Molpro calculation's state does not change on a sub-second timescale, so
+    // polling much faster than that is pure overhead -- and doing so concurrently across many jobs at
+    // once (e.g. right after a large batch is launched, before this cycle's own backoff below has had
+    // a chance to grow from a fast initial cycle) is exactly what was observed overloading a real
+    // login node into refusing new sessions and going unresponsive. Local jobs have no such cost, so
+    // keep their much tighter floor.
+    std::this_thread::sleep_for(localhost() ? 10ms : 500ms);
     std::this_thread::sleep_for((stop - start) * 2);
   }
   // Only perform the remote-cache cleanup (which can delete the remote run directory) when we have
@@ -429,46 +549,66 @@ void Job::poll_job(int verbosity) {
   // too in that case, so cleanup only fires once we've actually confirmed the job was alive.
   if (!localhost() and m_backend_command_server != nullptr and
       (status == killed or (status == completed and m_seen_running))) {
-    m_backend_command_server.reset(new Shell(m_backend.host)); // so that any zombie is resolved or similar
-    m_trace(4 - verbosity) << "Pull run directory at end of job " << std::endl;
-    m_trace(4 - verbosity) << Shell()("echo local rundir;ls -lta '" + m_project.filename("", "", 0).string() + "'")
-                           << std::endl;
-    m_trace(4 - verbosity) << "remote cache directory: " << m_remote_cache_directory << std::endl;
-    m_trace(4 - verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta '" + m_remote_cache_directory +
-                                                          "' 2>&1")
-                           << std::endl;
-    auto rundir_result = pull_rundir(verbosity);
-    m_trace(4 - verbosity) << Shell()("echo local rundir;ls -lta '" + m_project.filename("", "", 0).string() + "'")
-                           << std::endl;
-    m_trace(4 - verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta '" + m_remote_cache_directory +
-                                                          "'  2>&1")
-                           << std::endl;
-    auto remote_manifest = vector_to_set(util::splitString(
-        (*m_backend_command_server)("ls -1 '" + m_remote_cache_directory + "' 2>&1 | grep -v Info.plist"), '\n'));
-    auto local_manifest = vector_to_set(util::splitString(
-        Shell()("ls -1 '" + m_project.filename("", "", 0).string() + "' 2>&1 | grep -v Info.plist"), '\n'));
-    //    std::cout << "rundir_result " << std::get<0>(rundir_result) << std::endl;
-    if (!std::get<0>(rundir_result) or remote_manifest == local_manifest) {
-      {
-        m_trace(4 - verbosity) << "remove run directory " + m_remote_cache_directory + " at end of job " << std::endl;
-        auto slash = m_remote_cache_directory.rfind("/");
-        (*m_backend_command_server)("cd '" + m_remote_cache_directory.substr(0, slash) + "' && rm -rf '" +
-                                    m_remote_cache_directory.substr(slash + 1) + "'");
+    // This whole block is best-effort: it can fail (a timed-out pull, an unresponsive remote ls/rm) for
+    // exactly the same reasons a mid-poll sync can, and for exactly the same reason as the try/catches
+    // around pull_rundir() above, none of that may be allowed to propagate out of this function. This
+    // is the *last* code before the terminal set_status() below; leaving the remote cache behind
+    // undeleted (it can be cleaned up by a later Job for the same project, or manually) is a much
+    // smaller problem than never publishing a terminal status at all and hanging every external caller
+    // forever.
+    try {
+      m_backend_command_server.reset(new Shell(m_backend.host)); // so that any zombie is resolved or similar
+      m_trace(4 - verbosity) << "Pull run directory at end of job " << std::endl;
+      m_trace(4 - verbosity) << Shell()("echo local rundir;ls -lta '" + m_project.filename("", "", 0).string() + "'")
+                             << std::endl;
+      m_trace(4 - verbosity) << "remote cache directory: " << m_remote_cache_directory << std::endl;
+      m_trace(4 - verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta '" + m_remote_cache_directory +
+                                                            "' 2>&1")
+                             << std::endl;
+      auto rundir_result = pull_rundir(verbosity);
+      m_trace(4 - verbosity) << Shell()("echo local rundir;ls -lta '" + m_project.filename("", "", 0).string() + "'")
+                             << std::endl;
+      m_trace(4 - verbosity) << (*m_backend_command_server)("echo remote cache;ls -lta '" + m_remote_cache_directory +
+                                                            "'  2>&1")
+                             << std::endl;
+      auto remote_manifest = vector_to_set(util::splitString(
+          (*m_backend_command_server)("ls -1 '" + m_remote_cache_directory + "' 2>&1 | grep -v Info.plist"), '\n'));
+      auto local_manifest = vector_to_set(util::splitString(
+          Shell()("ls -1 '" + m_project.filename("", "", 0).string() + "' 2>&1 | grep -v Info.plist"), '\n'));
+      //    std::cout << "rundir_result " << std::get<0>(rundir_result) << std::endl;
+      if (!std::get<0>(rundir_result) or remote_manifest == local_manifest) {
+        {
+          m_trace(4 - verbosity) << "remove run directory " + m_remote_cache_directory + " at end of job "
+                                 << std::endl;
+          auto slash = m_remote_cache_directory.rfind("/");
+          (*m_backend_command_server)("cd '" + m_remote_cache_directory.substr(0, slash) + "' && rm -rf '" +
+                                      m_remote_cache_directory.substr(slash + 1) + "'");
+        }
+      } else if (remote_manifest.count("No such file") !=
+                 0) { // sometimes sync will be tried before the remote cache
+                     // exists, so stay quiet when that happens
+        m_trace(-verbosity) << "Not removing remote cache " << m_backend.host + ":'" + m_remote_cache_directory + "'"
+                            << " because master local copy " << m_project.filename("", "", 0) << " has failed to update"
+                            << std::endl;
+        m_trace(-verbosity) << "remote manifest:\n" << remote_manifest << std::endl;
+        m_trace(-verbosity) << "local manifest:\n" << local_manifest << std::endl;
+        m_trace(-verbosity) << "Output stream from rsync:\n" << std::get<1>(rundir_result) << std::endl;
+        m_trace(-verbosity) << "Error stream from rsync:\n" << std::get<2>(rundir_result) << std::endl;
+        m_trace(-verbosity) << "To recover manually, try\n"
+                            << "rsync -asv " << m_backend.host + ":'" + m_remote_cache_directory + "/'" << " '"
+                            << m_project.filename("", "", 0).string() + "'" << std::endl;
       }
-    } else if (remote_manifest.count("No such file") != 0) { // sometimes sync will be tried before the remote cache
-                                                             // exists, so stay quiet when that happens
-      m_trace(-verbosity) << "Not removing remote cache " << m_backend.host + ":'" + m_remote_cache_directory + "'"
-                          << " because master local copy " << m_project.filename("", "", 0) << " has failed to update"
-                          << std::endl;
-      m_trace(-verbosity) << "remote manifest:\n" << remote_manifest << std::endl;
-      m_trace(-verbosity) << "local manifest:\n" << local_manifest << std::endl;
-      m_trace(-verbosity) << "Output stream from rsync:\n" << std::get<1>(rundir_result) << std::endl;
-      m_trace(-verbosity) << "Error stream from rsync:\n" << std::get<2>(rundir_result) << std::endl;
-      m_trace(-verbosity) << "To recover manually, try\n"
-                          << "rsync -asv " << m_backend.host + ":'" + m_remote_cache_directory + "/'" << " '"
-                          << m_project.filename("", "", 0).string() + "'" << std::endl;
+    } catch (const std::exception& e) {
+      m_trace(-verbosity) << "End-of-job remote cache cleanup failed, leaving remote cache " << m_backend.host
+                          << ":'" << m_remote_cache_directory << "' in place: " << e.what() << std::endl;
     }
   }
+  // Publish the terminal status only now, after all the trailing pull_rundir()/remote-cache
+  // cleanup above has actually finished touching the local project directory (see the deferral
+  // at the top of the loop). status_from_output() re-derives from status() by default, so this
+  // still applies its own override (downgrading to "failed" if the pulled output records an
+  // error) exactly as before -- only the timing of the first, terminal set_status() moved.
+  set_status(status);
   m_project.m_xml_cached = "";
   set_status(m_project.status_from_output());
   m_backend_command_server.reset(); // close down backend server as no longer needed

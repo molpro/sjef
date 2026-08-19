@@ -3,6 +3,9 @@
 #define BOOST_ALL_NO_LIB
 #define BOOST_PROCESS_USE_STD_FS
 #include "Logger.h"
+#include <chrono>
+#include <functional>
+#include <memory>
 #if __has_include(<boost/process/child.hpp>)
 #include <boost/process/child.hpp>
 #include <boost/process/io.hpp>
@@ -33,6 +36,15 @@ public:
    */
   Shell(std::string host, std::string shell = "/bin/bash");
   Shell() : Shell("localhost") {}
+  /*!
+   * @brief Terminate this Shell's underlying process if it's still running and wasn't explicitly
+   * detached (e.g. by run_local_async() for a fire-and-forget local job). Without this, replacing a
+   * Shell that still has a live interactive session -- e.g. every Job::run() call's
+   * `m_backend_command_server.reset(new Shell(...))`, including every retry of a failed launch --
+   * orphans the old ssh process instead of ending it, leaking one persistent remote session per
+   * replacement for as long as the machine stays up.
+   */
+  ~Shell();
   /*!
    *@brief Execute a command. For a remote host, the command is sent to the remote shell already set up in the class
    * constructor. For a local host, a new process is created.
@@ -78,8 +90,11 @@ private:
   const std::string m_host;
   const std::string m_shell;
   mutable bp::opstream m_in;
-  mutable std::unique_ptr<bp::ipstream> m_out;
-  mutable std::unique_ptr<bp::ipstream> m_err;
+  // shared_ptr, not unique_ptr: read_lines_with_deadline() may abandon a reader thread that is still
+  // blocked on one of these streams (see its doc comment), and that thread needs the stream to stay
+  // alive for as long as it might still touch it, independent of this Shell's own lifetime.
+  mutable std::shared_ptr<bp::ipstream> m_out;
+  mutable std::shared_ptr<bp::ipstream> m_err;
   mutable std::string m_last_out;
   mutable std::string m_last_err;
   mutable Logger m_trace;
@@ -99,6 +114,22 @@ protected:
   void run_remote_sync(std::string command, const std::string& directory, int verbosity, const std::string& out) const;
   void capture_out() const;
   bool localhost() const { return (m_host.empty() || m_host == "localhost"); }
+  /*!
+   * @brief Read lines from stream, invoking on_line(line) for each, until on_line returns true or EOF.
+   *
+   * Bounds the wait for each individual line to idle_timeout: if the process feeding stream (e.g. an
+   * unresponsive remote login node/session, or a stuck local command) goes silent for longer than that
+   * with no line and no EOF, throws Shell::runtime_error naming context, instead of blocking forever.
+   *
+   * The underlying std::getline() this drives has no way to be interrupted once it has started
+   * blocking, so on timeout the reader thread is deliberately abandoned (detached) rather than joined;
+   * stream is kept alive independently (via shared_ptr) for as long as that abandoned thread needs it.
+   * Callers must treat a timeout as this Shell being unusable and construct a fresh one -- which is
+   * already how Job.cpp recovers from any Shell::runtime_error out of this class.
+   */
+  void read_lines_with_deadline(const std::shared_ptr<std::istream>& stream,
+                                const std::function<bool(const std::string&)>& on_line, const std::string& context,
+                                std::chrono::seconds idle_timeout) const;
 };
 
 std::vector<std::string> tokenise(const std::string& command);

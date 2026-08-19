@@ -529,7 +529,14 @@ void Job::poll_job(int verbosity) {
       m_trace(4 - verbosity) << "active polling cycle stops" << std::endl;
     }
     using namespace std::literals::chrono_literals;
-    std::this_thread::sleep_for(10ms);
+    // For a remote backend, each cycle above is a real network round trip (a status check plus an
+    // rsync pull), and a Molpro calculation's state does not change on a sub-second timescale, so
+    // polling much faster than that is pure overhead -- and doing so concurrently across many jobs at
+    // once (e.g. right after a large batch is launched, before this cycle's own backoff below has had
+    // a chance to grow from a fast initial cycle) is exactly what was observed overloading a real
+    // login node into refusing new sessions and going unresponsive. Local jobs have no such cost, so
+    // keep their much tighter floor.
+    std::this_thread::sleep_for(localhost() ? 10ms : 500ms);
     std::this_thread::sleep_for((stop - start) * 2);
   }
   // Only perform the remote-cache cleanup (which can delete the remote run directory) when we have

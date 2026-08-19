@@ -13,6 +13,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <filesystem>
+#include <iostream>
 #include <mutex>
 #include <regex>
 #include <sstream>
@@ -63,6 +64,23 @@ Shell::Shell(std::string host, std::string shell) : m_host(std::move(host)), m_s
     //    std::cout << "ssh is"<<ssh<<", "<<m_process.valid()<<", "<<m_process.running()<<std::endl;
     if (!m_process.valid() || !m_process.running())
       throw Shell::runtime_error("Spawning run process has failed");
+  }
+}
+
+Shell::~Shell() {
+  // valid() is false for a process that was never started (e.g. localhost()), already reaped by
+  // wait()/exit_code(), or explicitly detach()ed by run_local_async() for a fire-and-forget local job
+  // -- detach() means "this process should keep running independently of this Shell object", so this
+  // must not touch it. Anything still valid() and running() here is a live session (interactive remote
+  // shell, or a synchronous local/rsync child between spawning and this destructor somehow being
+  // reached first) that nothing else is ever going to wait for or use again; terminate it rather than
+  // leaving it to run forever as an orphan.
+  try {
+    if (m_process.valid() && m_process.running())
+      m_process.terminate();
+  } catch (...) {
+    // Best-effort cleanup only; a destructor must not throw, and there is nothing more useful to do
+    // with a failure to terminate an already-orphaned process.
   }
 }
 

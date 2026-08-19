@@ -37,6 +37,15 @@ public:
   Shell(std::string host, std::string shell = "/bin/bash");
   Shell() : Shell("localhost") {}
   /*!
+   * @brief Terminate this Shell's underlying process if it's still running and wasn't explicitly
+   * detached (e.g. by run_local_async() for a fire-and-forget local job). Without this, replacing a
+   * Shell that still has a live interactive session -- e.g. every Job::run() call's
+   * `m_backend_command_server.reset(new Shell(...))`, including every retry of a failed launch --
+   * orphans the old ssh process instead of ending it, leaking one persistent remote session per
+   * replacement for as long as the machine stays up.
+   */
+  ~Shell();
+  /*!
    *@brief Execute a command. For a remote host, the command is sent to the remote shell already set up in the class
    * constructor. For a local host, a new process is created.
    *

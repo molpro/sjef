@@ -69,6 +69,16 @@ private:
   HostConnectionThrottle& m_throttle;
 };
 
+HostConnectionThrottle& throttle_for_host(const std::string& host, int max_concurrent,
+                                          std::map<std::string, std::unique_ptr<HostConnectionThrottle>>& registry,
+                                          std::mutex& registry_mutex) {
+  std::lock_guard l(registry_mutex);
+  auto [it, inserted] = registry.try_emplace(host, nullptr);
+  if (inserted)
+    it->second = std::make_unique<HostConnectionThrottle>(max_concurrent);
+  return *it->second;
+}
+
 HostConnectionThrottle& handshake_throttle_for_host(const std::string& host) {
   // How many new-session handshakes to a single host may be in flight at once. Deliberately well under
   // OpenSSH's own conservative defaults for simultaneous unauthenticated/new connections (e.g.
@@ -77,11 +87,23 @@ HostConnectionThrottle& handshake_throttle_for_host(const std::string& host) {
   constexpr int max_concurrent_handshakes_per_host = 3;
   static std::mutex registry_mutex;
   static std::map<std::string, std::unique_ptr<HostConnectionThrottle>> registry;
-  std::lock_guard l(registry_mutex);
-  auto [it, inserted] = registry.try_emplace(host, nullptr);
-  if (inserted)
-    it->second = std::make_unique<HostConnectionThrottle>(max_concurrent_handshakes_per_host);
-  return *it->second;
+  return throttle_for_host(host, max_concurrent_handshakes_per_host, registry, registry_mutex);
+}
+
+HostConnectionThrottle& rsync_throttle_for_host(const std::string& host) {
+  // How many rsync invocations (push_rundir/pull_rundir) against a single host may be in flight at
+  // once. Unlike the handshake throttle above, this bounds a genuinely different, and far more
+  // frequently hit, server-side resource: every rsync call's --rsh multiplexes onto the *one* shared
+  // ssh ControlMaster connection per host (see system_specific_ssh_options()), so all of them together
+  // -- across every concurrently-running job for this host, for the job's entire lifetime, not just its
+  // launch -- compete for that one connection's session slots. A real login node was observed refusing
+  // sessions outright ("mux_client_request_session: session request failed: Session open refused by
+  // peer") once enough concurrent jobs' launches and poll cycles overlapped, which is exactly OpenSSH's
+  // own MaxSessions (default 10) being exceeded. This keeps concurrent usage well under that.
+  constexpr int max_concurrent_rsyncs_per_host = 4;
+  static std::mutex registry_mutex;
+  static std::map<std::string, std::unique_ptr<HostConnectionThrottle>> registry;
+  return throttle_for_host(host, max_concurrent_rsyncs_per_host, registry, registry_mutex);
 }
 } // namespace
 
@@ -178,6 +200,7 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::push_rundir(int verb
   m_project.m_trace(2 - verbosity) << "Push rsync: " << command << std::endl;
   auto start_time = std::chrono::steady_clock::now();
   ensure_remote_cache_directory();
+  ThrottleGuard rsync_throttle(rsync_throttle_for_host(m_backend.host));
   const Shell& shell = Shell("localhost", "");
   std::string rsync_out;
   try {
@@ -231,6 +254,7 @@ std::tuple<bool, std::string, std::string> sjef::util::Job::pull_rundir(int verb
     command += " -v";
   m_project.m_trace(2 - verbosity) << "Pull rsync: " << command << std::endl;
   auto start_time = std::chrono::steady_clock::now();
+  ThrottleGuard rsync_throttle(rsync_throttle_for_host(m_backend.host));
   const Shell& shell = Shell("localhost", "");
   std::string rsync_out;
   try {

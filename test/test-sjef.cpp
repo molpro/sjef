@@ -2,11 +2,13 @@
 #include <gtest/gtest.h>
 
 #include "test-sjef.h"
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <list>
 #include <map>
 #include <regex>
+#include <thread>
 #include <sjef/sjef-backend.h>
 #include <sjef/sjef.h>
 #include <sjef/util/Locker.h>
@@ -926,4 +928,102 @@ TEST_F(test_sjef, bad_remote) {
   }
   EXPECT_TRUE(caught);
 #endif
+}
+
+// Exercises a backend that submits to, and polls the status of, an external batch scheduler -- the shape
+// of a real cluster backend (Slurm's sbatch/squeue, or a local queueing tool like task-spool's ts) as
+// opposed to the library's built-in default of directly launching and then tracking a package executable
+// by its own local process id. That default is selected whenever a backend's run_jobnumber field is left
+// exactly equal to the library's own hard-coded sentinel "([0-9]+)", even if a custom regex would
+// happen to match the same text; a batch backend must therefore use some other, textually distinct
+// regex to get the submission-and-polling code path exercised here at all. The scheduler itself is
+// faked with three tiny, dependency-free shell scripts (no real batch system, no chemistry package)
+// backed by a shared "queue" directory of one start-timestamp file per submitted job, so job status is
+// computed from elapsed wall-clock time rather than from a backgrounded process that could be reaped
+// early -- keeping the fake immune to the very races this test exists to catch in the library code.
+TEST_F(test_sjef, scripted_batch_backend) {
+  if (!sjef::util::Shell::local_asynchronous_supported())
+    return;
+  auto suffix = this->suffix();
+  auto backenddirectory = sjef::expand_path((m_dot_sjef / suffix).string());
+  fs::create_directories(backenddirectory);
+  auto queuedirectory = sjef::expand_path((fs::path{backenddirectory} / "queue").string());
+  fs::create_directories(queuedirectory);
+
+  // date(1) truncates to whole seconds, so the fake job's measured elapsed time can be up to 1s shorter
+  // than its real elapsed time (started just before a second boundary, checked just after). Keep the
+  // sampling window (below) comfortably clear of that slop on both ends.
+  constexpr int job_duration_seconds = 5;
+
+  auto write_script = [](const fs::path& path, const std::string& content) {
+    std::ofstream(path) << content;
+    std::system((std::string{"chmod +x '"} + path.string() + "'").c_str());
+  };
+
+  auto submit_script = backenddirectory / "submit.sh";
+  write_script(submit_script, "#!/bin/sh\n"
+                              "dir='" +
+                                  queuedirectory.string() + "'\n"
+                                                    "id=$(( $(cat \"$dir/counter\" 2>/dev/null || echo 0) + 1 ))\n"
+                                                    "echo \"$id\" > \"$dir/counter\"\n"
+                                                    "date +%s > \"$dir/$id.start\"\n"
+                                                    "echo \"Job $id submitted\"\n");
+  auto status_script = backenddirectory / "status.sh";
+  write_script(status_script, "#!/bin/sh\n"
+                              "dir='" +
+                                  queuedirectory.string() + "'\n"
+                                                    "id=\"$1\"\n"
+                                                    "start=$(cat \"$dir/$id.start\" 2>/dev/null || echo 0)\n"
+                                                    "elapsed=$(( $(date +%s) - start ))\n"
+                                                    "if [ -f \"$dir/$id.killed\" ]; then echo \"$id killed\"\n"
+                                                    "elif [ \"$elapsed\" -lt " +
+                                  std::to_string(job_duration_seconds) +
+                                  " ]; then echo \"$id running\"\n"
+                                  "else echo \"$id finished\"\n"
+                                  "fi\n");
+  auto kill_script = backenddirectory / "kill.sh";
+  write_script(kill_script, "#!/bin/sh\n"
+                            "dir='" +
+                                queuedirectory.string() + "'\n"
+                                                  "touch \"$dir/$1.killed\"\n");
+
+  auto backendfile = sjef::expand_path((fs::path{backenddirectory} / "backends.xml").string());
+  for (const auto& [backend_name, host] : std::map<std::string, std::string>{{"local", ""}, {"remote", "127.0.0.1"}}) {
+    std::ofstream(backendfile) << "<?xml version=\"1.0\"?>\n<backends>\n"
+                               << "<backend name=\"" << backend_name << "\""
+                               << (host.empty() ? "" : " host=\"" + host + "\"") << "\n"
+                               << "         run_command=\"" << submit_script.string() << "\"\n"
+                               << "         run_jobnumber=\"Job ([0-9]+) submitted\"\n"
+                               << "         status_command=\"" << status_script.string() << "\"\n"
+                               << "         status_running=\"running\" status_waiting=\"queued\"\n"
+                               << "         kill_command=\"" << kill_script.string() << "\"/>\n"
+                               << "</backends>" << std::endl;
+    sjef::Project p(testproject("scripted_batch_backend_" + backend_name));
+    { std::ofstream(p.filename("inp")) << ""; }
+
+    ASSERT_TRUE(p.run(backend_name, 0, true, false));
+    const auto& jobnumber = p.property_get("jobnumber");
+    EXPECT_NE(jobnumber, "");
+    EXPECT_NE(jobnumber, "0");
+    EXPECT_NE(jobnumber, "-1");
+
+    // The job is a fake scheduler entry that runs for job_duration_seconds; at every sample taken
+    // before that has elapsed, status must still be running (or, early on, waiting) -- never completed.
+    // This is the regression this test exists for: a status_command whose output doesn't happen to
+    // repeat the job number gets silently misread as "the job isn't there", and a run_jobnumber that
+    // collides with the library's default sentinel gets the wrong quantity tracked as the job id
+    // altogether -- both of which previously made status jump straight to completed here, long before
+    // the fake job's elapsed-time clock says it should.
+    using namespace std::chrono;
+    for (int sample_ms : {300, 900, 1500, 2100}) {
+      std::this_thread::sleep_for(milliseconds(300));
+      EXPECT_THAT(p.status(), ::testing::AnyOf(sjef::status::running, sjef::status::waiting))
+          << "backend=" << backend_name << ", sample=" << sample_ms << "ms";
+    }
+
+    auto deadline = steady_clock::now() + seconds(job_duration_seconds + 10);
+    while (p.status() != sjef::status::completed && steady_clock::now() < deadline)
+      std::this_thread::sleep_for(milliseconds(100));
+    EXPECT_EQ(p.status(), sjef::status::completed) << "backend=" << backend_name;
+  }
 }

@@ -47,23 +47,35 @@ namespace sjef {
         sync_backend_config_file(project_suffix);
     }
 
+    inline std::string xml_escape_attribute(const std::string& value) {
+        std::string result;
+        result.reserve(value.size());
+        for (char c: value) {
+            switch (c) {
+                case '&': result += "&amp;"; break;
+                case '<': result += "&lt;"; break;
+                case '>': result += "&gt;"; break;
+                case '"': result += "&quot;"; break;
+                default: result += c;
+            }
+        }
+        return result;
+    }
+
     inline std::string yaml1(const std::string& key, const std::string& value, bool multiline=false) {
-        std::string yaml_specials = "{}[]&:*#?|-<>=!%@/";
         std::string result{"  "};
         result += key + ": ";
-        std::string quote = (multiline
-                             || (yaml_specials.find_first_of(
-                                     value[0]) == std::string::npos
-                                 && value.find(": ") == std::string::npos
-                                 && value.find_first_of("#") == std::string::npos
-                             ))
-                                ? ""
-                                : "'";
-        auto quoted_value = quote + value + quote;
         if (multiline) {
-            result += ">\n    " + quoted_value;
+            result += ">\n    " + value;
+        } else {
+            std::string escaped;
+            escaped.reserve(value.size());
+            for (char c: value) {
+                if (c == '\'') escaped += "''";
+                else escaped += c;
+            }
+            result += "'" + escaped + "'";
         }
-        else result += quoted_value;
         // std::cout << "yaml1 "<<key<<", "<<value<<"::: "<<result<<std::endl;
         return result;
 
@@ -89,24 +101,24 @@ namespace sjef {
             stream << "<backends>" << std::endl;
             for (const auto &[name, backend]: backends_) {
                 // std::cout << "writing backend " << name << std::endl;
-                stream << "  <backend name=\"" + name + "\" ";
+                stream << "  <backend name=\"" + xml_escape_attribute(name) + "\" ";
                 if (backend.host != "")
-                    stream << "\n           host=\"" + backend.host + "\" ";
+                    stream << "\n           host=\"" + xml_escape_attribute(backend.host) + "\" ";
                 if (backend.run_command != "")
-                    stream << "\n           run_command=\"" + backend.run_command + "\" ";
+                    stream << "\n           run_command=\"" + xml_escape_attribute(backend.run_command) + "\" ";
                 if (backend.run_jobnumber != "")
-                    stream << "\n           run_jobnumber=\"" + backend.run_jobnumber + "\" ";
+                    stream << "\n           run_jobnumber=\"" + xml_escape_attribute(backend.run_jobnumber) + "\" ";
                 if (backend.status_command != "")
-                    stream << "\n           status_command=\"" + backend.status_command +
+                    stream << "\n           status_command=\"" + xml_escape_attribute(backend.status_command) +
                             "\" ";
                 if (backend.status_waiting != "")
-                    stream << "\n           status_waiting=\"" + backend.status_waiting +
+                    stream << "\n           status_waiting=\"" + xml_escape_attribute(backend.status_waiting) +
                             "\" ";
                 if (backend.status_running != "")
-                    stream << "\n           status_running=\"" + backend.status_running +
+                    stream << "\n           status_running=\"" + xml_escape_attribute(backend.status_running) +
                             "\" ";
                 if (backend.kill_command != "")
-                    stream << "\n           kill_command=\"" + backend.kill_command + "\" ";
+                    stream << "\n           kill_command=\"" + xml_escape_attribute(backend.kill_command) + "\" ";
                 stream << "\n  />" << std::endl;
             }
             stream << "</backends>" << std::endl;

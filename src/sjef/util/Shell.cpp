@@ -190,6 +190,12 @@ void Shell::run_local_sync(const std::string& command, const std::string& direct
   }
   fs::current_path(directory);
 
+  // Whether the child's stdout/stderr are wired up to m_out/m_err (to be read back below) or redirected
+  // straight to the caller-supplied files. Only in the former case is there anything for this function to
+  // read afterwards -- reading m_out/m_err in the latter case would wait on pipes the child was never
+  // connected to, which never produce a line and never hit eof, so it would just block until
+  // read_lines_with_deadline's timeout and then report a spurious "unresponsive" failure.
+  const bool capture_via_pipe = out == "/dev/null" and err == "/dev/null";
   m_out.reset(new bp::ipstream);
   m_err.reset(new bp::ipstream);
   if (m_shell.empty()) {
@@ -197,7 +203,7 @@ void Shell::run_local_sync(const std::string& command, const std::string& direct
     auto tokens = tokenise(command);
     if (!tokens.empty())
       tokens[0] = executable(tokens[0]);
-    if (out == "/dev/null" and err == "/dev/null")
+    if (capture_via_pipe)
       m_process = bp::child(tokens, bp::std_out > *m_out, bp::std_err > *m_err SJEF_NO_CONSOLE_WINDOW);
     else
       m_process = bp::child(tokens, bp::std_out > out, bp::std_err > err SJEF_NO_CONSOLE_WINDOW);
@@ -212,43 +218,45 @@ void Shell::run_local_sync(const std::string& command, const std::string& direct
     // std::cout << "run_local_sync pipeline=" << pipeline << std::endl;
     // std::cout << "run_local_sync out=" << out << std::endl;
     // std::cout << "run_local_sync err=" << err << std::endl;
-    if (out == "/dev/null" and err == "/dev/null")
+    if (capture_via_pipe)
       m_process = bp::child(executable("nohup"), shell_path, "-c", pipeline, bp::std_out > *m_out, bp::std_err > *m_err SJEF_NO_CONSOLE_WINDOW);
     else
       m_process = bp::child(executable("nohup"), shell_path, "-c", pipeline, bp::std_out > out, bp::std_err > err SJEF_NO_CONSOLE_WINDOW);
   }
   if (!m_process.valid())
     throw Shell::runtime_error("Spawning run process has failed");
-  try {
-    read_lines_with_deadline(
-        m_err,
-        [&](const std::string& l) {
-          if (l.substr(0, terminator.size()) == terminator)
-            return true;
-          m_last_err += l + '\n';
-          return false;
-        },
-        "local command stderr (\"" + command + "\")", command_idle_timeout);
-    // std::cout << "wait , read output" << std::endl;
-    read_lines_with_deadline(
-        m_out,
-        [&](const std::string& l) {
-          if (l == terminator)
-            return true;
-          m_last_out += l + '\n';
-          // std::cout << "out line from command " << l << std::endl;
-          return false;
-        },
-        "local command output (\"" + command + "\")", command_idle_timeout);
-    m_job_number = 0;
-    // std::cout << "finished wait , read output" << std::endl;
-    // std::cout << "m_last_output " << m_last_out << std::endl;
-  } catch (const std::exception& e) {
-    throw runtime_error(
-        (std::string{"Shell(\""} + command +
-         "\") has failed whilst capturing the output.\nExit code: " + std::to_string(m_process.exit_code()) +
-         "\n\nstdout:\n" + m_last_out + "\nstderr:\n" + m_last_err + "\nException thrown:" + e.what())
-            .c_str());
+  if (capture_via_pipe) {
+    try {
+      read_lines_with_deadline(
+          m_err,
+          [&](const std::string& l) {
+            if (l.substr(0, terminator.size()) == terminator)
+              return true;
+            m_last_err += l + '\n';
+            return false;
+          },
+          "local command stderr (\"" + command + "\")", command_idle_timeout);
+      // std::cout << "wait , read output" << std::endl;
+      read_lines_with_deadline(
+          m_out,
+          [&](const std::string& l) {
+            if (l == terminator)
+              return true;
+            m_last_out += l + '\n';
+            // std::cout << "out line from command " << l << std::endl;
+            return false;
+          },
+          "local command output (\"" + command + "\")", command_idle_timeout);
+      m_job_number = 0;
+      // std::cout << "finished wait , read output" << std::endl;
+      // std::cout << "m_last_output " << m_last_out << std::endl;
+    } catch (const std::exception& e) {
+      throw runtime_error(
+          (std::string{"Shell(\""} + command +
+           "\") has failed whilst capturing the output.\nExit code: " + std::to_string(m_process.exit_code()) +
+           "\n\nstdout:\n" + m_last_out + "\nstderr:\n" + m_last_err + "\nException thrown:" + e.what())
+              .c_str());
+    }
   }
   fs::current_path(current_path_save);
   m_process.wait();
@@ -356,10 +364,15 @@ void Shell::run_remote_sync(std::string command, const std::string& directory, i
     throw Shell::runtime_error("remote server process has died");
   try {
     m_in << command << std::endl;
-    if (out == "/dev/null") {
-      m_in << "echo '" << terminator << "'" << std::endl;
-      capture_out();
-    }
+    // Always wait for the command to finish, whether or not its own stdout/stderr were redirected to
+    // files: the terminator is a separate, unredirected "echo" sequenced after it on the same
+    // persistent shell session, so it only reaches m_out once the command itself has completed. Without
+    // this, run_remote_sync() would return as soon as the command line was merely handed to the shell's
+    // stdin -- not once it had actually run -- racing every caller that relies on "sync" meaning the
+    // command (and whatever it wrote to `out`) is actually finished, e.g. Job::run()'s pull_rundir() and
+    // run_jobnumber capture immediately afterwards.
+    m_in << "echo '" << terminator << "'" << std::endl;
+    capture_out();
   } catch (const std::exception& e) {
     throw Shell::runtime_error((std::string{"Spawning run process has failed: "} + e.what()).c_str());
   }

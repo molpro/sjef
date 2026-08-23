@@ -39,6 +39,25 @@ inline bool localhost(const std::string_view& host) {
 }
 
 ///> @private
+// A single filesystem syscall against a networked filesystem (NFS and similar) can fail with a
+// transient I/O error under ordinary load, with nothing actually wrong -- observed in practice
+// copying a project's input file into a fresh run directory on an HPC cluster's shared home
+// directory. Retry a few times with a short backoff before giving up.
+template <class F> inline void retry_transient_io_error(F&& f) {
+  constexpr int max_attempts = 5;
+  for (int attempt = 1;; ++attempt) {
+    try {
+      f();
+      return;
+    } catch (const std::exception&) {
+      if (attempt >= max_attempts)
+        throw;
+      std::this_thread::sleep_for(std::chrono::milliseconds(20 * (1 << (attempt - 1))));
+    }
+  }
+}
+
+///> @private
 bool copyDir(fs::path const& source, fs::path const& destination, bool delete_source = false, bool recursive = true) {
   using sjef::runtime_error;
   if (!fs::exists(source) || !fs::is_directory(source))
@@ -56,7 +75,7 @@ bool copyDir(fs::path const& source, fs::path const& destination, bool delete_so
         return false;
     } else {
       if (current.filename() != ".lock" && current.extension() != ".lock")
-        fs::copy_file(current, destination / current.filename());
+        retry_transient_io_error([&] { fs::copy_file(current, destination / current.filename()); });
     }
   }
   return true;
@@ -73,10 +92,19 @@ std::map<fs::path, std::shared_ptr<util::Locker>> lockers;
 inline std::shared_ptr<util::Locker> make_locker(const fs::path& filename) {
   std::lock_guard lock(s_make_locker_mutex);
   auto name = fs::absolute(filename);
-  if (lockers.count(name) == 0) {
-    lockers[name] = std::make_shared<util::Locker>(fs::path{name} / ".lock");
-  }
-  return lockers[name];
+  auto found = lockers.find(name);
+  if (found != lockers.end())
+    return found->second;
+  // Construct into a local first, and only insert on success. lockers[name] = make_shared<...>(...)
+  // would insert a default-constructed (null) entry for `name` via operator[] before evaluating the
+  // right-hand side, so a transient failure in Locker's constructor (e.g. a flaky networked
+  // filesystem's lock file briefly returning EIO on open) would permanently poison the map with a
+  // null locker for that path -- every later call for the same path would then find the entry
+  // already present, skip reconstruction, and hand back that null pointer, crashing or hanging
+  // whatever dereferences it via bolt(), for the remaining lifetime of the process.
+  auto locker = std::make_shared<util::Locker>(fs::path{name} / ".lock");
+  lockers[name] = locker;
+  return locker;
 }
 inline void prune_lockers(const fs::path& filename) {
   std::lock_guard lock(s_make_locker_mutex);

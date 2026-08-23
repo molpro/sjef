@@ -1,8 +1,10 @@
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <map>
 #include <mutex>
 #include <string>
+#include <thread>
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -11,6 +13,27 @@
 #include <boost/interprocess/sync/file_lock.hpp>
 
 namespace sjef::util {
+
+// Opening or locking the lock file are both a single syscall against whatever filesystem the project
+// lives on. On a networked filesystem (NFS and similar), that syscall can fail with a transient I/O
+// error under ordinary load -- observed in practice on an HPC cluster's shared home directory not
+// just as an occasional microsecond-scale blip, but as bursts of failures recurring across several
+// seconds -- with nothing wrong with the file or the lock itself. Retry with a backoff generous
+// enough to ride that out (~8s total across 8 attempts) before giving up and letting the error
+// propagate, rather than failing a job launch outright over a hiccup that would have gone unnoticed
+// a moment later.
+template <class F> inline auto retry_transient_io_error(F&& f) -> decltype(f()) {
+  constexpr int max_attempts = 8;
+  for (int attempt = 1;; ++attempt) {
+    try {
+      return f();
+    } catch (const std::exception&) {
+      if (attempt >= max_attempts)
+        throw;
+      std::this_thread::sleep_for(std::chrono::milliseconds(30 * (1 << (attempt - 1))));
+    }
+  }
+}
 
 inline std::string hash_path(const fs::path& path) {
   if (auto parent = path.parent_path(); !parent.string().empty())
@@ -34,8 +57,9 @@ inline fs::path lock_file(fs::path path) {
 }
 
 Locker::Locker(fs::path path)
-    : m_path(lock_file(std::move(path))),
-      m_file_lock(std::make_unique<boost::interprocess::file_lock>(fs::absolute(m_path).string().c_str())) {}
+    : m_path(lock_file(std::move(path))), m_file_lock(retry_transient_io_error([this] {
+        return std::make_unique<boost::interprocess::file_lock>(fs::absolute(m_path).string().c_str());
+      })) {}
 Locker::~Locker() = default;
 
 void Locker::add_bolt() {
@@ -47,7 +71,19 @@ void Locker::add_bolt() {
   m_lock.reset(new std::scoped_lock<std::mutex>(m_mutex));
   m_owning_thread = this_thread;
   m_bolts = 1;
-  m_file_lock->lock();
+  try {
+    retry_transient_io_error([this] { m_file_lock->lock(); return 0; });
+  } catch (...) {
+    // Roll back: without this, a lock() failure (even after retries) leaves m_mutex held with no
+    // Bolt object ever fully constructed to release it via remove_bolt() -- the RAII Bolt whose
+    // constructor called add_bolt() never finishes constructing, so its destructor never runs
+    // either. Every subsequent bolt() call on this Locker, from any thread, would then block on
+    // m_mutex forever.
+    m_bolts = 0;
+    m_owning_thread = {};
+    m_lock.reset(nullptr);
+    throw;
+  }
 }
 void Locker::remove_bolt() {
   --m_bolts;

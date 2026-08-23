@@ -40,11 +40,12 @@ inline bool localhost(const std::string_view& host) {
 
 ///> @private
 // A single filesystem syscall against a networked filesystem (NFS and similar) can fail with a
-// transient I/O error under ordinary load, with nothing actually wrong -- observed in practice
-// copying a project's input file into a fresh run directory on an HPC cluster's shared home
-// directory. Retry a few times with a short backoff before giving up.
+// transient I/O error under ordinary load, with nothing actually wrong -- observed in practice on
+// an HPC cluster's shared home directory not just as an occasional microsecond-scale blip, but as
+// bursts of failures recurring across several seconds. Retry with a backoff generous enough to ride
+// that out (~8s total across 8 attempts) before giving up and letting the error propagate.
 template <class F> inline void retry_transient_io_error(F&& f) {
-  constexpr int max_attempts = 5;
+  constexpr int max_attempts = 8;
   for (int attempt = 1;; ++attempt) {
     try {
       f();
@@ -52,7 +53,7 @@ template <class F> inline void retry_transient_io_error(F&& f) {
     } catch (const std::exception&) {
       if (attempt >= max_attempts)
         throw;
-      std::this_thread::sleep_for(std::chrono::milliseconds(20 * (1 << (attempt - 1))));
+      std::this_thread::sleep_for(std::chrono::milliseconds(30 * (1 << (attempt - 1))));
     }
   }
 }
@@ -990,13 +991,19 @@ void Project::check_property_file() const {
   check_property_file_locked();
 }
 void Project::check_property_file_locked() const {
-  auto lastwrite = fs::last_write_time(propertyFile());
-  if (m_property_file_modification_time == lastwrite && !properties_last_written_by_me(false))
-    m_property_file_modification_time -= std::chrono::milliseconds(1);
-  if (m_property_file_modification_time < lastwrite) {
-    load_property_file_locked();
-    m_property_file_modification_time = lastwrite;
-  }
+  // Every property read (including status()) funnels through here, so on a networked filesystem
+  // this is hit constantly -- wrap the whole sequence, not just load_property_file_locked()'s own
+  // file read, since the fs::last_write_time() calls immediately below are just as exposed to the
+  // same transient I/O errors.
+  retry_transient_io_error([&] {
+    auto lastwrite = fs::last_write_time(propertyFile());
+    if (m_property_file_modification_time == lastwrite && !properties_last_written_by_me(false))
+      m_property_file_modification_time -= std::chrono::milliseconds(1);
+    if (m_property_file_modification_time < lastwrite) {
+      load_property_file_locked();
+      m_property_file_modification_time = lastwrite;
+    }
+  });
 }
 
 void Project::save_property_file() const {
@@ -1004,20 +1011,22 @@ void Project::save_property_file() const {
   save_property_file_locked();
 }
 void Project::save_property_file_locked() const {
-  struct plist_writer writer;
-  writer.file = propertyFile().string();
-  if (!fs::exists(propertyFile())) {
-    fs::create_directories(m_filename);
-    { std::ofstream x(propertyFile()); }
-  }
-  if (use_writer)
-    m_properties->save(writer, "\t", pugi::format_no_declaration);
-  else
-    m_properties->save_file(propertyFile().c_str());
-  auto path = (fs::path{m_filename} / fs::path{writing_object_file});
-  std::ofstream o{path.string()};
-  std::hash<const Project*> hasher;
-  o << hasher(this);
+  retry_transient_io_error([&] {
+    struct plist_writer writer;
+    writer.file = propertyFile().string();
+    if (!fs::exists(propertyFile())) {
+      fs::create_directories(m_filename);
+      { std::ofstream x(propertyFile()); }
+    }
+    if (use_writer)
+      m_properties->save(writer, "\t", pugi::format_no_declaration);
+    else
+      m_properties->save_file(propertyFile().c_str());
+    auto path = (fs::path{m_filename} / fs::path{writing_object_file});
+    std::ofstream o{path.string()};
+    std::hash<const Project*> hasher;
+    o << hasher(this);
+  });
 }
 
 ///> @private

@@ -16,19 +16,21 @@ namespace sjef::util {
 
 // Opening or locking the lock file are both a single syscall against whatever filesystem the project
 // lives on. On a networked filesystem (NFS and similar), that syscall can fail with a transient I/O
-// error under ordinary load -- observed in practice on an HPC cluster's shared home directory -- with
-// nothing wrong with the file or the lock itself. Retry a few times with a short backoff before
-// giving up and letting the error propagate, rather than failing a job launch outright over a hiccup
-// that would have gone unnoticed a moment later.
+// error under ordinary load -- observed in practice on an HPC cluster's shared home directory not
+// just as an occasional microsecond-scale blip, but as bursts of failures recurring across several
+// seconds -- with nothing wrong with the file or the lock itself. Retry with a backoff generous
+// enough to ride that out (~8s total across 8 attempts) before giving up and letting the error
+// propagate, rather than failing a job launch outright over a hiccup that would have gone unnoticed
+// a moment later.
 template <class F> inline auto retry_transient_io_error(F&& f) -> decltype(f()) {
-  constexpr int max_attempts = 5;
+  constexpr int max_attempts = 8;
   for (int attempt = 1;; ++attempt) {
     try {
       return f();
     } catch (const std::exception&) {
       if (attempt >= max_attempts)
         throw;
-      std::this_thread::sleep_for(std::chrono::milliseconds(20 * (1 << (attempt - 1))));
+      std::this_thread::sleep_for(std::chrono::milliseconds(30 * (1 << (attempt - 1))));
     }
   }
 }

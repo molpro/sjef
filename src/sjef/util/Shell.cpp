@@ -179,8 +179,24 @@ std::vector<std::string> tokenise(const std::string& command) {
   return tokens;
 }
 
+// fs::current_path() is process-wide state, not thread-local, so every place that saves it, chdir()s
+// to a target directory to spawn a child there, and restores it afterwards (run_local_sync() and
+// run_local_async() below) must run as one atomic unit with respect to every other thread doing the
+// same thing -- including Job::poll_job()'s free-running background thread, which is already active
+// for any other Job whose subprocess hasn't exited yet and fires this same save/chdir/restore
+// sequence (with directory=".") on every status-check cycle. Each of run_local_sync/run_local_async
+// is called via a *different* Shell instance per Job, and Shell's own m_run_mutex is per-instance, so
+// it does nothing to prevent this. Without a single process-wide lock, one thread's restore can land
+// between another thread's chdir() and its subprocess spawn, silently launching that subprocess (e.g.
+// Molpro itself, given a bare relative input filename) in the wrong directory. Only the brief
+// spawn/read/restore dance needs to be serialized, not the child's subsequent execution -- once
+// spawned (and, for the async case, detached), the child runs independently of this lock, so actual
+// job runtimes still overlap.
+static std::mutex g_current_path_mutex;
+
 void Shell::run_local_sync(const std::string& command, const std::string& directory, int verbosity,
                            const std::string& out, const std::string& err) const {
+  std::unique_lock<std::mutex> current_path_lock(g_current_path_mutex);
   auto wait = true;
   fs::path current_path_save;
   try {
@@ -259,6 +275,10 @@ void Shell::run_local_sync(const std::string& command, const std::string& direct
     }
   }
   fs::current_path(current_path_save);
+  // Nothing from here on touches the cwd, so release the lock now rather than holding it (and
+  // blocking every other thread's launch/status-check) for however long this command's own process
+  // takes to actually exit.
+  current_path_lock.unlock();
   m_process.wait();
   if (m_process.exit_code()) {
     throw runtime_error((std::string{"Shell(\""} + command +
@@ -293,6 +313,7 @@ void Shell::capture_job_number_from_error(const std::string& command) const {
 
 void Shell::run_local_async(const std::string& command, const std::string& directory, int verbosity,
                             const std::string& out) const {
+  std::lock_guard<std::mutex> current_path_lock(g_current_path_mutex);
   fs::path current_path_save;
   try {
     current_path_save = fs::current_path();

@@ -484,7 +484,8 @@ mapstringstring_t Project::backend_parameters(const std::string& backend, bool d
   return result;
 }
 
-bool Project::run(int verbosity, bool force, bool wait, const std::string& options) {
+bool Project::run(int verbosity, bool force, bool wait, const std::string& options,
+                   const mapstringstring_t& backend_parameters) {
 
   using util::splitString;
 
@@ -495,6 +496,24 @@ bool Project::run(int verbosity, bool force, bool wait, const std::string& optio
   m_trace(2 - verbosity) << "Project::run() run_needed()=" << run_needed(verbosity) << std::endl;
   if (!force && !run_needed())
     return false;
+
+  // Temporarily override the backend parameters given in backend_parameters, remembering
+  // their actual current value (or absence thereof) so it can be put back once the job has
+  // been launched. this->backend_parameters() only tells us the names of the parameters that
+  // the backend's run_command template references, so any name in the caller-supplied map that
+  // isn't among those is also snapshotted, to guarantee nothing is left overridden afterwards.
+  mapstringstring_t saved_backend_parameters;
+  if (!backend_parameters.empty()) {
+    for (const auto& parameter : this->backend_parameters(backend.name))
+      saved_backend_parameters.emplace(parameter.first, backend_parameter_get(backend.name, parameter.first));
+    for (const auto& parameter : backend_parameters)
+      saved_backend_parameters.emplace(parameter.first, backend_parameter_get(backend.name, parameter.first));
+    for (const auto& parameter : saved_backend_parameters)
+      backend_parameter_delete(backend.name, parameter.first);
+    for (const auto& parameter : backend_parameters)
+      backend_parameter_set(backend.name, parameter.first, parameter.second);
+  }
+
   //  status(unevaluated);
   std::string line;
   std::string optionstring = options+" ";
@@ -520,6 +539,15 @@ bool Project::run(int verbosity, bool force, bool wait, const std::string& optio
   property_set("jobnumber", std::to_string(m_job->job_number()));
   //    p_status_mutex.reset(); // TODO probably not necessary
   m_trace(3 - verbosity) << "jobnumber " << m_job->job_number() << std::endl;
+
+  if (!backend_parameters.empty()) {
+    for (const auto& parameter : backend_parameters)
+      backend_parameter_delete(backend.name, parameter.first);
+    for (const auto& parameter : saved_backend_parameters)
+      if (!parameter.second.empty())
+        backend_parameter_set(backend.name, parameter.first, parameter.second);
+  }
+
   if (wait)
     this->wait();
   return true;

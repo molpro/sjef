@@ -165,12 +165,20 @@ public:
    * @param wait Whether to wait for the job to complete instead of returning
    * after launching it
    * @param options Additional options
+   * @param backend_parameters If non-empty, backend parameters to use for this run only.
+   * Every backend parameter referenced by the backend's run_command template, together with any
+   * name given here, is saved and unset before applying these name/value pairs with
+   * backend_parameter_set(). Once the job has been launched, the given parameters are unset and
+   * the previously-saved parameters (including the absence of a value, where that was the case)
+   * are restored, so the override does not outlive this call to run().
    * @return
    */
-  bool run(int verbosity = 0, bool force = false, bool wait = false, const std::string& options="");
-  bool run(const std::string& name, int verbosity = 0, bool force = false, bool wait = false, const std::string& options="") {
+  bool run(int verbosity = 0, bool force = false, bool wait = false, const std::string& options = "",
+           const mapstringstring_t& backend_parameters = {});
+  bool run(const std::string& name, int verbosity = 0, bool force = false, bool wait = false,
+           const std::string& options = "", const mapstringstring_t& backend_parameters = {}) {
     change_backend(name);
-    return run(verbosity, force, wait);
+    return run(verbosity, force, wait, options, backend_parameters);
   }
 
   /*!

@@ -495,6 +495,46 @@ TEST_F(test_sjef, backend_parameter_expand2) {
       EXPECT_THROW(p.backend_parameter_expand(backend, preamble + test.first + " more stuff"), std::runtime_error);
 }
 
+#ifndef WIN32
+// Exercises the backend_parameters argument to run(): it should be applied only for the
+// duration of the launch, with whatever was configured before (whether an explicit value, or
+// nothing at all) back in place once the job has been submitted.
+TEST_F(test_sjef, run_backend_parameters) {
+  auto suffix = this->suffix();
+  const std::string backend_name = "run_backend_parameters_backend";
+  const auto run_script = testfile("run_backend_parameters.sh").string();
+  std::ofstream(sjef::expand_path(std::string{m_dot_sjef / suffix / "backends.xml"}))
+      << "<?xml version=\"1.0\"?>\n<backends>\n <backend name=\"" << backend_name << "\" run_command=\"sh "
+      << run_script << " {%message:default_message}\"/>\n</backends>";
+  std::ofstream(run_script) << "echo \"$1\" > \"${2%.*}.out\";echo '<?xml version=\"1.0\"?>\n<root/>' > "
+                               "\"${2%.*}.xml\";";
+  auto p = sjef::Project(testproject("run_backend_parameters"));
+  std::ofstream(p.filename("inp")) << "some input";
+
+  p.backend_parameter_set(backend_name, "message", "preset_value");
+
+  // A run-scoped override takes effect for that run...
+  ASSERT_TRUE(p.run(backend_name, 0, true, false, "", {{"message", "overridden_value"}}));
+  p.wait();
+  EXPECT_EQ(p.file_contents("out"), "overridden_value");
+  // ...but does not outlive it: the pre-existing explicit value is restored.
+  EXPECT_EQ(p.backend_parameter_get(backend_name, "message"), "preset_value");
+
+  // A subsequent run with no override sees the restored value.
+  ASSERT_TRUE(p.run(backend_name, 0, true, false));
+  p.wait();
+  EXPECT_EQ(p.file_contents("out"), "preset_value");
+
+  // A parameter that was never explicitly set is restored to being unset, not to the
+  // template's default value.
+  p.backend_parameter_delete(backend_name, "message");
+  ASSERT_TRUE(p.run(backend_name, 0, true, false, "", {{"message", "one_shot_value"}}));
+  p.wait();
+  EXPECT_EQ(p.file_contents("out"), "one_shot_value");
+  EXPECT_EQ(p.backend_parameter_get(backend_name, "message"), "");
+}
+#endif
+
 TEST_F(test_sjef, atomic) {
   auto filename = testproject("He");
   std::string testval = "testval";

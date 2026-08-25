@@ -198,7 +198,7 @@ class Project(Node):
         """
         self._project_wrapper.trash()
 
-    def run(self, backend=None, verbosity=0, force=False, wait=False, options=""):
+    def run(self, backend=None, verbosity=0, force=False, wait=False, options="", backend_parameters=None):
         """
         Start a sjef job
 
@@ -207,9 +207,13 @@ class Project(Node):
         :param force: whether to force submission of job even if run_needed() reports that it's unnecessary
         :param wait: whether to wait until the job completes instead of returning after launchin it
         :param options: command-line options
+        :param backend_parameters: if given, a dictionary of backend parameter name/value pairs to use for
+            this run only. Any backend parameters already set are restored once the job has been launched,
+            so the override does not persist beyond this call.
         """
         self.children = []
-        self._project_wrapper.run(backend, verbosity, force, wait=False, options=options)
+        self._project_wrapper.run(backend, verbosity, force, wait=False, options=options,
+                                   backend_parameters=backend_parameters)
         if wait:
             self.wait()
 

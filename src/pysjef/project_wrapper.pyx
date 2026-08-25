@@ -189,7 +189,7 @@ cdef class ProjectWrapper:
         """
         deref(self.c_project).trash()
 
-    def run(self, backend=None, verbosity=0, bool force=False, bool wait=False, options=""):
+    def run(self, backend=None, verbosity=0, bool force=False, bool wait=False, options="", backend_parameters=None):
         # For a remote backend this blocks on network I/O (pushing the run directory via
         # rsync/ssh), which can take several seconds. It touches only the C++ Project object,
         # never the Python C-API, so it's safe to release the GIL for the call's duration -
@@ -200,15 +200,22 @@ cdef class ProjectWrapper:
         cdef int v = verbosity
         cdef string bend
         cdef string opts = options.encode('utf-8')
+        cdef map[string, string] cbackend_parameters
+        cdef string ckey, cval
+        if backend_parameters:
+            for key, val in backend_parameters.items():
+                ckey = str(key).encode('utf-8')
+                cval = str(val).encode('utf-8')
+                cbackend_parameters[ckey] = cval
         cdef Project* proj = self.c_project.get()
         cdef bool result
         if backend is None:
             with nogil:
-                result = deref(proj).run(v, force, wait, opts)
+                result = deref(proj).run(v, force, wait, opts, cbackend_parameters)
         else:
             bend = backend.encode('utf-8')
             with nogil:
-                result = deref(proj).run(bend, v, force, wait, opts)
+                result = deref(proj).run(bend, v, force, wait, opts, cbackend_parameters)
         return result
 
     def run_needed(self, int verbosity = 0):

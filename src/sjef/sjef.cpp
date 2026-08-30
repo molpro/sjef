@@ -842,8 +842,13 @@ void Project::recent_edit(const std::filesystem::path& add, const std::filesyste
       changed = changed || lines >= recentMax;
     }
     if (changed) {
-      fs::remove(recent_projects_file);
-      fs::rename(recent_projects_file_, recent_projects_file);
+      // Same reasoning as the two retry_transient_io_error() call sites elsewhere in this file: a
+      // plain filesystem operation on a file this function itself just created, under a lock that
+      // should exclude every other sjef-aware writer, can still fail transiently in practice.
+      retry_transient_io_error([&] {
+        fs::remove(recent_projects_file);
+        fs::rename(recent_projects_file_, recent_projects_file);
+      });
     } else
       fs::remove(recent_projects_file_);
   }

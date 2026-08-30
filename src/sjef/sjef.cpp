@@ -1028,7 +1028,21 @@ struct plist_writer : pugi::xml_writer {
 
 constexpr static bool use_writer = false;
 void Project::load_property_file_locked() const {
-  if (auto result = m_properties->load_file(propertyFile().c_str()); !result)
+  auto result = m_properties->load_file(propertyFile().c_str());
+  if (!result && result.status == pugi::status_file_not_found && fs::exists(propertyFile())) {
+    // pugixml's load_file() opens the file itself (effectively fopen()); this has been directly
+    // observed to fail with "file not found" at the exact same instant a concurrent, independent
+    // process's plain stat() sees the file existing -- i.e. not always a reliable signal that the
+    // file is genuinely gone on this platform. Retrying load_file() itself doesn't help when that
+    // condition persists (observed for minutes at a time on one real machine), so fall back to a
+    // different I/O path -- read the bytes ourselves and hand them to pugixml as a buffer -- rather
+    // than asking pugixml to open the file a second time the same way.
+    std::ifstream in(propertyFile(), std::ios::binary);
+    std::string content{std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
+    if (in)
+      result = m_properties->load_buffer(content.data(), content.size());
+  }
+  if (!result)
     throw runtime_error("error in loading " + propertyFile().string() + "\n" + result.description() + "\n" +
                         slurp(propertyFile()));
   m_property_file_modification_time = fs::last_write_time(propertyFile());
@@ -1059,7 +1073,20 @@ void Project::check_property_file_locked() const {
   // file read, since the fs::last_write_time() calls immediately below are just as exposed to the
   // same transient I/O errors.
   retry_transient_io_error([&] {
-    auto lastwrite = fs::last_write_time(propertyFile());
+    fs::file_time_type lastwrite;
+    try {
+      lastwrite = fs::last_write_time(propertyFile());
+    } catch (const std::exception&) {
+      // Directly observed: fs::last_write_time() throwing "no such file" at the exact instant a
+      // concurrent, independent process's plain stat() sees the file existing. When that happens
+      // and fs::exists() still confirms the file is there, there's nothing to react to -- treat it
+      // as no change (skip the reload below) rather than propagating a failure for a file that, by
+      // direct observation, exists. If fs::exists() agrees the file is genuinely gone, escalate as
+      // before.
+      if (fs::exists(propertyFile()))
+        return;
+      throw;
+    }
     if (m_property_file_modification_time == lastwrite && !properties_last_written_by_me(false))
       m_property_file_modification_time -= std::chrono::milliseconds(1);
     if (m_property_file_modification_time < lastwrite) {

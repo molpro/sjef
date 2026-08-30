@@ -127,7 +127,13 @@ Project::Project(const std::filesystem::path& filename, bool construct, const st
   {
     auto lock = m_locker->bolt();
     if (fs::exists(propertyFile())) {
-      load_property_file_locked();
+      // check_property_file_locked() below wraps its own load_property_file_locked() call in
+      // retry_transient_io_error() for exactly this reason (see its comment), but this direct
+      // call -- taken whenever a project bundle with an existing property file is (re)opened --
+      // didn't have the same protection, leaving it exposed to the same class of transient
+      // failure reading a file that has genuinely just been written (e.g. right after another
+      // Project instance created it moments before).
+      retry_transient_io_error([&] { load_property_file_locked(); });
       property_delete("run_input_hash"); // because different hashes are obtained on Windows and linux/macos, at least if project checked out from git
     } else {
       if (!fs::exists(m_filename))

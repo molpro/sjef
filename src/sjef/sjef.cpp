@@ -707,15 +707,26 @@ bool Project::run_needed(int verbosity) const {
 }
 
 std::string Project::xml(int run, bool sync) const {
-  //  std::cout << "Project::xml() status="<<status()<<std::endl;
   if (status() != completed)
     return xmlRepair(file_contents(m_suffixes.at("xml"), "", run, sync));
   if (run != last_run_directory)
     m_xml_cached.clear();
   last_run_directory = run;
   if (m_xml_cached.empty()) {
-    m_xml_cached = xmlRepair(file_contents(m_suffixes.at("xml"), "", run, sync));
-    //    std::cout << "m_xml_cached set to " << m_xml_cached << std::endl;
+    // A job whose status has just flipped to completed may not yet have its xml file fully
+    // flushed to disk, or created at all -- status() reports completion as soon as the process
+    // exits, with no guarantee about the state of its output files at that instant. file_contents()
+    // returns an empty string for a file that doesn't exist (or is genuinely empty) the same way it
+    // would for one not yet written; caching that empty result here as if it were final content
+    // would permanently stick this Project instance with the "<root/>" placeholder xmlRepair()
+    // produces from it -- run's own number never changes again for a completed run, so nothing
+    // would ever invalidate the cache to let a later, real read through. Only cache genuine content;
+    // an empty read is left uncached so the next call (e.g. a caller retrying for exactly this
+    // reason) tries the file again instead of being handed the same stale placeholder forever.
+    auto raw = file_contents(m_suffixes.at("xml"), "", run, sync);
+    if (raw.empty())
+      return xmlRepair(raw);
+    m_xml_cached = xmlRepair(raw);
   }
   return m_xml_cached;
 }

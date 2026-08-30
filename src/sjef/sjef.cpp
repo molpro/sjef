@@ -128,12 +128,6 @@ inline std::shared_ptr<util::Locker> make_locker(const fs::path& filename) {
   lockers[name] = locker;
   return locker;
 }
-inline void prune_lockers(const fs::path& filename) {
-  std::lock_guard lock(s_make_locker_mutex);
-  auto name = fs::absolute(filename);
-  if (lockers.count(name) > 0 && lockers[name].use_count() == 0)
-    lockers.erase(name);
-}
 inline fs::path sjef_config_directory() {
   return fs::path(expand_path(getenv("SJEF_CONFIG") == nullptr ? "~/.sjef" : getenv("SJEF_CONFIG")));
 }
@@ -220,7 +214,19 @@ Project::Project(const std::filesystem::path& filename, bool construct, const st
   }
 }
 
-Project::~Project() {}
+Project::~Project() {
+  // make_locker() caches one Locker per unique project path in a process-global map, keyed for
+  // the whole process lifetime, so that every Project instance pointing at the same bundle shares
+  // one lock -- deliberately never pruned here. A Job's background poll_job() task (see Job.cpp)
+  // holds only a reference to the owning Project, not its own share of m_locker, and doesn't get
+  // joined by this destructor; actually freeing the Locker here, out from under a still-running
+  // poll_job() that reaches it through that Project reference, is a use-after-free. Locker no
+  // longer needs pruning to avoid leaking file descriptors: its underlying file descriptor is now
+  // opened lazily and closed again around each bolted section (see Locker::add_bolt() /
+  // remove_bolt()) rather than held for the object's whole lifetime, so an entry sitting unpruned
+  // in this map costs a small, bounded amount of memory -- one lightweight object per distinct
+  // path ever opened -- not an open file descriptor.
+}
 
 std::string Project::get_project_suffix(const std::filesystem::path& filename,
                                         const std::string& default_suffix) const {
@@ -320,10 +326,22 @@ bool Project::move(const std::filesystem::path& destination_filename, bool force
     if (!copyDir(fs::path(m_filename), dest, true))
       throw runtime_error("Failed to copy current project directory");
     m_filename = dest.string();
+    // Rebuild the locker for the new location. Previously this wasn't needed here: m_locker's file
+    // descriptor was opened once, eagerly, at Locker construction, and an already-open Unix file
+    // descriptor stays valid even after the file it was opened from is renamed or removed -- so the
+    // stale-looking old Locker kept working by accident. Now that the descriptor is opened lazily,
+    // on demand, around each bolted section (see Locker::add_bolt()), a Locker still keyed to the
+    // pre-move path would try to reopen a lock file that fs::remove_all() below is about to delete.
+    m_locker = make_locker(m_filename);
     force_file_names(namesave);
     recent_edit(history ? m_filename : "", filenamesave);
     if (!fs::remove_all(filenamesave))
       throw runtime_error("failed to delete current project directory");
+    // Deliberately not pruning the old path's now-(likely)-unreferenced map entry here: see the
+    // comment on Project::~Project() for why actually freeing a Locker while anything might still
+    // reach it through a stale reference (e.g. a background poll_job() task that this move() call's
+    // running/waiting guard above can't fully rule out) is unsafe, and unnecessary now that an idle
+    // Locker doesn't hold a file descriptor open.
     return true;
   } catch (...) {
     m_warn.warn() << "move failed to copy " << m_filename << " : " << dest << std::endl;

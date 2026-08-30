@@ -56,22 +56,51 @@ inline fs::path lock_file(fs::path path) {
   return result;
 }
 
-Locker::Locker(fs::path path)
-    : m_path(lock_file(std::move(path))), m_file_lock(retry_transient_io_error([this] {
-        return std::make_unique<boost::interprocess::file_lock>(fs::absolute(m_path).string().c_str());
-      })) {}
+Locker::Locker(fs::path path) : m_path(lock_file(std::move(path))) {}
 Locker::~Locker() = default;
 
 void Locker::add_bolt() {
   auto this_thread = std::this_thread::get_id();
-  if (m_owning_thread == this_thread && m_bolts > 0) {
-    m_bolts++;
-    return;
+  {
+    std::lock_guard state_lock(m_state_mutex);
+    // This check has to happen before we know whether this thread already holds m_mutex, so it
+    // can't itself be guarded by m_mutex -- m_state_mutex exists purely to make this read (and
+    // every write to the same fields, below and in remove_bolt()) race-free instead of racing
+    // against another thread's genuinely-mutex-protected acquire or release happening right now.
+    if (m_owning_thread == this_thread && m_bolts > 0) {
+      m_bolts++;
+      return;
+    }
   }
   m_lock.reset(new std::scoped_lock<std::mutex>(m_mutex));
-  m_owning_thread = this_thread;
-  m_bolts = 1;
+  {
+    std::lock_guard state_lock(m_state_mutex);
+    m_owning_thread = this_thread;
+    m_bolts = 1;
+  }
   try {
+    // Opened here rather than in the constructor: this Locker is cached process-wide, keyed by
+    // path, for as long as any Project referencing that path is alive (see make_locker() in
+    // sjef.cpp) -- an eagerly-opened, never-closed handle would leak one file descriptor per
+    // distinct project path ever opened, for the rest of the process, regardless of whether that
+    // path's Project is still doing anything. Opening it fresh here and closing it again in
+    // remove_bolt() below means the descriptor is only live for as long as a bolt actually is.
+    // m_file_lock itself is only ever touched while m_mutex is held (here, and in remove_bolt()),
+    // so it doesn't need m_state_mutex's protection the way m_bolts/m_owning_thread do.
+    if (!m_file_lock) {
+      // Recreate the lock file if it's gone missing since this Locker was constructed or last
+      // used: this same process-wide, path-keyed Locker cache (see make_locker() in sjef.cpp) can
+      // hand back a cached-but-idle Locker for a path whose directory was deleted and recreated in
+      // the meantime -- e.g. Project::copy()'s destination reusing a path an earlier
+      // Project::move() vacated -- since copying/recreating a project bundle doesn't itself copy
+      // the old .lock file. An eagerly-opened, always-live file descriptor never needed this (the
+      // descriptor stays valid via the file's inode regardless of what happens to the path
+      // afterwards); reopening on demand does.
+      lock_file(m_path);
+      m_file_lock = retry_transient_io_error([this] {
+        return std::make_unique<boost::interprocess::file_lock>(fs::absolute(m_path).string().c_str());
+      });
+    }
     retry_transient_io_error([this] { m_file_lock->lock(); return 0; });
   } catch (...) {
     // Roll back: without this, a lock() failure (even after retries) leaves m_mutex held with no
@@ -79,6 +108,7 @@ void Locker::add_bolt() {
     // constructor called add_bolt() never finishes constructing, so its destructor never runs
     // either. Every subsequent bolt() call on this Locker, from any thread, would then block on
     // m_mutex forever.
+    std::lock_guard state_lock(m_state_mutex);
     m_bolts = 0;
     m_owning_thread = {};
     m_lock.reset(nullptr);
@@ -86,11 +116,18 @@ void Locker::add_bolt() {
   }
 }
 void Locker::remove_bolt() {
+  std::lock_guard state_lock(m_state_mutex);
   --m_bolts;
   if (m_bolts < 0)
     throw std::out_of_range("Locker::remove_bolt called too many times");
   if (m_bolts == 0) {
     m_file_lock->unlock();
+    m_file_lock.reset(); // release the file descriptor now that nothing needs it locked
+    // Without this, m_owning_thread keeps naming the thread that last held the bolt even though
+    // m_bolts is back to 0 -- harmless on its own, but if that same thread's id is later reused
+    // (or, before this fix, simply read without synchronization) it could make the reentrant check
+    // above appear to match a thread that does not actually hold anything.
+    m_owning_thread = {};
     m_lock.reset(nullptr);
   }
 }

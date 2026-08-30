@@ -25,6 +25,9 @@ namespace sjef::util {
  * called multiple times, with only the first instance having a real effect, and the lock being released when the last
  * bolt is removed. It is recommended not to call add_bolt() directly, but to use the RAII pattern provided by the
  * bolt() function.
+ *
+ * The underlying file descriptor used to hold the lock is opened only while at least one bolt is held, and closed
+ * again once the last one is removed -- not kept open for this object's whole lifetime.
  */
 class Locker {
 public:
@@ -39,8 +42,20 @@ private:
   const fs::path m_path;
   std::unique_ptr<std::scoped_lock<std::mutex>> m_lock;
   std::mutex m_mutex;
+  // Guards m_bolts, m_owning_thread and m_file_lock against add_bolt()'s reentrant-call check,
+  // which (by design) has to read m_owning_thread/m_bolts *before* it knows whether this thread
+  // already holds m_mutex -- so that read can't itself be protected by m_mutex. Without a separate
+  // mutex for just these fields, that read races every other thread's writes to them.
+  std::mutex m_state_mutex;
   int m_bolts = 0;
-  const std::unique_ptr<boost::interprocess::file_lock> m_file_lock;
+  // Opened lazily, only while a bolt is actually held (see add_bolt()/remove_bolt()), rather than
+  // for this Locker's whole lifetime: a Locker lives in a process-wide, path-keyed cache for as
+  // long as any Project pointing at that path is alive, so an eagerly-opened, never-closed handle
+  // here means one leaked file descriptor per distinct project path ever opened, for the life of
+  // the process -- fine for a handful of projects, but exhausted a constrained file descriptor
+  // budget outright on a workload that legitimately visits thousands of distinct paths (many
+  // parameter variants across many molecules) while keeping every resulting Project alive.
+  std::unique_ptr<boost::interprocess::file_lock> m_file_lock;
   std::thread::id m_owning_thread;
 
 public:

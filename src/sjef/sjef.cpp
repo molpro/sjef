@@ -55,8 +55,12 @@ inline bool localhost(const std::string_view& host) {
 // up to the cap, then three more 5s sleeps) while starting with the same fast first retries for
 // the common, genuinely-transient case.
 template <class F> inline void retry_transient_io_error(F&& f) {
-  constexpr int max_attempts = 12;
-  constexpr auto max_sleep = std::chrono::milliseconds(5000);
+  // Confirmed by direct observation: a property file that was reported missing across 12 attempts
+  // spanning ~23s (the previous budget) was, moments after this loop gave up, present and valid --
+  // i.e. this really is transient, just slower to resolve than 23s on at least one real machine.
+  // Widened accordingly (~115s worst case) rather than guessing at a new number a second time.
+  constexpr int max_attempts = 20;
+  constexpr auto max_sleep = std::chrono::milliseconds(10000);
   for (int attempt = 1;; ++attempt) {
     try {
       f();

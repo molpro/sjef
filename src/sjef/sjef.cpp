@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <functional>
+#include <iostream>
 #include <map>
 #include <pugixml.hpp>
 #include <random>
@@ -60,9 +61,15 @@ template <class F> inline void retry_transient_io_error(F&& f) {
     try {
       f();
       return;
-    } catch (const std::exception&) {
-      if (attempt >= max_attempts)
+    } catch (const std::exception& e) {
+      // TODO temporary diagnostic while chasing a reported, not-yet-locally-reproduced failure of
+      // this exact retry loop -- remove once that's understood.
+      std::cerr << "retry_transient_io_error: attempt " << attempt << "/" << max_attempts
+                << " failed: " << e.what() << std::endl;
+      if (attempt >= max_attempts) {
+        std::cerr << "retry_transient_io_error: giving up after " << max_attempts << " attempts" << std::endl;
         throw;
+      }
       std::this_thread::sleep_for(std::min(std::chrono::milliseconds(30 * (1 << (attempt - 1))), max_sleep));
     }
   }

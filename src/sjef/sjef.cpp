@@ -39,13 +39,23 @@ inline bool localhost(const std::string_view& host) {
 }
 
 ///> @private
-// A single filesystem syscall against a networked filesystem (NFS and similar) can fail with a
-// transient I/O error under ordinary load, with nothing actually wrong -- observed in practice on
-// an HPC cluster's shared home directory not just as an occasional microsecond-scale blip, but as
-// bursts of failures recurring across several seconds. Retry with a backoff generous enough to ride
-// that out (~8s total across 8 attempts) before giving up and letting the error propagate.
+// A single filesystem syscall can fail with a transient I/O error under ordinary load, with
+// nothing actually wrong -- observed in practice on an HPC cluster's shared home directory not
+// just as an occasional microsecond-scale blip, but as bursts of failures recurring across
+// several seconds, and separately, locally, from antivirus/backup software (e.g. a corporate
+// endpoint scanner, or Time Machine) intercepting rapid file create-then-rename sequences of the
+// kind sjef's own atomic file updates do. Retry with a backoff generous enough to ride that out
+// before giving up and letting the error propagate.
+//
+// The previous version of this comment claimed "~8s total across 8 attempts", but the doubling
+// backoff with no cap actually summed to ~3.8s over 7 sleeps -- not necessarily enough against a
+// busy antivirus scanner, which can hold a file for several seconds at a time. Capping each sleep
+// and using more attempts reaches a considerably longer worst-case window (~23s: 3.8s of doubling
+// up to the cap, then three more 5s sleeps) while starting with the same fast first retries for
+// the common, genuinely-transient case.
 template <class F> inline void retry_transient_io_error(F&& f) {
-  constexpr int max_attempts = 8;
+  constexpr int max_attempts = 12;
+  constexpr auto max_sleep = std::chrono::milliseconds(5000);
   for (int attempt = 1;; ++attempt) {
     try {
       f();
@@ -53,7 +63,7 @@ template <class F> inline void retry_transient_io_error(F&& f) {
     } catch (const std::exception&) {
       if (attempt >= max_attempts)
         throw;
-      std::this_thread::sleep_for(std::chrono::milliseconds(30 * (1 << (attempt - 1))));
+      std::this_thread::sleep_for(std::min(std::chrono::milliseconds(30 * (1 << (attempt - 1))), max_sleep));
     }
   }
 }
@@ -845,10 +855,13 @@ void Project::recent_edit(const std::filesystem::path& add, const std::filesyste
       // Same reasoning as the two retry_transient_io_error() call sites elsewhere in this file: a
       // plain filesystem operation on a file this function itself just created, under a lock that
       // should exclude every other sjef-aware writer, can still fail transiently in practice.
-      retry_transient_io_error([&] {
-        fs::remove(recent_projects_file);
-        fs::rename(recent_projects_file_, recent_projects_file);
-      });
+      //
+      // rename() atomically replaces an existing destination on POSIX, so the separate remove()
+      // that used to precede it here was both unnecessary and actively harmful: it opened a
+      // window, inside the supposedly-atomic update, where recent_projects_file didn't exist at
+      // all, and turned what should be one filesystem operation into two -- doubling the surface
+      // for exactly the kind of transient failure this retry exists to absorb.
+      retry_transient_io_error([&] { fs::rename(recent_projects_file_, recent_projects_file); });
     } else
       fs::remove(recent_projects_file_);
   }

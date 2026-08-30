@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <functional>
+#include <iostream>
 #include <map>
 #include <pugixml.hpp>
 #include <random>
@@ -39,21 +40,41 @@ inline bool localhost(const std::string_view& host) {
 }
 
 ///> @private
-// A single filesystem syscall against a networked filesystem (NFS and similar) can fail with a
-// transient I/O error under ordinary load, with nothing actually wrong -- observed in practice on
-// an HPC cluster's shared home directory not just as an occasional microsecond-scale blip, but as
-// bursts of failures recurring across several seconds. Retry with a backoff generous enough to ride
-// that out (~8s total across 8 attempts) before giving up and letting the error propagate.
+// A single filesystem syscall can fail with a transient I/O error under ordinary load, with
+// nothing actually wrong -- observed in practice on an HPC cluster's shared home directory not
+// just as an occasional microsecond-scale blip, but as bursts of failures recurring across
+// several seconds, and separately, locally, from antivirus/backup software (e.g. a corporate
+// endpoint scanner, or Time Machine) intercepting rapid file create-then-rename sequences of the
+// kind sjef's own atomic file updates do. Retry with a backoff generous enough to ride that out
+// before giving up and letting the error propagate.
+//
+// The previous version of this comment claimed "~8s total across 8 attempts", but the doubling
+// backoff with no cap actually summed to ~3.8s over 7 sleeps -- not necessarily enough against a
+// busy antivirus scanner, which can hold a file for several seconds at a time. Capping each sleep
+// and using more attempts reaches a considerably longer worst-case window (~23s: 3.8s of doubling
+// up to the cap, then three more 5s sleeps) while starting with the same fast first retries for
+// the common, genuinely-transient case.
 template <class F> inline void retry_transient_io_error(F&& f) {
-  constexpr int max_attempts = 8;
+  // Confirmed by direct observation: a property file that was reported missing across 12 attempts
+  // spanning ~23s (the previous budget) was, moments after this loop gave up, present and valid --
+  // i.e. this really is transient, just slower to resolve than 23s on at least one real machine.
+  // Widened accordingly (~115s worst case) rather than guessing at a new number a second time.
+  constexpr int max_attempts = 20;
+  constexpr auto max_sleep = std::chrono::milliseconds(10000);
   for (int attempt = 1;; ++attempt) {
     try {
       f();
       return;
-    } catch (const std::exception&) {
-      if (attempt >= max_attempts)
+    } catch (const std::exception& e) {
+      // TODO temporary diagnostic while chasing a reported, not-yet-locally-reproduced failure of
+      // this exact retry loop -- remove once that's understood.
+      std::cerr << "retry_transient_io_error: attempt " << attempt << "/" << max_attempts
+                << " failed: " << e.what() << std::endl;
+      if (attempt >= max_attempts) {
+        std::cerr << "retry_transient_io_error: giving up after " << max_attempts << " attempts" << std::endl;
         throw;
-      std::this_thread::sleep_for(std::chrono::milliseconds(30 * (1 << (attempt - 1))));
+      }
+      std::this_thread::sleep_for(std::min(std::chrono::milliseconds(30 * (1 << (attempt - 1))), max_sleep));
     }
   }
 }
@@ -107,12 +128,6 @@ inline std::shared_ptr<util::Locker> make_locker(const fs::path& filename) {
   lockers[name] = locker;
   return locker;
 }
-inline void prune_lockers(const fs::path& filename) {
-  std::lock_guard lock(s_make_locker_mutex);
-  auto name = fs::absolute(filename);
-  if (lockers.count(name) > 0 && lockers[name].use_count() == 0)
-    lockers.erase(name);
-}
 inline fs::path sjef_config_directory() {
   return fs::path(expand_path(getenv("SJEF_CONFIG") == nullptr ? "~/.sjef" : getenv("SJEF_CONFIG")));
 }
@@ -127,7 +142,13 @@ Project::Project(const std::filesystem::path& filename, bool construct, const st
   {
     auto lock = m_locker->bolt();
     if (fs::exists(propertyFile())) {
-      load_property_file_locked();
+      // check_property_file_locked() below wraps its own load_property_file_locked() call in
+      // retry_transient_io_error() for exactly this reason (see its comment), but this direct
+      // call -- taken whenever a project bundle with an existing property file is (re)opened --
+      // didn't have the same protection, leaving it exposed to the same class of transient
+      // failure reading a file that has genuinely just been written (e.g. right after another
+      // Project instance created it moments before).
+      retry_transient_io_error([&] { load_property_file_locked(); });
       property_delete("run_input_hash"); // because different hashes are obtained on Windows and linux/macos, at least if project checked out from git
     } else {
       if (!fs::exists(m_filename))
@@ -193,7 +214,19 @@ Project::Project(const std::filesystem::path& filename, bool construct, const st
   }
 }
 
-Project::~Project() {}
+Project::~Project() {
+  // make_locker() caches one Locker per unique project path in a process-global map, keyed for
+  // the whole process lifetime, so that every Project instance pointing at the same bundle shares
+  // one lock -- deliberately never pruned here. A Job's background poll_job() task (see Job.cpp)
+  // holds only a reference to the owning Project, not its own share of m_locker, and doesn't get
+  // joined by this destructor; actually freeing the Locker here, out from under a still-running
+  // poll_job() that reaches it through that Project reference, is a use-after-free. Locker no
+  // longer needs pruning to avoid leaking file descriptors: its underlying file descriptor is now
+  // opened lazily and closed again around each bolted section (see Locker::add_bolt() /
+  // remove_bolt()) rather than held for the object's whole lifetime, so an entry sitting unpruned
+  // in this map costs a small, bounded amount of memory -- one lightweight object per distinct
+  // path ever opened -- not an open file descriptor.
+}
 
 std::string Project::get_project_suffix(const std::filesystem::path& filename,
                                         const std::string& default_suffix) const {
@@ -293,10 +326,22 @@ bool Project::move(const std::filesystem::path& destination_filename, bool force
     if (!copyDir(fs::path(m_filename), dest, true))
       throw runtime_error("Failed to copy current project directory");
     m_filename = dest.string();
+    // Rebuild the locker for the new location. Previously this wasn't needed here: m_locker's file
+    // descriptor was opened once, eagerly, at Locker construction, and an already-open Unix file
+    // descriptor stays valid even after the file it was opened from is renamed or removed -- so the
+    // stale-looking old Locker kept working by accident. Now that the descriptor is opened lazily,
+    // on demand, around each bolted section (see Locker::add_bolt()), a Locker still keyed to the
+    // pre-move path would try to reopen a lock file that fs::remove_all() below is about to delete.
+    m_locker = make_locker(m_filename);
     force_file_names(namesave);
     recent_edit(history ? m_filename : "", filenamesave);
     if (!fs::remove_all(filenamesave))
       throw runtime_error("failed to delete current project directory");
+    // Deliberately not pruning the old path's now-(likely)-unreferenced map entry here: see the
+    // comment on Project::~Project() for why actually freeing a Locker while anything might still
+    // reach it through a stale reference (e.g. a background poll_job() task that this move() call's
+    // running/waiting guard above can't fully rule out) is unsafe, and unnecessary now that an idle
+    // Locker doesn't hold a file descriptor open.
     return true;
   } catch (...) {
     m_warn.warn() << "move failed to copy " << m_filename << " : " << dest << std::endl;
@@ -836,8 +881,16 @@ void Project::recent_edit(const std::filesystem::path& add, const std::filesyste
       changed = changed || lines >= recentMax;
     }
     if (changed) {
-      fs::remove(recent_projects_file);
-      fs::rename(recent_projects_file_, recent_projects_file);
+      // Same reasoning as the two retry_transient_io_error() call sites elsewhere in this file: a
+      // plain filesystem operation on a file this function itself just created, under a lock that
+      // should exclude every other sjef-aware writer, can still fail transiently in practice.
+      //
+      // rename() atomically replaces an existing destination on POSIX, so the separate remove()
+      // that used to precede it here was both unnecessary and actively harmful: it opened a
+      // window, inside the supposedly-atomic update, where recent_projects_file didn't exist at
+      // all, and turned what should be one filesystem operation into two -- doubling the surface
+      // for exactly the kind of transient failure this retry exists to absorb.
+      retry_transient_io_error([&] { fs::rename(recent_projects_file_, recent_projects_file); });
     } else
       fs::remove(recent_projects_file_);
   }
@@ -993,7 +1046,21 @@ struct plist_writer : pugi::xml_writer {
 
 constexpr static bool use_writer = false;
 void Project::load_property_file_locked() const {
-  if (auto result = m_properties->load_file(propertyFile().c_str()); !result)
+  auto result = m_properties->load_file(propertyFile().c_str());
+  if (!result && result.status == pugi::status_file_not_found && fs::exists(propertyFile())) {
+    // pugixml's load_file() opens the file itself (effectively fopen()); this has been directly
+    // observed to fail with "file not found" at the exact same instant a concurrent, independent
+    // process's plain stat() sees the file existing -- i.e. not always a reliable signal that the
+    // file is genuinely gone on this platform. Retrying load_file() itself doesn't help when that
+    // condition persists (observed for minutes at a time on one real machine), so fall back to a
+    // different I/O path -- read the bytes ourselves and hand them to pugixml as a buffer -- rather
+    // than asking pugixml to open the file a second time the same way.
+    std::ifstream in(propertyFile(), std::ios::binary);
+    std::string content{std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
+    if (in)
+      result = m_properties->load_buffer(content.data(), content.size());
+  }
+  if (!result)
     throw runtime_error("error in loading " + propertyFile().string() + "\n" + result.description() + "\n" +
                         slurp(propertyFile()));
   m_property_file_modification_time = fs::last_write_time(propertyFile());
@@ -1024,7 +1091,20 @@ void Project::check_property_file_locked() const {
   // file read, since the fs::last_write_time() calls immediately below are just as exposed to the
   // same transient I/O errors.
   retry_transient_io_error([&] {
-    auto lastwrite = fs::last_write_time(propertyFile());
+    fs::file_time_type lastwrite;
+    try {
+      lastwrite = fs::last_write_time(propertyFile());
+    } catch (const std::exception&) {
+      // Directly observed: fs::last_write_time() throwing "no such file" at the exact instant a
+      // concurrent, independent process's plain stat() sees the file existing. When that happens
+      // and fs::exists() still confirms the file is there, there's nothing to react to -- treat it
+      // as no change (skip the reload below) rather than propagating a failure for a file that, by
+      // direct observation, exists. If fs::exists() agrees the file is genuinely gone, escalate as
+      // before.
+      if (fs::exists(propertyFile()))
+        return;
+      throw;
+    }
     if (m_property_file_modification_time == lastwrite && !properties_last_written_by_me(false))
       m_property_file_modification_time -= std::chrono::milliseconds(1);
     if (m_property_file_modification_time < lastwrite) {

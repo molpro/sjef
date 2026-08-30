@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iterator>
 #include <algorithm>
+#include <mutex>
 
 #include "sjef-backend.h"
 #include "sjef.h"
@@ -152,11 +153,68 @@ namespace sjef {
         return (host.empty() || host == "localhost");
     }
 
+    namespace {
+        struct BackendConfigStat {
+            bool xml_exists = false;
+            fs::file_time_type xml_mtime{};
+            bool yaml_exists = false;
+            fs::file_time_type yaml_mtime{};
+            bool operator==(const BackendConfigStat &other) const {
+                return xml_exists == other.xml_exists && xml_mtime == other.xml_mtime &&
+                       yaml_exists == other.yaml_exists && yaml_mtime == other.yaml_mtime;
+            }
+        };
+        struct BackendConfigCacheEntry {
+            BackendConfigStat stat;
+            std::map<std::string, Backend> backends;
+        };
+        BackendConfigStat stat_backend_config_files(const std::string &project_suffix) {
+            BackendConfigStat result;
+            if (auto path = backend_config_file_path(project_suffix, "xml"); fs::exists(path)) {
+                result.xml_exists = true;
+                result.xml_mtime = fs::last_write_time(path);
+            }
+            if (auto path = backend_config_file_path(project_suffix, "yaml"); fs::exists(path)) {
+                result.yaml_exists = true;
+                result.yaml_mtime = fs::last_write_time(path);
+            }
+            return result;
+        }
+        std::mutex s_backend_config_cache_mutex;
+        std::map<std::string, BackendConfigCacheEntry> s_backend_config_cache;
+    } // namespace
+
     std::map<std::string, Backend> load_backend_config(const std::string &project_suffix) {
+        // sync_backend_config_file()/ensure_local_backend() each read and parse both the xml and
+        // yaml config files (to compare/reconcile them, and to repair older malformed entries),
+        // and the whole chain below runs on every call. That's real, unconditional file I/O and
+        // parsing for data that's static for the lifetime of a process, in the common case where
+        // nothing about the backend configuration has changed -- which matters here because
+        // load_backend_config() runs on every single Project construction, and a script working
+        // through a large Database constructs one Project per molecule. Skip straight to a cached
+        // result while the config files' existence and modification times haven't changed since
+        // it was built; the check itself is cheap (stat, not read+parse), and correctly detects a
+        // change made from another process (e.g. iMolpro editing backend settings concurrently),
+        // not just from this one.
+        auto stat = stat_backend_config_files(project_suffix);
+        {
+            std::lock_guard<std::mutex> lock(s_backend_config_cache_mutex);
+            if (auto it = s_backend_config_cache.find(project_suffix);
+                it != s_backend_config_cache.end() && it->second.stat == stat)
+                return it->second.backends;
+        }
         sync_backend_config_file(project_suffix);
         ensure_local_backend(project_suffix);
         sync_backend_config_file(project_suffix);
-        return read_backend_config_file(project_suffix, backend_config_file_suffix());
+        auto result = read_backend_config_file(project_suffix, backend_config_file_suffix());
+        // The calls above may themselves have written the config files (to sync or repair them),
+        // so re-stat rather than reusing the stat taken before them.
+        auto new_stat = stat_backend_config_files(project_suffix);
+        {
+            std::lock_guard<std::mutex> lock(s_backend_config_cache_mutex);
+            s_backend_config_cache[project_suffix] = {new_stat, result};
+        }
+        return result;
     }
     std::map<std::string, Backend> read_backend_config_file(const std::string &project_suffix,
                                                             std::string config_file_suffix) {

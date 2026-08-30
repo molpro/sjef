@@ -108,7 +108,8 @@ Public Member Functions</h2></td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>A thread-safe class for an inter-thread/inter-process lock. The lock mechanism is based on a locked file in the file system. The locked file is a file that may or may not already exist; if it doesn't, it is created. The file contents are not altered, and the file is not deleted. If the specified file is a directory, the lock is instead made on a file in that directory. All threads in the same process using the locker must do so through the same <a class="el" href="classsjef_1_1util_1_1_locker.html" title="A thread-safe class for an inter-thread/inter-process lock. The lock mechanism is based on a locked f...">Locker</a> object. </p>
-<p>The lock is initially open, and is closed by calling <a class="el" href="classsjef_1_1util_1_1_locker.html#aed0e887db924ba9767f18e7b7cfeb5e2">add_bolt()</a> and reopened with <a class="el" href="classsjef_1_1util_1_1_locker.html#a81b05082ca19a80a7491353b5d141ecc">remove_bolt()</a>; <a class="el" href="classsjef_1_1util_1_1_locker.html#aed0e887db924ba9767f18e7b7cfeb5e2">add_bolt()</a> can be called multiple times, with only the first instance having a real effect, and the lock being released when the last bolt is removed. It is recommended not to call <a class="el" href="classsjef_1_1util_1_1_locker.html#aed0e887db924ba9767f18e7b7cfeb5e2">add_bolt()</a> directly, but to use the RAII pattern provided by the <a class="el" href="classsjef_1_1util_1_1_locker.html#a69ddaa601238d828e64baf8448981d6f">bolt()</a> function. </p>
+<p>The lock is initially open, and is closed by calling <a class="el" href="classsjef_1_1util_1_1_locker.html#aed0e887db924ba9767f18e7b7cfeb5e2">add_bolt()</a> and reopened with <a class="el" href="classsjef_1_1util_1_1_locker.html#a81b05082ca19a80a7491353b5d141ecc">remove_bolt()</a>; <a class="el" href="classsjef_1_1util_1_1_locker.html#aed0e887db924ba9767f18e7b7cfeb5e2">add_bolt()</a> can be called multiple times, with only the first instance having a real effect, and the lock being released when the last bolt is removed. It is recommended not to call <a class="el" href="classsjef_1_1util_1_1_locker.html#aed0e887db924ba9767f18e7b7cfeb5e2">add_bolt()</a> directly, but to use the RAII pattern provided by the <a class="el" href="classsjef_1_1util_1_1_locker.html#a69ddaa601238d828e64baf8448981d6f">bolt()</a> function.</p>
+<p>The underlying file descriptor used to hold the lock is opened only while at least one bolt is held, and closed again once the last one is removed &ndash; not kept open for this object's whole lifetime. </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a8d96fa42cc4d6601b07d4a554e701d4a" name="a8d96fa42cc4d6601b07d4a554e701d4a"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a8d96fa42cc4d6601b07d4a554e701d4a">&#9670;&#160;</a></span>Locker()</h2>
@@ -244,7 +245,7 @@ Public Member Functions</h2></td></tr>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Tue Aug 25 2026 09:24:30 for sjef by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
+Generated on Sun Aug 30 2026 16:08:35 for sjef by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.8
 </small></address>
 </body>
 </html>

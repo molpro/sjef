@@ -293,9 +293,21 @@ inline std::string slurp(const std::filesystem::path& path) {
 }
 
 std::string Job::run(const std::string& command, int verbosity, bool wait) {
-  m_closing = true;
+  // Guarded the same way ~Job() guards its own m_closing=true below: poll_job() reads m_closing
+  // under m_closing_mutex (see the lock_guard around its "m_closing or status==completed or
+  // m_killed" check), so writing it here without the same lock is a data race even though the two
+  // sides never observe an actually-wrong value in practice. Released before m_poll_task.wait()
+  // (which blocks until poll_job() returns) to avoid deadlocking against poll_job() itself trying
+  // to acquire this same mutex.
+  {
+    std::lock_guard lock(m_closing_mutex);
+    m_closing = true;
+  }
   m_poll_task.wait();
-  m_closing = false;
+  {
+    std::lock_guard lock(m_closing_mutex);
+    m_closing = false;
+  }
   m_backend_command_server.reset(new Shell(m_backend.host));
   std::string run_output;
   {
@@ -423,6 +435,8 @@ void Job::kill(int verbosity) {
     //    std::cout << "Job::kill() finished set_status()"<<std::endl;
   }
 
+  // Atomic (see the member declaration): poll_job() reads this both under m_kill_mutex and under
+  // m_closing_mutex at different points, so no single mutex here would actually synchronize both.
   m_killed = true;
   //  std::cout << "Job::kill() set sentinel"<<std::endl;
 }

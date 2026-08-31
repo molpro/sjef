@@ -4,6 +4,7 @@
 #include "../sjef.h"
 #include "Logger.h"
 #include "Shell.h"
+#include <atomic>
 #include <future>
 
 namespace sjef::util {
@@ -60,13 +61,17 @@ protected:
   mutable std::shared_ptr<Shell> m_backend_command_server;
   int m_job_number=0;
   mutable Logger m_trace;
-  bool m_killed = false;
+  // atomic, not guarded by m_kill_mutex like the rest of the members below: poll_job() also reads
+  // this under m_closing_mutex (its "m_closing or status==completed or m_killed" check), a
+  // different mutex than kill()'s m_kill_mutex-guarded write, so mutex protection alone -- correct
+  // as it looked at either call site individually -- didn't actually synchronize the two.
+  std::atomic<bool> m_killed = false;
   bool m_closing = false; //!< set to signal that polling should be stopped
   std::mutex m_closing_mutex;
-  //! Guards this job's own m_backend_command_server/m_job_number/m_killed against a concurrent
-  //! kill() racing run()'s (re)creation of the backend server, and against poll_job()'s status
-  //! reads racing kill()'s status write. Deliberately a member, not a process-wide global: this
-  //! job's launch/poll/kill must never serialize against an unrelated Job's, since each Job's
+  //! Guards this job's own m_backend_command_server/m_job_number against a concurrent kill()
+  //! racing run()'s (re)creation of the backend server, and against poll_job()'s status reads
+  //! racing kill()'s status write. Deliberately a member, not a process-wide global: this job's
+  //! launch/poll/kill must never serialize against an unrelated Job's, since each Job's
   //! push/submit/pull is itself blocking network I/O that can take seconds against a real remote
   //! host, and a shared lock would turn concurrent parallel launches into a queue where one slow
   //! or stuck remote call freezes every other job's launch and status polling too.

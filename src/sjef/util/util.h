@@ -1,7 +1,12 @@
 #ifndef SJEF_LIB_UTIL_UTIL_H_
 #define SJEF_LIB_UTIL_UTIL_H_
+#include <cstdlib>
+#include <cstring>
 #include <ostream>
 #include <regex>
+#include <set>
+#include <string>
+#include <vector>
 
 namespace sjef::util {
 

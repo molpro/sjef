@@ -407,7 +407,6 @@ private:
   std::set<std::string, std::less<>> m_run_directory_ignore;
   void property_delete_locked(const std::string& property);
   void check_property_file_locked() const;
-  void check_property_file() const;
   void save_property_file_locked() const;
   void save_property_file() const;
   void load_property_file_locked() const;

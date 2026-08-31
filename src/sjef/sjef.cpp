@@ -828,7 +828,13 @@ std::string Project::property_get(const std::string& property) const {
   return property_get(std::vector<std::string>{property})[property];
 }
 mapstringstring_t Project::property_get(const std::vector<std::string>& properties) const {
-  check_property_file();
+  // Held for the whole function, not just check_property_file()'s own reload-if-needed step:
+  // m_properties is an in-memory pugixml tree shared with property_set()/property_delete(),
+  // which mutate it under this same lock (see property_set() above) -- querying it via XPath
+  // below without the lock still held races a concurrent mutation on another thread, even though
+  // check_property_file() itself was safely locked while it ran.
+  auto lock = m_locker->bolt();
+  check_property_file_locked();
   mapstringstring_t results;
   for (const std::string& property : properties) {
     std::string query{"/plist/dict/key[text()='" + property + "']/following-sibling::string[1]"};
@@ -842,7 +848,10 @@ mapstringstring_t Project::property_get(const std::vector<std::string>& properti
 }
 
 std::vector<std::string> Project::property_names() const {
-  check_property_file();
+  // See the comment in property_get() above: held for the whole function so the XPath query below
+  // isn't left unprotected once check_property_file()'s own lock scope ends.
+  auto lock = m_locker->bolt();
+  check_property_file_locked();
   std::vector<std::string> result;
   for (const auto& node : m_properties->select_nodes((std::string{"/plist/dict/key"}).c_str()))
     result.push_back(node.node().child_value());
@@ -1090,11 +1099,6 @@ bool Project::properties_last_written_by_me(bool removeFile) const {
   if (removeFile && writer == me)
     fs::remove(path);
   return writer == me;
-}
-void Project::check_property_file() const {
-  auto lock = m_locker->bolt();
-
-  check_property_file_locked();
 }
 void Project::check_property_file_locked() const {
   // Every property read (including status()) funnels through here, so on a networked filesystem

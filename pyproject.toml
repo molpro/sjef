@@ -36,7 +36,7 @@ write_to = "src/pysjef/_version.py"
 [tool.cibuildwheel]
 build-verbosity = 1
 test-command = "python -c \"import pysjef; print(pysjef.__version__)\""
-skip = ["pp*"]
+skip = ["pp*", "*i686"]  # i686 needs manylinux2014 (CentOS 7, EOL); its yum mirror is no longer reachable from CI
 
 [tool.cibuildwheel.linux]
 manylinux-x86_64-image = "manylinux_2_28"

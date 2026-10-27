@@ -97,6 +97,20 @@ bool copyDir(fs::path const& source, fs::path const& destination, bool delete_so
   return true;
 }
 
+///> @private
+// Whether a recent-projects list entry is known to exist, without throwing. An entry on an
+// unreachable filesystem (e.g. a cloud-storage mount that is offline) makes the throwing
+// fs::exists() fail with errors such as ETIMEDOUT, which would otherwise abort opening an
+// unrelated project. If unreachable is non-null, it is set when the existence could not be
+// determined, as distinct from the entry definitely not existing.
+bool recent_entry_exists(const std::string& entry, bool* unreachable = nullptr) {
+  std::error_code ec;
+  const bool result = fs::exists(entry, ec);
+  if (unreachable != nullptr)
+    *unreachable = static_cast<bool>(ec);
+  return result;
+}
+
 namespace sjef {
 
 inline std::string getattribute(pugi::xpath_node node, const std::string& name) {
@@ -886,7 +900,10 @@ void Project::recent_edit(const std::filesystem::path& add, const std::filesyste
       }
       std::string line;
       while (getline(in, line) && lines < recentMax) {
-        if (line != remove.string() && line != add && fs::exists(line)) {
+        // An entry that cannot currently be reached is kept rather than discarded, since it is
+        // not known to have gone away.
+        bool unreachable;
+        if (line != remove.string() && line != add && (recent_entry_exists(line, &unreachable) || unreachable)) {
           ++lines;
           out << line << std::endl;
         } else
@@ -1016,7 +1033,7 @@ int Project::recent_find(const std::string& suffix, const std::filesystem::path&
   std::ifstream in(expand_path(recent_projects_directory / "projects"));
   std::string line;
   for (int position = 1; std::getline(in, line); ++position) {
-    if (fs::exists(line)) {
+    if (recent_entry_exists(line)) {
       if (line == filename.string())
         return position;
     } else
@@ -1036,7 +1053,7 @@ std::string Project::recent(const std::string& suffix, int number) {
   std::ifstream in(expand_path(recent_projects_directory / "projects"));
   std::string line;
   for (int position = 0; std::getline(in, line);) {
-    if (fs::exists(line))
+    if (recent_entry_exists(line))
       ++position;
     if (position == number)
       return line;

@@ -205,3 +205,19 @@ TEST_F(test_sjef_molpro, failure) {
         << p.file_contents("xml") << sjef::util::Shell()("ls -lRa " + p.filename().string()) << std::endl;
   }
 }
+
+TEST_F(test_sjef_molpro, reopen_after_killed_job_without_output) {
+  const auto name = testfile("Killed.molpro");
+  {
+    sjef::Project p(name);
+    { std::ofstream(p.filename("inp")) << "geometry={He};hf"; }
+    // simulate a job whose process was killed: it is recorded as running, but the output never appeared
+    p.property_set("_status", std::to_string(static_cast<int>(sjef::status::running)));
+    p.property_set("jobnumber", "999999");
+    ASSERT_FALSE(fs::exists(p.filename("xml", "", 0)));
+  }
+  sjef::Project reopened(name);
+  EXPECT_NE(reopened.status(), sjef::status::completed);
+  EXPECT_EQ(reopened.status(), sjef::status::failed);
+  EXPECT_TRUE(reopened.run_needed());
+}

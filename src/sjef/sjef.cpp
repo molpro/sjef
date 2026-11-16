@@ -216,6 +216,10 @@ Project::Project(const std::filesystem::path& filename, bool construct, const st
         if (new_status == unknown) {
           //          std::cout << "setting status from " << initial_status << " to completed" << std::endl;
           property_set("_status", std::to_string(static_cast<int>(completed)));
+          // The job has gone, but that does not mean it finished: if it left no output (eg it was
+          // killed), this downgrades the status to failed so that it is run again.
+          if (const auto checked = status_from_output(); checked != completed)
+            property_set("_status", std::to_string(static_cast<int>(checked)));
         }
       }
     }

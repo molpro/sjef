@@ -31,6 +31,11 @@ std::string sjef::Project::input_from_output(bool sync) const {
 
 sjef::status sjef::Project::status_from_output() const {
     if (m_project_suffix == "molpro") {
+        // A job that is recorded as completed but left no output xml at all (eg the process was
+        // killed or failed to start) has not really completed; reporting it as such would make
+        // callers trust a result that does not exist, and stop run_needed() relying on the status.
+        if (status() == sjef::status::completed && !std::filesystem::exists(filename("xml", "", 0)))
+            return sjef::status::failed;
         sjef::pugi_xml_document outxml;
         outxml.load_string(xml().c_str());
         if (!outxml.select_nodes("//error").empty())

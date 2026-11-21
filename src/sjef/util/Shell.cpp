@@ -341,11 +341,27 @@ void Shell::run_local_async(const std::string& command, const std::string& direc
   m_trace(2 - verbosity) << "launching shell local process: " << executable("nohup") << " " << shell_path << " -c '"
                          << pipeline << "'" << std::endl;
   m_process = bp::child(executable("nohup"), shell_path, "-c", pipeline, bp::std_out > out, bp::std_err > *m_err SJEF_NO_CONSOLE_WINDOW);
-  m_process.detach();
-  capture_job_number_from_error(command);
+  // The nohup wrapper only backgrounds the real job, echoes its pid, and exits straight away; the job
+  // itself is reparented to init and is not our child. The wrapper, however, *is* our child, and
+  // bp::child::detach() merely stops tracking it -- it does not reap it -- so detaching here left one
+  // zombie per launch for the lifetime of the host process. Reap it explicitly instead, including on the
+  // failure path (a wrapper that never printed its job number may still be alive, so kill it first).
+  try {
+    capture_job_number_from_error(command);
+  } catch (...) {
+    std::error_code ec;
+    if (m_process.valid()) {
+      if (m_process.running(ec))
+        m_process.terminate(ec);
+      m_process.wait(ec);
+    }
+    fs::current_path(current_path_save);
+    throw;
+  }
   fs::current_path(current_path_save);
   if (!m_process.valid())
     throw Shell::runtime_error("Spawning run process has failed");
+  m_process.wait(); // wrapper has already printed $! and exited, so this returns at once
 }
 
 void Shell::run_remote_async(std::string command, const std::string& directory, int verbosity, const std::string& out,

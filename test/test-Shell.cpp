@@ -13,7 +13,9 @@
 #include <winsock.h>
 #endif
 
+#include <memory>
 #include <regex>
+#include <sstream>
 #include <sjef/util/Shell.h>
 namespace fs = std::filesystem;
 
@@ -70,6 +72,47 @@ TEST(Shell, local_asynchronous) {
     EXPECT_TRUE(fs::exists(testfile.string()));
   }
 }
+#ifndef WIN32
+// Number of defunct (zombie) children of this process, i.e. exited children that nobody has wait()ed for.
+static int zombie_children() {
+  FILE* pipe = popen("ps -axo stat=,ppid=", "r");
+  if (!pipe)
+    return -1;
+  const auto self = std::to_string(getpid());
+  int count = 0;
+  char buffer[256];
+  while (fgets(buffer, sizeof buffer, pipe)) {
+    std::istringstream line(buffer);
+    std::string stat, ppid;
+    if ((line >> stat >> ppid) && stat[0] == 'Z' && ppid == self)
+      ++count;
+  }
+  pclose(pipe);
+  return count;
+}
+
+// Regression test: each local asynchronous launch used to leave its short-lived nohup wrapper behind as an
+// unreaped zombie child of the host process (bp::child::detach() does not reap). In a long-running GUI that
+// accumulates without bound and eventually exhausts the per-user process limit.
+//
+// The Shell objects are deliberately kept alive while the zombies are counted: ~Shell() happens to reap an
+// exited child as a side effect of calling running(), which would otherwise mask the leak. In real use a
+// Shell lives as long as its sjef Job, so that is the situation that matters.
+TEST(Shell, local_asynchronous_leaves_no_zombies) {
+  const auto before = zombie_children();
+  ASSERT_GE(before, 0);
+  constexpr int launches = 5;
+  std::vector<std::unique_ptr<sjef::util::Shell>> shells;
+  for (int i = 0; i < launches; ++i) {
+    shells.push_back(std::make_unique<sjef::util::Shell>());
+    (*shells.back())("true", false);
+    EXPECT_NE(shells.back()->job_number(), 0);
+    shells.back()->wait();
+  }
+  EXPECT_EQ(zombie_children(), before) << "local asynchronous launches left unreaped child processes";
+}
+#endif
+
 #ifndef WIN32
 TEST(Shell, remote_asynchronous_2) {
   char hostname[HOST_NAME_MAX];
